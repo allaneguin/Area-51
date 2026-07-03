@@ -189,6 +189,9 @@ const App = {
   updateNav(route) {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.remove('active');
+      // O botão "Sair da Conta" também é um .nav-item com href="#", mas nunca deve
+      // ficar ativo — ignora para não confundir com o item selecionado.
+      if (el.id === 'sidebar-nav-logout') return;
       if (el.getAttribute('href') === '#' + route || (route==='dashboard' && el.getAttribute('href')==='#')) {
         el.classList.add('active');
       }
