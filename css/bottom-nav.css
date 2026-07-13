@@ -43,8 +43,9 @@
 
 /* Estado Ativo */
 .bottom-nav-link.active {
-  color: var(--primary, #003D7A);
-  font-weight: 500;
+  color: var(--primary, #1C4E89);
+  background: transparent; /* nao herda o realce escuro da sidebar */
+  font-weight: 700;
 }
 
 .bottom-nav-link.active svg {

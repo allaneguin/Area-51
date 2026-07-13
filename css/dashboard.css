@@ -2,81 +2,81 @@
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.stat-card {
+.stat-head {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  background: linear-gradient(145deg, var(--card-bg), rgba(248, 249, 250, 0.8));
-  border-top: 1px solid var(--border-focus);
+  gap: 10px;
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-lg);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
-.stat-icon::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  border-radius: var(--radius-lg);
-  opacity: 0.15;
-}
+.stat-icon svg { width: 18px; height: 18px; }
 
-.stat-icon svg { width: 28px; height: 28px; position: relative; z-index: 1; }
-
-.stat-icon.purple { color: var(--primary); }
-.stat-icon.purple::before { background-color: var(--primary); }
-
-.stat-icon.green { color: var(--text-main); }
-.stat-icon.green::before { background-color: var(--text-muted); }
+.stat-icon.blue { background: var(--primary-light); color: var(--primary); }
+.stat-icon.amber { background: var(--warning-bg); color: var(--warning); }
+.stat-icon.green { background: var(--success-bg); color: var(--success); }
+/* alias legado */
+.stat-icon.purple { background: var(--primary-light); color: var(--primary); }
 
 .stat-value {
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--text-main);
-  line-height: 1.2;
+  line-height: 1.1;
+  margin-top: 14px;
 }
 
 .stat-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-light);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
+
+.stat-delta {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.stat-delta.positive { color: var(--success); }
+.stat-delta.warning { color: var(--warning); }
 
 /* Recent Contracts List */
 .recent-section {
   background: var(--card-bg);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
   overflow: hidden;
   position: relative;
 }
 
 .recent-header {
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  background: rgba(0,0,0,0.02);
+  padding: 16px 22px;
+  border-bottom: 1px solid #EDF0F5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .recent-title {
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
-  font-weight: 500;
+  font-size: 15.5px;
+  font-weight: 700;
   color: var(--text-main);
 }
 
@@ -88,11 +88,11 @@
 .contract-row {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1.25rem 2rem;
-  border-bottom: 1px solid rgba(0,0,0,0.03);
+  gap: 16px;
+  padding: 15px 22px;
+  border-bottom: 1px solid #F2F4F8;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition);
 }
 
 .contract-row:last-child {
@@ -100,24 +100,22 @@
 }
 
 .contract-row:hover {
-  background-color: rgba(0,0,0,0.02);
-  transform: scale(1.005);
+  background-color: #F8FAFC;
 }
 
 .contract-row-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background-color: var(--primary-light);
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid var(--border-focus);
 }
 
-.contract-row-icon svg { width: 22px; height: 22px; }
+.contract-row-icon svg { width: 18px; height: 18px; }
 
 .contract-row-info {
   flex: 1;
@@ -125,19 +123,19 @@
 }
 
 .contract-row-name {
-  font-weight: 500;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 14.5px;
   color: var(--text-main);
-  margin-bottom: 0.25rem;
 }
 
 .contract-row-meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font-size: 12.5px;
+  color: var(--text-light);
+  margin-top: 1px;
 }
 
 .contract-row-date {
-  font-size: 0.85rem;
+  font-size: 12.5px;
   color: var(--text-light);
   white-space: nowrap;
   font-weight: 500;

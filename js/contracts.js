@@ -75,11 +75,11 @@ const ContractsView = {
         </a>
       </div>
 
-      <div class="contracts-tabs animate-fade-in-up" style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
-        <button class="btn btn-primary" id="tab-residencial" onclick="ContractsView.switchTab('residencial')" style="flex: 1; justify-content: center; background: var(--primary); box-shadow: var(--shadow-md);">
+      <div class="seg-tabs animate-fade-in-up">
+        <button class="seg-tab active" id="tab-residencial" onclick="ContractsView.switchTab('residencial')">
           Residenciais (${residenciais.length})
         </button>
-        <button class="btn btn-secondary" id="tab-comercial" onclick="ContractsView.switchTab('comercial')" style="flex: 1; justify-content: center; background: var(--card-bg); color: var(--text-main);">
+        <button class="seg-tab" id="tab-comercial" onclick="ContractsView.switchTab('comercial')">
           Comerciais (${comerciais.length})
         </button>
       </div>
@@ -107,38 +107,11 @@ const ContractsView = {
   },
   
   switchTab(tab) {
-    const btnResidencial = document.getElementById('tab-residencial');
-    const btnComercial = document.getElementById('tab-comercial');
-    const listResidencial = document.getElementById('list-residencial');
-    const listComercial = document.getElementById('list-comercial');
-    
-    if (tab === 'residencial') {
-      btnResidencial.className = 'btn btn-primary';
-      btnResidencial.style.background = 'var(--primary)';
-      btnResidencial.style.color = '#fff';
-      btnResidencial.style.boxShadow = 'var(--shadow-md)';
-      
-      btnComercial.className = 'btn btn-secondary';
-      btnComercial.style.background = 'var(--card-bg)';
-      btnComercial.style.color = 'var(--text-main)';
-      btnComercial.style.boxShadow = 'none';
-      
-      listResidencial.style.display = 'block';
-      listComercial.style.display = 'none';
-    } else {
-      btnComercial.className = 'btn btn-primary';
-      btnComercial.style.background = 'var(--primary)';
-      btnComercial.style.color = '#fff';
-      btnComercial.style.boxShadow = 'var(--shadow-md)';
-      
-      btnResidencial.className = 'btn btn-secondary';
-      btnResidencial.style.background = 'var(--card-bg)';
-      btnResidencial.style.color = 'var(--text-main)';
-      btnResidencial.style.boxShadow = 'none';
-      
-      listComercial.style.display = 'block';
-      listResidencial.style.display = 'none';
-    }
+    const isRes = tab === 'residencial';
+    document.getElementById('tab-residencial').classList.toggle('active', isRes);
+    document.getElementById('tab-comercial').classList.toggle('active', !isRes);
+    document.getElementById('list-residencial').style.display = isRes ? 'block' : 'none';
+    document.getElementById('list-comercial').style.display = isRes ? 'none' : 'block';
   },
   
   deleteContract(id) {

@@ -2,6 +2,10 @@
 // Supabase Configuration & Initialization Module
 // ═══════════════════════════════════════════════════════
 
+// Desliga o login/nuvem e faz o app rodar 100% no localStorage.
+// Voltar para true quando a URL do projeto Supabase estiver valida.
+const SUPABASE_ENABLED = false;
+
 const supabaseUrl = 'https://hbmqmzsssccrsyqdyixd.supabase.co';
 const supabaseKey = 'sb_publishable_zKudHzqDlkkSHp4Q5n7KrQ_wBW7mHFb';
 
@@ -9,6 +13,11 @@ let supabaseClient = null;
 let SupabaseActive = false;
 
 (function() {
+  if (!SUPABASE_ENABLED) {
+    console.warn("⚠️ Supabase desativado (SUPABASE_ENABLED = false). Rodando offline no localStorage.");
+    localStorage.removeItem('sb-' + supabaseUrl.split('//')[1].split('.')[0] + '-auth-token');
+    return;
+  }
   if (typeof supabase !== 'undefined') {
     try {
       const { createClient } = supabase;

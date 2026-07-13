@@ -3,9 +3,34 @@
 // ═══════════════════════════════════════════════════════
 
 const Dashboard = {
+  // "R$ 2.450,00" -> 2450.00
+  parseValor(v) {
+    if (!v) return 0;
+    const d = String(v).replace(/\D/g, '');
+    return d ? parseInt(d, 10) / 100 : 0;
+  },
+
+  // Contratos cujo termino cai nos proximos 30 dias
+  countAVencer(contracts) {
+    const hoje = new Date();
+    const limite = new Date();
+    limite.setDate(limite.getDate() + 30);
+    return contracts.filter(c => {
+      const fim = c.fields && c.fields.data_termino;
+      if (!fim) return false;
+      const d = new Date(fim);
+      return d >= hoje && d <= limite;
+    }).length;
+  },
+
   render(container) {
     const stats = Storage.getStats();
-    const recent = Storage.getAll().slice(0, 5);
+    const all = Storage.getAll();
+    const recent = all.slice(0, 5);
+
+    const aVencer = this.countAVencer(all);
+    const receita = all.reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
+    const receitaFmt = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
     
     let recentHtml = recent.length ? recent.map(c => {
       const status = Utils.getContractStatus(c);
@@ -50,22 +75,34 @@ const Dashboard = {
 
       <div class="stats-grid stagger-1 animate-fade-in-up">
         <div class="card stat-card">
-          <div class="stat-icon purple">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <div class="stat-head">
+            <span class="stat-icon blue">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </span>
+            <span class="stat-label">Total de Contratos</span>
           </div>
-          <div>
-            <div class="stat-value">${stats.total}</div>
-            <div class="stat-label">Total de Contratos</div>
-          </div>
+          <div class="stat-value">${stats.total}</div>
+          <div class="stat-delta ${stats.thisMonth ? 'positive' : ''}">${stats.thisMonth ? `+${stats.thisMonth} este mês` : 'Nenhum ainda'}</div>
         </div>
         <div class="card stat-card">
-          <div class="stat-icon green">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          <div class="stat-head">
+            <span class="stat-icon amber">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </span>
+            <span class="stat-label">A vencer · 30 dias</span>
           </div>
-          <div>
-            <div class="stat-value">${stats.thisMonth}</div>
-            <div class="stat-label">Criados este Mês</div>
+          <div class="stat-value">${aVencer}</div>
+          <div class="stat-delta ${aVencer ? 'warning' : ''}">${aVencer ? 'Requer atenção' : 'Nada a vencer'}</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-head">
+            <span class="stat-icon green">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </span>
+            <span class="stat-label">Receita mensal</span>
           </div>
+          <div class="stat-value">${receitaFmt}</div>
+          <div class="stat-delta">Somando os aluguéis ativos</div>
         </div>
       </div>
 

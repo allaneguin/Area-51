@@ -4,273 +4,348 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meus Imóveis — Gestão de contratos de locação</title>
+  <title>Meus Imóveis — Contratos de locação sem planilhas</title>
   <meta name="description"
-    content="Crie, organize e assine contratos de locação com precisão. A plataforma para gestão de imóveis e locações.">
+    content="Organize sua carteira de imóveis e realize a gestão de locações sem planilhas. Do rascunho à assinatura, em um só lugar.">
   <link rel="icon" type="image/svg+xml"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='45' y='20' width='40' height='60' fill='%23515151' /><rect x='40' y='32' width='35' height='8' rx='4' fill='%23ffffff' /><rect x='55' y='47' width='20' height='8' rx='4' fill='%23ffffff' /><rect x='55' y='62' width='20' height='8' rx='4' fill='%23ffffff' /><path d='M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z' fill='%23003D7A' stroke='%23ffffff' stroke-width='4' stroke-linejoin='round' /></svg>">
 
-  <link rel="stylesheet" href="css/landing.css?v=1.0.2">
+  <link rel="stylesheet" href="css/landing.css?v=2.0.2">
 </head>
 
 <body class="lp">
 
-  <!-- ═══════════ Header ═══════════ -->
-  <header class="lp-header" id="lp-header">
-    <div class="lp-container lp-header-inner">
+  <!-- ═══════════ NAV ═══════════ -->
+  <nav class="lp-nav">
+    <div class="lp-container lp-nav-inner">
       <a href="#top" class="lp-brand" aria-label="Meus Imóveis — Início">
         <span class="lp-brand-mark">
           <svg viewBox="0 0 100 100" aria-hidden="true">
-            <rect x="45" y="20" width="40" height="60" fill="#515151" />
-            <rect x="40" y="32" width="35" height="8" rx="4" fill="#ffffff" />
-            <rect x="55" y="47" width="20" height="8" rx="4" fill="#ffffff" />
-            <rect x="55" y="62" width="20" height="8" rx="4" fill="#ffffff" />
-            <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#003D7A" stroke="#ffffff"
-              stroke-width="4" stroke-linejoin="round" />
+            <rect x="45" y="20" width="40" height="60" fill="#E9E7E2" />
+            <rect x="40" y="32" width="35" height="8" rx="4" fill="#143A66" />
+            <rect x="55" y="47" width="20" height="8" rx="4" fill="#143A66" />
+            <rect x="55" y="62" width="20" height="8" rx="4" fill="#143A66" />
+            <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#143A66"
+              stroke="#F0F6FF" stroke-width="4" stroke-linejoin="round" />
           </svg>
         </span>
-        <span class="lp-brand-name">Meus Imóveis</span>
+        Meus Imóveis
       </a>
 
-      <nav class="lp-nav" aria-label="Navegação principal">
+      <div class="lp-nav-links">
         <a href="#recursos">Recursos</a>
         <a href="#como-funciona">Como funciona</a>
         <a href="#planos">Planos</a>
-      </nav>
-
-      <div class="lp-header-actions">
-        <a href="app.html" class="lp-link-muted">Entrar</a>
-        <a href="app.html" class="lp-btn lp-btn-primary">Começar grátis</a>
       </div>
 
-      <button class="lp-menu-toggle" aria-label="Abrir menu" onclick="document.body.classList.toggle('lp-menu-open')">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      <div class="lp-nav-actions">
+        <a href="app.html" class="lp-signin">Entrar</a>
+        <a href="app.html" class="lp-cta-nav">Começar grátis</a>
+        <button type="button" class="lp-menu-toggle" aria-label="Abrir menu"
+          onclick="document.body.classList.toggle('lp-menu-open')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
     </div>
-    <!-- menu mobile -->
-    <div class="lp-mobile-nav">
-      <a href="#recursos" onclick="document.body.classList.remove('lp-menu-open')">Recursos</a>
-      <a href="#como-funciona" onclick="document.body.classList.remove('lp-menu-open')">Como funciona</a>
-      <a href="#planos" onclick="document.body.classList.remove('lp-menu-open')">Planos</a>
-      <a href="app.html" class="lp-btn lp-btn-primary">Começar grátis</a>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <header class="lp-hero" id="top">
+    <div class="lp-hero-glow"></div>
+    <div class="lp-hero-grid"></div>
+
+    <div class="lp-hero-inner">
+      <h1 class="lp-hero-title lp-rise">Crie, gerencie e <em>assine</em> cada contrato</h1>
+
+      <p class="lp-hero-sub lp-rise lp-d1">
+        Organize sua carteira de imóveis e realize a gestão de locações sem planilhas — feito para locadores,
+        imobiliárias e profissionais do direito imobiliário.
+      </p>
+
+      <div class="lp-hero-cta lp-rise lp-d2">
+        <a href="app.html" class="lp-btn lp-btn-primary">Começar agora →</a>
+        <a href="#como-funciona" class="lp-btn lp-btn-ghost">Ver como funciona</a>
+      </div>
+
+      <!-- Mock do produto -->
+      <div class="lp-mock lp-rise lp-d3" aria-hidden="true">
+        <div class="lp-mock-window">
+          <div class="lp-mock-bar">
+            <span class="lp-mock-dot"></span>
+            <span class="lp-mock-dot"></span>
+            <span class="lp-mock-dot"></span>
+            <span class="lp-mock-url">app.meusimoveis.com.br</span>
+          </div>
+
+          <div class="lp-mock-body">
+            <div class="lp-mock-side">
+              <div class="lp-mock-side-title">PRINCIPAL</div>
+              <div class="lp-mock-nav active">▦ Dashboard</div>
+              <div class="lp-mock-nav">◫ Contratos</div>
+              <div class="lp-mock-nav">▤ Modelos</div>
+              <div class="lp-mock-nav">◔ Vencimentos</div>
+            </div>
+
+            <div class="lp-mock-main">
+              <div class="lp-mock-head">
+                <div>
+                  <div class="lp-mock-h1">Visão Geral</div>
+                  <div class="lp-mock-h2">11 contratos ativos · 2 vencendo em 30 dias</div>
+                </div>
+                <div class="lp-mock-btn">+ Novo contrato</div>
+              </div>
+
+              <div class="lp-mock-stats">
+                <div class="lp-mock-stat">
+                  <div class="lp-mock-stat-label">CONTRATOS ATIVOS</div>
+                  <div class="lp-mock-stat-value">11</div>
+                  <div class="lp-mock-stat-delta lp-green">+2 este mês</div>
+                </div>
+                <div class="lp-mock-stat">
+                  <div class="lp-mock-stat-label">A VENCER · 30 DIAS</div>
+                  <div class="lp-mock-stat-value">2</div>
+                  <div class="lp-mock-stat-delta lp-blue">Reajuste anual</div>
+                </div>
+                <div class="lp-mock-stat">
+                  <div class="lp-mock-stat-label">RECEITA MENSAL</div>
+                  <div class="lp-mock-stat-value">R$ 18,4k</div>
+                  <div class="lp-mock-stat-delta lp-green">+4,1%</div>
+                </div>
+              </div>
+
+              <div class="lp-mock-list">
+                <div class="lp-mock-list-head">Editados recentemente</div>
+                <div class="lp-mock-row">
+                  <span class="lp-mock-row-name">Apto 302 — Ed. Aurora</span>
+                  <span class="lp-mock-chip lp-chip-green">Assinado</span>
+                </div>
+                <div class="lp-mock-row">
+                  <span class="lp-mock-row-name">Loja 12 — Galeria Central</span>
+                  <span class="lp-mock-chip lp-chip-blue">Aguardando inquilino</span>
+                </div>
+                <div class="lp-mock-row">
+                  <span class="lp-mock-row-name">Casa — R. das Acácias, 88</span>
+                  <span class="lp-mock-chip lp-chip-gray">Rascunho</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main id="top">
-
-    <!-- ═══════════ Hero ═══════════ -->
-    <section class="lp-hero">
-      <div class="lp-container lp-hero-stage">
-
-        <!-- nota adesiva -->
-        <div class="lp-float lp-float-tl lp-note">
-          Capture cada detalhe, organize seus imóveis e gerencie contratos com precisão.
-        </div>
-
-        <!-- prazos -->
-        <div class="lp-float lp-float-tr">
-          <div class="lp-float-label">Próximo vencimento</div>
-          <div class="lp-float-name">Reajuste Anual</div>
-          <div class="lp-float-sub">Apto 302 — Ed. Aurora</div>
-          <span class="lp-chip">01/07 · 30 dias</span>
-        </div>
-
-        <!-- núcleo -->
-        <div class="lp-hero-core">
-          <div class="lp-hero-badge">
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <rect x="45" y="20" width="40" height="60" fill="#515151" />
-              <rect x="40" y="32" width="35" height="8" rx="4" fill="#ffffff" />
-              <rect x="55" y="47" width="20" height="8" rx="4" fill="#ffffff" />
-              <rect x="55" y="62" width="20" height="8" rx="4" fill="#ffffff" />
-              <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#003D7A" stroke="#ffffff"
-                stroke-width="4" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <h1 class="lp-hero-title">Crie, gerencie e<span class="accent">assine cada contrato</span></h1>
-          <p class="lp-hero-subtitle">Organize sua carteira de imóveis e realize a gestão de locações sem planilhas.</p>
-          <div class="lp-hero-cta">
-            <a href="app.html" class="lp-btn lp-btn-primary lp-btn-lg">Começar agora</a>
-            <a href="#como-funciona" class="lp-btn lp-btn-ghost lp-btn-lg">Ver como funciona</a>
-          </div>
-        </div>
-
-        <!-- contratos ativos -->
-        <div class="lp-float lp-float-bl">
-          <div class="lp-float-label">Contratos ativos</div>
-          <div class="lp-mini">
-            <span class="lp-mini-dot">8</span>
-            <div class="lp-mini-info">
-              <div class="lp-mini-name">Locação Residencial</div>
-              <div class="lp-mini-bar"><span class="lp-bar-w60"></span></div>
-            </div>
-          </div>
-          <div class="lp-mini">
-            <span class="lp-mini-dot alt">3</span>
-            <div class="lp-mini-info">
-              <div class="lp-mini-name">Locação Comercial</div>
-              <div class="lp-mini-bar"><span class="lp-bar-w90"></span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- integrações -->
-        <div class="lp-float lp-float-br">
-          <div class="lp-float-label">Tudo conectado</div>
-          <div class="lp-icons">
-            <span title="PDF">
-              <svg fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            </span>
-            <span title="Assinatura">
-              <svg fill="none" stroke="#003D7A" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-            </span>
-            <span title="Agenda">
-              <svg fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            </span>
-          </div>
-        </div>
-
+  <!-- ═══════════ RECURSOS ═══════════ -->
+  <section class="lp-section-light" id="recursos">
+    <div class="lp-container">
+      <div class="lp-head">
+        <div class="lp-eyebrow">RECURSOS</div>
+        <h2 class="lp-h2">Tudo que você precisa para gerir <em>locações</em></h2>
+        <p class="lp-lead">Menos abas abertas, menos retrabalho. Cada etapa do contrato vive no mesmo lugar.</p>
       </div>
-    </section>
 
-    <!-- ═══════════ Logos / prova social ═══════════ -->
-    <section class="lp-strip">
-      <div class="lp-container">
-        <p class="lp-strip-text">Feito para locadores, imobiliárias e profissionais do direito imobiliário</p>
+      <div class="lp-features">
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-blue">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+          </div>
+          <h3>Modelos prontos</h3>
+          <p>Contratos de locação residencial e comercial pré-formatados. É só preencher os campos.</p>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-green">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </div>
+          <h3>Editor inteligente</h3>
+          <p>Máscaras automáticas para CPF, valores e datas. Sem erro de formatação.</p>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-violet">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          </div>
+          <h3>Exportação em PDF</h3>
+          <p>Gere o contrato final pronto para impressão ou assinatura com um clique.</p>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-blue">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          </div>
+          <h3>Link seguro para o inquilino</h3>
+          <p>Envie um link criptografado e o inquilino preenche os próprios dados. Tudo volta para o seu painel.</p>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-green">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          </div>
+          <h3>Painel centralizado</h3>
+          <p>Veja todos os contratos, status e atividade recente em um único lugar.</p>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-feature-icon lp-icon-violet">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <h3>Na nuvem, com segurança</h3>
+          <p>Seus contratos sincronizados e protegidos por login, acessíveis de qualquer dispositivo.</p>
+        </article>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ═══════════ Recursos ═══════════ -->
-    <section class="lp-section" id="recursos">
-      <div class="lp-container">
-        <div class="lp-section-head">
-          <span class="lp-eyebrow">Recursos</span>
-          <h2 class="lp-section-title">Tudo que você precisa para gerir locações</h2>
-          <p class="lp-section-sub">Do rascunho à assinatura, em um só lugar.</p>
-        </div>
-
-        <div class="lp-grid">
-          <article class="lp-feature">
-            <div class="lp-feature-icon purple">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
-            </div>
-            <h3>Modelos prontos</h3>
-            <p>Contratos de locação residencial e comercial pré-formatados. É só preencher os campos.</p>
-          </article>
-
-          <article class="lp-feature">
-            <div class="lp-feature-icon blue">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-            </div>
-            <h3>Editor inteligente</h3>
-            <p>Máscaras automáticas para CPF, valores e datas. Sem erro de formatação.</p>
-          </article>
-
-          <article class="lp-feature">
-            <div class="lp-feature-icon red">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            </div>
-            <h3>Exportação em PDF</h3>
-            <p>Gere o contrato final pronto para impressão ou assinatura com um clique.</p>
-          </article>
-
-          <article class="lp-feature">
-            <div class="lp-feature-icon green">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l3.586-3.586z"/></svg>
-            </div>
-            <h3>Link seguro para o inquilino</h3>
-            <p>Envie um link criptografado e o inquilino preenche os próprios dados. Tudo volta para o seu painel.</p>
-          </article>
-
-          <article class="lp-feature">
-            <div class="lp-feature-icon amber">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            </div>
-            <h3>Painel centralizado</h3>
-            <p>Veja todos os contratos, status e atividade recente em um único lugar.</p>
-          </article>
-
-          <article class="lp-feature">
-            <div class="lp-feature-icon slate">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            </div>
-            <h3>Na nuvem, com segurança</h3>
-            <p>Seus contratos sincronizados e protegidos por login, acessíveis de qualquer dispositivo.</p>
-          </article>
-        </div>
+  <!-- ═══════════ COMO FUNCIONA ═══════════ -->
+  <section class="lp-section-warm" id="como-funciona">
+    <div class="lp-container">
+      <div class="lp-head lp-head-center">
+        <div class="lp-eyebrow">COMO FUNCIONA</div>
+        <h2 class="lp-h2">Do modelo ao contrato assinado em <em>3 passos</em></h2>
       </div>
-    </section>
 
-    <!-- ═══════════ Como funciona ═══════════ -->
-    <section class="lp-section lp-section-alt" id="como-funciona">
-      <div class="lp-container">
-        <div class="lp-section-head">
-          <span class="lp-eyebrow">Como funciona</span>
-          <h2 class="lp-section-title">Do modelo ao contrato assinado em 3 passos</h2>
-        </div>
-
-        <div class="lp-steps">
-          <div class="lp-step">
+      <div class="lp-how">
+        <div class="lp-steps" role="tablist" aria-label="Passos">
+          <button type="button" class="lp-step active" role="tab" aria-selected="true" aria-controls="lp-preview" data-step="0">
             <span class="lp-step-num">1</span>
-            <h3>Escolha um modelo</h3>
-            <p>Selecione entre os modelos de locação residencial ou comercial.</p>
-          </div>
-          <div class="lp-step">
+            <span>
+              <span class="lp-step-title">Escolha um modelo</span>
+              <span class="lp-step-desc">Selecione entre os modelos de locação residencial ou comercial, prontos e
+                pré-formatados.</span>
+            </span>
+          </button>
+          <button type="button" class="lp-step" role="tab" aria-selected="false" aria-controls="lp-preview" data-step="1">
             <span class="lp-step-num">2</span>
-            <h3>Preencha os dados</h3>
-            <p>Use o editor ou envie o link para o inquilino completar as informações.</p>
-          </div>
-          <div class="lp-step">
+            <span>
+              <span class="lp-step-title">Preencha os dados</span>
+              <span class="lp-step-desc">Use o editor inteligente ou envie um link seguro para o inquilino completar as
+                informações.</span>
+            </span>
+          </button>
+          <button type="button" class="lp-step" role="tab" aria-selected="false" aria-controls="lp-preview" data-step="2">
             <span class="lp-step-num">3</span>
-            <h3>Gere e assine</h3>
-            <p>Exporte o PDF final pronto para impressão ou assinatura.</p>
-          </div>
+            <span>
+              <span class="lp-step-title">Gere e assine</span>
+              <span class="lp-step-desc">Exporte o PDF final pronto para impressão ou assinatura com um clique.</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="lp-preview-wrap">
+          <div class="lp-preview" id="lp-preview" role="tabpanel" aria-live="polite"></div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ═══════════ Planos / CTA ═══════════ -->
-    <section class="lp-section" id="planos">
-      <div class="lp-container">
-        <div class="lp-cta-band">
-          <h2>Pronto para organizar seus contratos?</h2>
-          <p>Crie sua conta gratuita e comece a gerenciar seus contratos em minutos.</p>
-          <a href="app.html" class="lp-btn lp-btn-light lp-btn-lg">Começar grátis</a>
-        </div>
+  <!-- ═══════════ CTA ═══════════ -->
+  <section class="lp-cta" id="planos">
+    <div class="lp-cta-inner">
+      <h2>Pronto para organizar seus <em>contratos?</em></h2>
+      <p>Crie sua conta gratuita e comece a gerenciar seus contratos em minutos.</p>
+      <div class="lp-hero-cta">
+        <a href="app.html" class="lp-btn lp-btn-primary">Começar grátis</a>
+        <a href="app.html" class="lp-btn lp-btn-ghost">Acessar o app →</a>
       </div>
-    </section>
+    </div>
+  </section>
 
-  </main>
-
-  <!-- ═══════════ Rodapé ═══════════ -->
+  <!-- ═══════════ FOOTER ═══════════ -->
   <footer class="lp-footer">
     <div class="lp-container lp-footer-inner">
       <a href="#top" class="lp-brand">
         <span class="lp-brand-mark">
           <svg viewBox="0 0 100 100" aria-hidden="true">
-            <rect x="45" y="20" width="40" height="60" fill="#515151" />
-            <rect x="40" y="32" width="35" height="8" rx="4" fill="#ffffff" />
-            <rect x="55" y="47" width="20" height="8" rx="4" fill="#ffffff" />
-            <rect x="55" y="62" width="20" height="8" rx="4" fill="#ffffff" />
-            <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#003D7A" stroke="#ffffff"
-              stroke-width="4" stroke-linejoin="round" />
+            <rect x="45" y="20" width="40" height="60" fill="#E9E7E2" />
+            <rect x="40" y="32" width="35" height="8" rx="4" fill="#143A66" />
+            <rect x="55" y="47" width="20" height="8" rx="4" fill="#143A66" />
+            <rect x="55" y="62" width="20" height="8" rx="4" fill="#143A66" />
+            <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#143A66"
+              stroke="#F0F6FF" stroke-width="4" stroke-linejoin="round" />
           </svg>
         </span>
-        <span class="lp-brand-name">Meus Imóveis</span>
+        Meus Imóveis
       </a>
-      <p class="lp-footer-copy">© 2026 Meus Imóveis · Projeto privado em construção.</p>
-      <a href="app.html" class="lp-link-muted">Acessar o app →</a>
+      <div class="lp-footer-copy">© 2026 Meus Imóveis · Projeto privado em construção.</div>
+      <a href="app.html" class="lp-footer-link">Acessar o app →</a>
     </div>
   </footer>
 
   <script>
-    // Header ganha sombra ao rolar
-    var lpHeader = document.getElementById('lp-header');
-    window.addEventListener('scroll', function () {
-      lpHeader.classList.toggle('scrolled', window.scrollY > 8);
-    }, { passive: true });
+    // "Como funciona": clicar num passo troca o preview.
+    var LP_PREVIEWS = [
+      {
+        kicker: 'PASSO 1 · MODELOS',
+        title: 'Modelos prontos para usar',
+        lines: [
+          { icon: '🏠', text: 'Locação Residencial', tag: 'POPULAR', tagClass: 'lp-tag-info' },
+          { icon: '🏢', text: 'Locação Comercial', tag: '', tagClass: 'lp-tag-info' },
+          { icon: '📄', text: 'Minuta Simplificada', tag: '', tagClass: 'lp-tag-info' }
+        ]
+      },
+      {
+        kicker: 'PASSO 2 · EDITOR',
+        title: 'Campos com máscara automática',
+        lines: [
+          { icon: '👤', text: 'CPF · 123.456.789-00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
+          { icon: '💰', text: 'Aluguel · R$ 2.450,00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
+          { icon: '🔗', text: 'Link enviado ao inquilino', tag: 'PENDENTE', tagClass: 'lp-tag-info' }
+        ]
+      },
+      {
+        kicker: 'PASSO 3 · EXPORTAÇÃO',
+        title: 'PDF pronto para assinar',
+        lines: [
+          { icon: '📑', text: 'Contrato_Apto302_Aurora.pdf', tag: 'GERADO', tagClass: 'lp-tag-ok' },
+          { icon: '✍️', text: 'Assinatura do locador', tag: 'ASSINADO', tagClass: 'lp-tag-ok' },
+          { icon: '⏳', text: 'Assinatura do inquilino', tag: 'AGUARDANDO', tagClass: 'lp-tag-info' }
+        ]
+      }
+    ];
+
+    var lpPreview = document.getElementById('lp-preview');
+    var lpSteps = document.querySelectorAll('.lp-step');
+
+    function lpRenderPreview(i) {
+      var p = LP_PREVIEWS[i];
+      var lines = p.lines.map(function (ln) {
+        return '<div class="lp-preview-line">' +
+          '<span>' + ln.icon + '</span>' +
+          '<span class="lp-preview-text">' + ln.text + '</span>' +
+          '<span class="lp-preview-tag ' + ln.tagClass + '">' + ln.tag + '</span>' +
+          '</div>';
+      }).join('');
+
+      // reinicia a animacao de fade a cada troca
+      lpPreview.style.animation = 'none';
+      lpPreview.offsetHeight;
+      lpPreview.style.animation = '';
+
+      lpPreview.innerHTML =
+        '<div class="lp-preview-kicker">' + p.kicker + '</div>' +
+        '<div class="lp-preview-title">' + p.title + '</div>' +
+        '<div class="lp-preview-lines">' + lines + '</div>';
+    }
+
+    lpSteps.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = Number(btn.dataset.step);
+        lpSteps.forEach(function (b) {
+          b.classList.toggle('active', b === btn);
+          b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+        });
+        lpRenderPreview(i);
+      });
+    });
+
+    lpRenderPreview(0);
+
+    // fecha o menu mobile ao navegar
+    document.querySelectorAll('.lp-nav-links a').forEach(function (a) {
+      a.addEventListener('click', function () { document.body.classList.remove('lp-menu-open'); });
+    });
   </script>
 </body>
 
