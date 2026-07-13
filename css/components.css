@@ -64,20 +64,6 @@
   color: var(--text-main);
 }
 
-.btn-icon {
-  padding: 0.5rem;
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  transition: all var(--transition);
-}
-
-.btn-icon:hover {
-  background: rgba(0,0,0,0.05);
-  color: var(--primary);
-}
-
 /* Cards */
 .card {
   background: var(--card-bg);
@@ -151,7 +137,6 @@ select.form-input, select.form-select {
 
 .badge-purple { background-color: var(--primary-light); color: var(--primary); }
 .badge-teal { background-color: var(--success-bg); color: var(--success); }
-.badge-default { background-color: #EDF0F5; color: var(--text-muted); }
 
 /* Sidebar Nav (tema escuro) */
 .sidebar-header {

@@ -28,8 +28,6 @@
 .stat-icon.blue { background: var(--primary-light); color: var(--primary); }
 .stat-icon.amber { background: var(--warning-bg); color: var(--warning); }
 .stat-icon.green { background: var(--success-bg); color: var(--success); }
-/* alias legado */
-.stat-icon.purple { background: var(--primary-light); color: var(--primary); }
 
 .stat-value {
   font-size: 34px;

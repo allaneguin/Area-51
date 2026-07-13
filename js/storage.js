@@ -277,15 +277,9 @@ const Storage = {
       const d = new Date(c.createdAt);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-    const types = {};
-    contracts.forEach(c => { types[c.templateId] = (types[c.templateId] || 0) + 1; });
-    const topType = Object.entries(types).sort((a,b) => b[1] - a[1])[0];
     return {
       total: contracts.length,
       thisMonth: thisMonth.length,
-      topType: topType ? topType[0] : null,
-      topTypeCount: topType ? topType[1] : 0,
-      types,
     };
   },
 

@@ -41,8 +41,6 @@ const App = {
       window.addEventListener('hashchange', () => this.handleRoute());
       this.handleRoute();
     }
-    
-    this.setupSidebar();
   },
   
   updateAuthSidebarUI() {
@@ -196,10 +194,6 @@ const App = {
         el.classList.add('active');
       }
     });
-  },
-  
-  setupSidebar() {
-    // Mobile menu logic can go here later if needed
   }
 };
 

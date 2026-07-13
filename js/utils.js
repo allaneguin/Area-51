@@ -18,26 +18,11 @@ const Utils = {
     const digits = v.replace(/\D/g,'');
     return digits.length <= 11 ? Utils.maskCPF(v) : Utils.maskCNPJ(v);
   },
-  maskPhone(v) {
-    const d = v.replace(/\D/g,'');
-    if (d.length <= 10) return d.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2');
-    return d.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
-  },
-  maskCEP(v) {
-    return v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').slice(0,9);
-  },
   maskCurrency(v) {
     let d = v.replace(/\D/g,'');
     if (!d) return '';
     d = (parseInt(d) / 100).toFixed(2);
     return 'R$ ' + d.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  },
-  maskDate(v) {
-    return v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').slice(0,10);
-  },
-  maskPercentage(v) {
-    let d = v.replace(/[^\d,]/g,'');
-    return d ? d + '%' : '';
   },
 
   // ── Formatação ──
@@ -45,11 +30,6 @@ const Utils = {
     if (!date) return '';
     const d = new Date(date);
     return d.toLocaleDateString('pt-BR');
-  },
-  formatDateTime(date) {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
   },
   formatRelativeDate(date) {
     const now = new Date();
@@ -71,11 +51,6 @@ const Utils = {
     const year = parts[2];
     return `${day} de ${months[month] || '___'} de ${year}`;
   },
-  currencyExtended(val) {
-    if (!val) return '(____________________)';
-    return val;
-  },
-
   // ── Validação ──
   isValidCPF(cpf) {
     cpf = cpf.replace(/\D/g,'');
@@ -97,8 +72,7 @@ const Utils = {
     input.addEventListener('input', () => {
       let fnName = 'mask' + maskType.charAt(0).toUpperCase() + maskType.slice(1);
       if (maskType.toLowerCase() === 'cpfcnpj') fnName = 'maskCPFCNPJ';
-      if (maskType.toLowerCase() === 'cep') fnName = 'maskCEP';
-      
+
       const fn = Utils[fnName];
       if (fn) {
         const oldVal = input.value;
@@ -110,38 +84,9 @@ const Utils = {
     });
   },
 
-  // ── DOM Helpers ──
-  $(sel, ctx = document) { return ctx.querySelector(sel); },
-  $$(sel, ctx = document) { return [...ctx.querySelectorAll(sel)]; },
-  
-  createElement(tag, attrs = {}, children = []) {
-    const el = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k === 'className') el.className = v;
-      else if (k === 'innerHTML') el.innerHTML = v;
-      else if (k === 'textContent') el.textContent = v;
-      else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
-      else el.setAttribute(k, v);
-    }
-    children.forEach(c => {
-      if (typeof c === 'string') el.appendChild(document.createTextNode(c));
-      else if (c) el.appendChild(c);
-    });
-    return el;
-  },
-
   // ── IDs ──
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  },
-
-  // ── Debounce ──
-  debounce(fn, delay = 300) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
-    };
   },
 
   // ── Obter Status do Contrato ──

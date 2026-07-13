@@ -4,18 +4,6 @@
 
 const ContractsView = {
   render(container) {
-    // Se Utils.formatDate não existir em utils.js, adicionamos uma fallback temporária
-    if (!Utils.formatDate) {
-       Utils.formatDate = (val) => {
-          if (!val) return '---';
-          if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
-             const parts = val.split('-');
-             return `${parts[2]}/${parts[1]}/${parts[0]}`;
-          }
-          return val;
-       };
-    }
-    
     const allContracts = Storage.getAll();
     
     // Filtra contratos residenciais e comerciais

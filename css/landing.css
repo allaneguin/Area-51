@@ -73,7 +73,6 @@
 .lp-d1 { animation-delay: 0.08s; }
 .lp-d2 { animation-delay: 0.16s; }
 .lp-d3 { animation-delay: 0.24s; }
-.lp-d4 { animation-delay: 0.35s; }
 
 /* ───────── Botões ───────── */
 .lp-btn {
@@ -408,7 +407,6 @@
 }
 .lp-green { color: #7FBF9B; }
 .lp-blue { color: var(--accent-soft); }
-.lp-gray { color: var(--muted); }
 
 .lp-mock-list {
   margin-top: 18px;
