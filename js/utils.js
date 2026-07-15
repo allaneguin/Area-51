@@ -84,6 +84,22 @@ const Utils = {
     });
   },
 
+  // ── Toast (feedback não-bloqueante, substitui alert) ──
+  toast(msg, type = 'success') {
+    let box = document.getElementById('toast-box');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toast-box';
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(() => el.classList.add('toast-out'), 4500);
+    setTimeout(() => el.remove(), 4900);
+  },
+
   // ── IDs ──
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

@@ -53,6 +53,19 @@
   stroke-width: 2.5px;
 }
 
+/* Na impressao ela nao pode aparecer: e position:fixed, entao o navegador
+   a repete em TODAS as paginas do PDF. */
+@media print {
+  .bottom-nav,
+  .mobile-overlay {
+    display: none !important;
+  }
+  /* sem a barra, o espaco reservado para ela tambem sai */
+  #main-content {
+    padding-bottom: 0 !important;
+  }
+}
+
 @media(max-width: 768px) {
   /* Mostrar apenas no mobile */
   .bottom-nav {

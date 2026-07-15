@@ -3,8 +3,8 @@
 // ═══════════════════════════════════════════════════════
 
 // Desliga o login/nuvem e faz o app rodar 100% no localStorage.
-// Voltar para true quando a URL do projeto Supabase estiver valida.
-const SUPABASE_ENABLED = false;
+// Util quando o projeto Supabase esta pausado ou fora do ar.
+const SUPABASE_ENABLED = true;
 
 const supabaseUrl = 'https://hbmqmzsssccrsyqdyixd.supabase.co';
 const supabaseKey = 'sb_publishable_zKudHzqDlkkSHp4Q5n7KrQ_wBW7mHFb';

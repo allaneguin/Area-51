@@ -67,8 +67,10 @@ const AuthUI = {
           display: inline-block;
         }
         .auth-title {
-          font-family: 'Playfair Display', serif;
+          font-family: var(--font-sans);
           font-size: 1.8rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
           margin-bottom: 0.5rem;
           color: var(--text-main);
         }

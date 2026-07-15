@@ -50,18 +50,18 @@ const Editor = {
     const status = Utils.getContractStatus(this.contract);
 
     container.innerHTML = `
-      <div class="editor-toolbar animate-fade-in-down" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 250px;">
-          <input type="text" id="contract-name" class="form-input editor-toolbar-title" style="width: auto; max-width: 400px; background: transparent; border-color: transparent;" value="${this.contract.name}" ${isReadOnly ? 'disabled' : ''}>
+      <div class="editor-toolbar animate-fade-in-down">
+        <div class="editor-toolbar-main">
+          <input type="text" id="contract-name" class="form-input editor-toolbar-title" value="${this.contract.name}" ${isReadOnly ? 'disabled' : ''}>
           <span id="editor-contract-status" class="badge-status ${status.class}">${status.label}</span>
         </div>
-        <div class="editor-toolbar-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+        <div class="editor-toolbar-actions">
           ${!isReadOnly ? `
           <button class="btn btn-secondary" onclick="Editor.save(true)">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
             Salvar
           </button>
-          <button class="btn btn-primary" onclick="Editor.generateTenantLink()" style="background: var(--primary);">
+          <button class="btn btn-primary" onclick="Editor.generateTenantLink()">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
             Gerar Link p/ Inquilino
           </button>
@@ -82,9 +82,17 @@ const Editor = {
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
-          <div class="preview-document" id="preview-content">
-            ${this.template.template}
-          </div>
+          <!-- thead/tfoot vazios: o navegador os repete em cada página
+               impressa, e eles viram a margem de cima e de baixo da folha -->
+          <table class="print-wrap">
+            <thead><tr><td><div class="print-spacer-inner"></div></td></tr></thead>
+            <tbody><tr><td>
+              <div class="preview-document" id="preview-content">
+                ${this.template.template}
+              </div>
+            </td></tr></tbody>
+            <tfoot><tr><td><div class="print-spacer-inner"></div></td></tr></tfoot>
+          </table>
         </div>
       </div>
 
@@ -198,7 +206,7 @@ const Editor = {
     if (this.contract.isFinalized) {
       html = `
         <div style="padding: 1.5rem; text-align: center; background: rgba(37, 211, 102, 0.1); color: #25D366; border: 1px solid #25D366; border-radius: 8px; margin-bottom: 2rem;">
-          <h3 style="margin-bottom: 0.5rem; font-family: 'Playfair Display', serif;">Contrato Finalizado</h3>
+          <h3 style="margin-bottom: 0.5rem; font-weight: 800; letter-spacing: -0.02em;">Contrato Finalizado</h3>
           <p style="margin: 0; font-size: 0.95rem;">Os dados foram preenchidos pelo inquilino e estão bloqueados para edição.<br>Você já pode exportar o PDF definitivo.</p>
         </div>
       ` + html;
@@ -299,7 +307,7 @@ const Editor = {
       this.contract = Storage.create(this.contract);
       window.location.hash = `#editor?id=${this.contract.id}`;
     }
-    if(showAlert) alert('Contrato salvo com sucesso!');
+    if(showAlert) Utils.toast('Contrato salvo com sucesso!');
   },
 
   generateTenantLink() {
@@ -325,9 +333,10 @@ const Editor = {
       const url = `${baseUrl}#tenant?id=${serverId}&key=${key}`;
       
       navigator.clipboard.writeText(url).then(() => {
-        alert('Link SEGURO e CRIPTOGRAFADO copiado!\n\nEnvie este link no WhatsApp do Inquilino para ele preencher de forma segura.');
-      }).catch(err => {
-        alert('Link gerado! Copie a URL abaixo:\n\n' + url);
+        Utils.toast('Link seguro copiado! Envie no WhatsApp do inquilino para ele preencher.');
+      }).catch(() => {
+        // ponytail: prompt nativo como fallback — deixa o usuário copiar a URL na mão
+        prompt('Não foi possível copiar automaticamente. Copie o link abaixo:', url);
       });
       
       if (btn) {
@@ -343,7 +352,7 @@ const Editor = {
           finalize(this.contract.cloudId, this.contract.cloudKey);
         })
         .catch(err => {
-          alert('Erro ao atualizar contrato no servidor: ' + err.message);
+          Utils.toast('Erro ao atualizar contrato no servidor: ' + err.message, 'error');
           if (btn) {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
@@ -364,7 +373,7 @@ const Editor = {
           finalize(serverId, key);
         })
         .catch(err => {
-          alert('Erro ao salvar contrato seguro no servidor: ' + err.message);
+          Utils.toast('Erro ao salvar contrato seguro no servidor: ' + err.message, 'error');
           if (btn) {
             btn.innerHTML = originalHTML;
             btn.disabled = false;

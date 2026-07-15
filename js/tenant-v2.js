@@ -5,34 +5,45 @@
 const Tenant = {
   contract: null,
   template: null,
-  
+
+  // Tela de erro/aviso, no visual da página
+  renderErro(container, titulo, detalhe = '') {
+    container.innerHTML = `
+      <div class="tenant-state">
+        <div class="tenant-state-icon error">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.46 0l-6.93 12A2 2 0 005.07 19z"></path></svg>
+        </div>
+        <h1>${titulo}</h1>
+        ${detalhe ? `<p>${detalhe}</p>` : ''}
+      </div>
+    `;
+  },
+
   render(container, param) {
     if (!param) {
-      container.innerHTML = '<h3 style="text-align:center; padding:3rem;">Link inválido ou expirado.</h3>';
+      this.renderErro(container, 'Link inválido', 'Peça um novo link ao locador.');
       return;
     }
-    
+
     if (param.startsWith('id=')) {
       // Novo link seguro na nuvem
       const urlParams = new URLSearchParams(param);
       const serverId = urlParams.get('id');
       const key = urlParams.get('key');
-      
+
       if (!serverId || !key) {
-        container.innerHTML = '<h3 style="text-align:center; padding:3rem;">Link incompleto ou inválido.</h3>';
+        this.renderErro(container, 'Link incompleto', 'Copie o link inteiro que o locador enviou.');
         return;
       }
-      
+
       container.innerHTML = `
-        <div style="text-align: center; padding: 5rem 0;">
-          <div class="spinner" style="border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
-          <h3>Buscando contrato com segurança no servidor...</h3>
+        <div class="tenant-state">
+          <div class="tenant-spinner"></div>
+          <h1>Abrindo o contrato</h1>
+          <p>Buscando seus dados com segurança no servidor...</p>
         </div>
-        <style>
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        </style>
       `;
-      
+
       CloudDB.loadContract(serverId, key).then(payload => {
         this.contract = {
           templateId: payload.t,
@@ -44,14 +55,14 @@ const Tenant = {
         
         this.template = Contracts[payload.t] || (Storage._getData().customTemplates || []).find(t => t.id === payload.t);
         if (!this.template) {
-          container.innerHTML = '<h3 style="text-align:center; padding:3rem;">Link inválido. Modelo de contrato não encontrado.</h3>';
+          this.renderErro(container, 'Modelo não encontrado', 'Este contrato usa um modelo que não existe mais.');
           return;
         }
-        
+
         this.renderTenantUI(container);
       }).catch(err => {
         console.error(err);
-        container.innerHTML = `<h3 style="color:red; text-align:center; padding: 3rem;">Erro ao carregar o contrato com segurança: ${err.message}</h3>`;
+        this.renderErro(container, 'Não foi possível abrir', err.message);
       });
       return;
     }
@@ -74,12 +85,12 @@ const Tenant = {
         
         this.template = Contracts[payload.t] || (Storage._getData().customTemplates || []).find(t => t.id === payload.t);
         if (!this.template) {
-          container.innerHTML = '<h3 style="text-align:center; padding:3rem;">Link inválido ou expirado. Modelo não encontrado.</h3>';
+          this.renderErro(container, 'Modelo não encontrado', 'Este contrato usa um modelo que não existe mais.');
           return;
         }
-        
+
       } catch (e) {
-        container.innerHTML = '<h3 style="color:red; text-align:center; padding: 3rem;">Erro ao ler o link do contrato.</h3>';
+        this.renderErro(container, 'Não foi possível ler o link', 'O link pode estar quebrado ou incompleto.');
         return;
       }
       
@@ -89,50 +100,77 @@ const Tenant = {
 
   renderTenantUI(container) {
     container.innerHTML = `
-      <div class="tenant-container animate-fade-in-up">
-        <div class="tenant-header">
-          <h2>Contrato de Locação</h2>
-          <p>Preencha seus dados pessoais abaixo para finalizar o contrato.</p>
-        </div>
-        
-        <div class="tenant-card glass">
-          <div class="tenant-summary">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px; height:24px; margin-bottom:10px; color:var(--primary);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-            <br>
-            <strong>Imóvel:</strong> ${this.contract.fields.end_imovel || 'Imóvel Residencial'}<br>
-            <strong style="color:var(--primary); font-size:1.1rem;">${this.contract.fields.valor_aluguel || 'A Combinar'} / mês</strong>
-          </div>
-          
-          <div class="tenant-layout animate-fade-in-up">
-            
-            <div class="tenant-preview-panel glass">
-              <div class="preview-header" style="background: var(--bg); padding: 1rem; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
-                <span>📄 Leia o Contrato Abaixo</span>
-              </div>
-              <div style="max-height: 50vh; overflow-y: auto; border-radius: 0 0 8px 8px; border: 1px solid var(--border-light);">
-                <div id="preview-content" class="preview-document" style="padding: 2rem; background: white; color: black; font-family: Arial, Helvetica, sans-serif;">
-                  ${this.template.template}
-                </div>
-              </div>
-            </div>
-
-            <div class="tenant-form-panel glass" id="tenant-form-container" style="margin-top: 2rem;"></div>
-
-          </div>
-          <div style="margin-top: 1.5rem; display: flex; align-items: flex-start; gap: 0.5rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
-            <input type="checkbox" id="aceito_contrato" style="margin-top: 0.25rem; width: 18px; height: 18px;" onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
-            <label for="aceito_contrato" style="font-size: 0.95rem; color: var(--text-main); cursor: pointer;">
-              Declaro que li e concordo com todos os termos descritos no contrato acima.
-            </label>
-          </div>
-          
-          <div style="position: relative;" onclick="if(document.getElementById('btn_salvar_inquilino').disabled) alert('⚠️ Por favor, marque a caixa acima confirmando que leu o contrato para poder salvar.')">
-            <button id="btn_salvar_inquilino" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 1.2rem; font-size: 1.1rem; justify-content: center;" onclick="Tenant.finish()" disabled>
-              Salvar e Enviar para o Locador
-            </button>
-          </div>
+      <div class="tenant-topbar">
+        <div class="tenant-brand">
+          <span class="tenant-brand-mark">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect x="45" y="20" width="40" height="60" fill="#E9E7E2" />
+              <rect x="40" y="32" width="35" height="8" rx="4" fill="#143A66" />
+              <rect x="55" y="47" width="20" height="8" rx="4" fill="#143A66" />
+              <rect x="55" y="62" width="20" height="8" rx="4" fill="#143A66" />
+              <path d="M35 25 L10 45 L10 80 L28 80 L28 59 L42 59 L42 80 L60 80 L60 45 Z" fill="#143A66" stroke="#F0F6FF" stroke-width="4" stroke-linejoin="round" />
+            </svg>
+          </span>
+          Meus Imóveis
         </div>
       </div>
+
+      <div class="tenant-header animate-fade-in-up">
+        <h1>Contrato de <em>Locação</em></h1>
+        <p>Preencha seus dados pessoais abaixo para finalizar o contrato.</p>
+      </div>
+
+      <div class="tenant-property animate-fade-in-up">
+        <span class="tenant-property-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </span>
+        <div class="tenant-property-info">
+          <div class="tenant-label">IMÓVEL</div>
+          <div class="tenant-property-value">${this.contract.fields.end_imovel || 'Imóvel Residencial'}</div>
+        </div>
+        <div class="tenant-property-rent">
+          <div class="tenant-label">ALUGUEL</div>
+          <div class="tenant-rent-value">${this.contract.fields.valor_aluguel || 'A combinar'}<span> /mês</span></div>
+        </div>
+      </div>
+
+      <div class="tenant-doc-label">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        LEIA O CONTRATO ABAIXO
+      </div>
+      <div class="tenant-doc">
+        <!-- thead/tfoot vazios: o navegador os repete em cada página
+             impressa, e eles viram a margem de cima e de baixo da folha -->
+        <table class="print-wrap">
+          <thead><tr><td><div class="print-spacer-inner"></div></td></tr></thead>
+          <tbody><tr><td>
+            <div id="preview-content" class="preview-document">
+              ${this.template.template}
+            </div>
+          </td></tr></tbody>
+          <tfoot><tr><td><div class="print-spacer-inner"></div></td></tr></tfoot>
+        </table>
+        <p class="tenant-doc-note">— Os campos destacados serão preenchidos com os seus dados —</p>
+      </div>
+
+      <div class="tenant-form-card">
+        <div class="tenant-form-title">Seus Dados Pessoais</div>
+        <div class="tenant-form-hint">Eles entram automaticamente nos campos destacados do contrato.</div>
+
+        <div class="tenant-form-grid" id="tenant-form-container"></div>
+
+        <input type="checkbox" id="aceito_contrato" class="tenant-check-input"
+          onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
+        <label for="aceito_contrato" class="tenant-accept">
+          Declaro que li e concordo com todos os termos descritos no contrato acima.
+        </label>
+
+        <button id="btn_salvar_inquilino" class="btn btn-primary tenant-submit" onclick="Tenant.finish()" disabled>
+          Salvar e Enviar para o Locador
+        </button>
+      </div>
+
+      <p class="tenant-footnote">Seus dados são enviados apenas ao locador responsável por este contrato.</p>
     `;
 
     this.renderForm();
@@ -141,12 +179,12 @@ const Tenant = {
   renderForm() {
     const container = document.getElementById('tenant-form-container');
     const tenantFields = this.template.fields.filter(f => f.section.toLowerCase() === 'locatário');
-    
-    let html = '<h3 style="margin-bottom: 1.5rem; color: var(--text-light); text-align:center; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">Seus Dados Pessoais</h3>';
-    
+
+    let html = '';
+
     tenantFields.forEach(f => {
       if (f.hidden) return;
-      
+
       let inputHtml = '';
       const val = this.contract.fields[f.name] || '';
       if (f.type === 'textarea') {
@@ -161,12 +199,15 @@ const Tenant = {
         inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${val}" ${f.mask ? `data-mask="${f.mask}"` : ''}>`;
       }
 
-      html += `<div class="form-group">
+      // Nome, endereço e textos longos ocupam a linha inteira do grid
+      const full = f.type === 'textarea' || /nome|end_|endereco/i.test(f.name) ? ' full' : '';
+
+      html += `<div class="form-group${full}">
         <label class="form-label">${f.label}</label>
         ${inputHtml}
       </div>`;
     });
-    
+
     container.innerHTML = html;
 
     container.querySelectorAll('input, textarea, select').forEach(el => {
@@ -213,6 +254,7 @@ const Tenant = {
       }
       
       el.textContent = val ? val : '___';
+      el.classList.toggle('filled', !!val); // preenchido = azul; vazio = ambar
     });
   },
 
@@ -235,7 +277,7 @@ const Tenant = {
     });
 
     if (!isValid) {
-      alert(errorMsg);
+      Utils.toast(errorMsg, 'error');
       return;
     }
 
@@ -248,30 +290,31 @@ const Tenant = {
     }
 
     const saveFinishedUI = (waUrl) => {
-      const formContainer = document.getElementById('tenant-form-container');
-      if (formContainer) {
-        formContainer.innerHTML = `
-          <div style="text-align: center; padding: 2rem 0;">
-            <svg fill="none" stroke="var(--success)" viewBox="0 0 24 24" style="width:64px; height:64px; margin-bottom: 1rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <h2 style="color: var(--success); margin-bottom: 0.5rem;">Dados Preenchidos!</h2>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Agora, você precisa enviar estes dados de volta para o Locador.</p>
-            
-            <a href="${waUrl}" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center; background: #25D366; border: none; padding: 1.2rem; font-size: 1.1rem; margin-bottom: 1rem;">
-              <svg fill="currentColor" viewBox="0 0 24 24" style="width: 24px; margin-right: 8px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Enviar para Locador
-          </a>
-          
-          <button class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 1.2rem; font-size: 1.1rem;" onclick="Tenant.downloadPDF()">
-            Baixar PDF (Opcional)
-          </button>
+      const primeiroNome = (this.contract.fields.nome_locatario || '').trim().split(' ')[0];
+
+      // Esconde o formulário e o contrato da tela — mas o contrato segue no DOM,
+      // porque o "Baixar PDF" imprime o #preview-content (ver @media print).
+      document.querySelectorAll('.tenant-header, .tenant-property, .tenant-doc-label, .tenant-doc, .tenant-footnote')
+        .forEach(el => el.classList.add('tenant-hidden'));
+
+      const card = document.querySelector('.tenant-form-card');
+      if (!card) return;
+
+      card.className = 'tenant-state';
+      card.innerHTML = `
+        <div class="tenant-state-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
-        `;
-      }
-      
-      const submitBtn = document.getElementById('btn_salvar_inquilino');
-      if (submitBtn) submitBtn.style.display = 'none';
-      const aceitoContainer = document.getElementById('aceito_contrato')?.parentElement;
-      if (aceitoContainer) aceitoContainer.style.display = 'none';
+        <h1>Dados enviados!</h1>
+        <p>${primeiroNome ? primeiroNome + ', recebemos' : 'Recebemos'} suas informações. Agora envie-as ao locador — ele vai revisar e gerar o contrato final para assinatura.</p>
+
+        <a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-whatsapp">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Enviar para o Locador
+        </a>
+
+        <button class="btn btn-secondary" onclick="Tenant.downloadPDF()">Baixar PDF (opcional)</button>
+      `;
     };
 
     if (this.contract.cloudId && this.contract.cloudKey) {
@@ -297,7 +340,7 @@ const Tenant = {
         
         saveFinishedUI(waUrl);
       }).catch(err => {
-        alert("Erro ao salvar dados no servidor seguro: " + err.message);
+        Utils.toast("Erro ao salvar dados no servidor seguro: " + err.message, 'error');
         if (saveBtn) {
           saveBtn.innerHTML = originalHTML;
           saveBtn.disabled = false;
@@ -337,21 +380,6 @@ const Tenant = {
 
   downloadPDF() {
     this.updatePreview();
-    
-    // Pegar o nome do inquilino para sugerir como nome de arquivo
-    const nomeInquilino = this.contract.fields.nome_locatario || 'Inquilino';
-    const nomeContrato = 'Contrato - ' + nomeInquilino;
-    
-    // Salvar o título original da página
-    const originalTitle = document.title;
-    
-    // Mudar o título temporariamente (o Chrome usa isso como nome do arquivo .pdf)
-    document.title = nomeContrato;
-    
-    // Chamar a tela de impressão do navegador
-    window.print();
-    
-    // Restaurar o título original
-    document.title = originalTitle;
+    generatePDF('Contrato - ' + (this.contract.fields.nome_locatario || 'Inquilino'));
   }
 };

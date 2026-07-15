@@ -124,10 +124,10 @@ const App = {
             localId = newContract.id;
           }
           
-          alert('Contrato importado com sucesso e salvo no seu painel!');
+          Utils.toast('Contrato importado com sucesso e salvo no seu painel!');
           window.location.hash = `#editor?id=${localId}`;
         }).catch(err => {
-          alert('Erro ao importar contrato seguro da nuvem: ' + err.message);
+          Utils.toast('Erro ao importar contrato seguro da nuvem: ' + err.message, 'error');
           window.location.hash = '#dashboard';
         });
         return; // Interrompe a execução normal de roteamento
@@ -148,10 +148,10 @@ const App = {
           isFinalized: true
         };
         Storage.create(contract);
-        alert('Contrato importado com sucesso e salvo no seu painel!');
+        Utils.toast('Contrato importado com sucesso e salvo no seu painel!');
         window.location.hash = '#dashboard';
       } catch(e) {
-        alert('Erro ao importar contrato. O link pode estar quebrado.');
+        Utils.toast('Erro ao importar contrato. O link pode estar quebrado.', 'error');
         window.location.hash = '#dashboard';
       }
       return; // Interrompe a execução normal de roteamento

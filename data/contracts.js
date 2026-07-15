@@ -169,32 +169,34 @@ const Contracts = {
 
       <p style="text-align: justify; margin-bottom: 2rem;">E por estarem, assim, justas e contratadas, as partes assinam o presente instrumento particular em duas vias de igual teor, na presença de duas testemunhas, e que de tudo dão fé.</p>
 
-      <p style="text-align: right; margin-bottom: 4rem;">
-        <span class="highlight" data-field="foro_cidade">___</span>, <span class="highlight" data-field="data_assinatura">___</span>.
-      </p>
+      <div class="signature-area">
+        <p style="text-align: right; margin-bottom: 4rem;">
+          <span class="highlight" data-field="foro_cidade">___</span>, <span class="highlight" data-field="data_assinatura">___</span>.
+        </p>
 
-      <div class="signatures" style="margin-bottom: 3rem;">
-        <div class="signature-block">
-          <div class="signature-line">
-            Locador: <span class="highlight" data-field="nome_locador">___</span>
+        <div class="signatures" style="margin-bottom: 3rem;">
+          <div class="signature-block">
+            <div class="signature-line">
+              Locador: <span class="highlight" data-field="nome_locador">___</span>
+            </div>
+          </div>
+          <div class="signature-block">
+            <div class="signature-line">
+              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
+            </div>
           </div>
         </div>
-        <div class="signature-block">
-          <div class="signature-line">
-            Locatário: <span class="highlight" data-field="nome_locatario">___</span>
+
+        <div class="signatures">
+          <div class="signature-block">
+            <div class="signature-line">
+              1ª Testemunha
+            </div>
           </div>
-        </div>
-      </div>
-      
-      <div class="signatures">
-        <div class="signature-block">
-          <div class="signature-line">
-            1ª Testemunha
-          </div>
-        </div>
-        <div class="signature-block">
-          <div class="signature-line">
-            2ª Testemunha
+          <div class="signature-block">
+            <div class="signature-line">
+              2ª Testemunha
+            </div>
           </div>
         </div>
       </div>
@@ -331,19 +333,21 @@ const Contracts = {
         Por estarem assim justos e contratados, assinam o presente instrumento.
       </p>
 
-      <p style="text-align: right; margin-bottom: 4rem;">
-        <span class="highlight" data-field="foro_cidade">___</span>, <span class="highlight" data-field="data_assinatura">___</span>.
-      </p>
+      <div class="signature-area">
+        <p style="text-align: right; margin-bottom: 4rem;">
+          <span class="highlight" data-field="foro_cidade">___</span>, <span class="highlight" data-field="data_assinatura">___</span>.
+        </p>
 
-      <div class="signatures">
-        <div class="signature-block">
-          <div class="signature-line">
-            Locador: <span class="highlight" data-field="nome_locador">___</span>
+        <div class="signatures">
+          <div class="signature-block">
+            <div class="signature-line">
+              Locador: <span class="highlight" data-field="nome_locador">___</span>
+            </div>
           </div>
-        </div>
-        <div class="signature-block">
-          <div class="signature-line">
-            Locatário: <span class="highlight" data-field="nome_locatario">___</span>
+          <div class="signature-block">
+            <div class="signature-line">
+              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
+            </div>
           </div>
         </div>
       </div>

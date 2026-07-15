@@ -269,11 +269,12 @@ select.form-input, select.form-select {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: 60px;
-  background: rgba(248, 249, 250, 0.9);
+  background: rgba(255, 255, 255, 0.9);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
   align-items: center;
+  gap: 10px; /* sem isto a marca fica colada no texto */
   padding: 0 1.25rem;
   z-index: 50;
 }
@@ -333,6 +334,60 @@ select.form-input, select.form-select {
   opacity: 1;
 }
 
+/* ═══════════════════════════════════════════════════════
+   IMPRESSÃO — margem em TODAS as páginas, sem cabeçalho do navegador
+
+   `@page { margin: 0 }` faz o Chrome parar de desenhar o cabeçalho/rodapé
+   (data, título, URL): não sobra margem para eles. Mas aí o texto encostaria
+   na borda, porque `padding` só vale no início e no fim do bloco — não se
+   repete a cada página.
+
+   Solução: o documento vai dentro de uma "tabela" cujos topo e rodapé são
+   faixas vazias. O navegador REPETE thead/tfoot em toda página impressa, e
+   essas faixas viram a margem de cima e de baixo de cada folha. A margem
+   lateral vem de padding, que essa sim vale em todas as páginas.
+   ═══════════════════════════════════════════════════════ */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* Precisa ser <table>/<thead>/<tfoot> DE VERDADE: com divs em
+   `display: table-header-group` o Chrome não repete a faixa por página. */
+.print-wrap {
+  width: 100%;
+  border-collapse: collapse;
+}
+.print-wrap > tbody > tr > td,
+.print-wrap > thead > tr > td,
+.print-wrap > tfoot > tr > td {
+  padding: 0;
+  border: none;
+}
+
+/* Na tela as faixas de margem não existem */
+.print-wrap > thead,
+.print-wrap > tfoot {
+  display: none;
+}
+
+@media print {
+  .print-wrap > thead { display: table-header-group; }
+  .print-wrap > tfoot { display: table-footer-group; }
+
+  /* a altura precisa vir do conteúdo: uma célula vazia colapsa */
+  .print-spacer-inner { height: 18mm; }
+
+  /* Assinaturas mais para o pé da página. É um empurrão fixo: o CSS de
+     impressão não sabe quanto espaço sobrou na folha, então não dá para
+     ancorar no rodapé sem dar uma página só para elas. */
+  .preview-document .signature-area {
+    margin-top: 35mm;
+    break-inside: avoid;
+    page-break-inside: avoid; /* Chrome antigo */
+  }
+}
+
 /* Utilitários */
 .mt-8 {
   margin-top: 2rem !important;
@@ -372,4 +427,48 @@ select.form-input, select.form-select {
 .badge-status-future {
   background-color: var(--primary-light);
   color: var(--primary);
+}
+
+/* Toasts (feedback não-bloqueante) */
+#toast-box {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  width: min(440px, calc(100vw - 32px));
+}
+
+.toast {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  animation: toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+}
+
+.toast-out {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
