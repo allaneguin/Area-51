@@ -62,12 +62,13 @@ const CloudDB = {
     return JSON.parse(new TextDecoder().decode(decrypted));
   },
 
-  // Generate a random 16 character alphanumeric secret key
+  // Generate a random 16 character alphanumeric secret key (CSPRNG)
   generateKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = window.crypto.getRandomValues(new Uint8Array(16));
     let key = '';
     for (let i = 0; i < 16; i++) {
-      key += chars.charAt(Math.floor(Math.random() * chars.length));
+      key += chars.charAt(bytes[i] % chars.length);
     }
     return key;
   },

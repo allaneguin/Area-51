@@ -298,6 +298,10 @@ const Editor = {
       if(val) el.style.borderBottom = 'none';
       else el.style.borderBottom = '2px dashed var(--primary)';
     });
+
+    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto
+    const pjLocador = Utils.isPJLocador(this.contract.fields);
+    prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
   },
 
   save(showAlert = false) {

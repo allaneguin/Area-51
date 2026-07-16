@@ -52,6 +52,14 @@ const Utils = {
     return `${day} de ${months[month] || '___'} de ${year}`;
   },
   // ── Validação ──
+  isCNPJ(v) {
+    return (v || '').replace(/\D/g, '').length > 11;
+  },
+  // Locador é PJ? Vale a escolha explícita do perfil; sem ela, infere pelo documento
+  isPJLocador(fields) {
+    fields = fields || {};
+    return fields.tipo_locador ? fields.tipo_locador === 'pj' : Utils.isCNPJ(fields.doc_locador);
+  },
   isValidCPF(cpf) {
     cpf = cpf.replace(/\D/g,'');
     if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;

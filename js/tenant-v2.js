@@ -256,6 +256,10 @@ const Tenant = {
       el.textContent = val ? val : '___';
       el.classList.toggle('filled', !!val); // preenchido = azul; vazio = ambar
     });
+
+    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto
+    const pjLocador = Utils.isPJLocador(this.contract.fields);
+    prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
   },
 
   finish() {

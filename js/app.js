@@ -22,7 +22,10 @@ const App = {
       supabaseClient.auth.onAuthStateChange((event, session) => {
         const user = session ? session.user : null;
         this.user = user;
-        
+
+        // Usuário chegou pelo link de redefinição de senha do e-mail
+        if (event === 'PASSWORD_RECOVERY') this.passwordRecovery = true;
+
         // Exibir/esconder botão de Logout na sidebar
         this.updateAuthSidebarUI();
         
@@ -74,7 +77,14 @@ const App = {
     const [path, param] = hash.split('?');
     
     const route = this.routes[path] || 'dashboard';
-    
+
+    // Fluxo de redefinição de senha (link do e-mail)
+    if (SupabaseActive && this.passwordRecovery) {
+      document.body.classList.add('tenant-mode');
+      AuthUI.renderNewPassword(this.container);
+      return;
+    }
+
     // Interceptação de login se Supabase estiver ativo
     if (SupabaseActive && !this.user && route !== 'tenant') {
       document.body.classList.add('tenant-mode'); // Esconde sidebar/navbar

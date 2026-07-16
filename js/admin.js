@@ -5,7 +5,8 @@
 const Admin = {
   render(container) {
     const profile = Storage.getAdminProfile();
-    
+    const isPJ = Utils.isPJLocador(profile);
+
     container.innerHTML = `
       <div class="admin-container animate-fade-in-up">
         
@@ -24,18 +25,25 @@ const Admin = {
           <!-- Seção Pessoal -->
           <h3 class="section-title">Dados Pessoais (Locador)</h3>
           <div class="form-grid">
-            <div class="form-group form-group-full">
-              <label class="form-label">Nome Completo</label>
-              <input type="text" class="form-input" id="admin_nome_locador" value="${profile.nome_locador || ''}">
+            <div class="form-group">
+              <label class="form-label">Tipo de Locador</label>
+              <select class="form-input" id="admin_tipo_locador" onchange="Admin.togglePFFields()">
+                <option value="pf">Pessoa Física (CPF)</option>
+                <option value="pj">Pessoa Jurídica (CNPJ)</option>
+              </select>
             </div>
             <div class="form-group">
+              <label class="form-label">Nome Completo / Razão Social</label>
+              <input type="text" class="form-input" id="admin_nome_locador" value="${profile.nome_locador || ''}">
+            </div>
+            <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
               <label class="form-label">Nacionalidade</label>
               <select class="form-input" id="admin_nac_locador">
                 <option value="brasileiro(a)">Brasileiro(a)</option>
                 <option value="estrangeiro(a)">Estrangeiro(a)</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
               <label class="form-label">Estado Civil</label>
               <select class="form-input" id="admin_est_civil_locador">
                 <option value="">Selecione...</option>
@@ -47,7 +55,7 @@ const Admin = {
                 <option value="em união estável">União Estável</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
               <label class="form-label">RG</label>
               <input type="text" class="form-input" id="admin_rg_locador" value="${profile.rg_locador || ''}">
             </div>
@@ -88,6 +96,7 @@ const Admin = {
     `;
 
     // Seta os valores iniciais dos selects
+    container.querySelector('#admin_tipo_locador').value = isPJ ? 'pj' : 'pf';
     if (profile.nac_locador) container.querySelector('#admin_nac_locador').value = profile.nac_locador;
     if (profile.est_civil_locador) container.querySelector('#admin_est_civil_locador').value = profile.est_civil_locador;
     if (profile.tipo_conta) container.querySelector('#admin_tipo_conta').value = profile.tipo_conta;
@@ -98,12 +107,19 @@ const Admin = {
     });
   },
 
+  togglePFFields() {
+    const isPJ = document.getElementById('admin_tipo_locador').value === 'pj';
+    document.querySelectorAll('.pf-only').forEach(el => el.style.display = isPJ ? 'none' : '');
+  },
+
   save() {
+    const isPJ = document.getElementById('admin_tipo_locador').value === 'pj';
     const profile = {
+      tipo_locador: isPJ ? 'pj' : 'pf',
       nome_locador: document.getElementById('admin_nome_locador').value,
-      nac_locador: document.getElementById('admin_nac_locador').value,
-      est_civil_locador: document.getElementById('admin_est_civil_locador').value,
-      rg_locador: document.getElementById('admin_rg_locador').value,
+      nac_locador: isPJ ? '' : document.getElementById('admin_nac_locador').value,
+      est_civil_locador: isPJ ? '' : document.getElementById('admin_est_civil_locador').value,
+      rg_locador: isPJ ? '' : document.getElementById('admin_rg_locador').value,
       doc_locador: document.getElementById('admin_doc_locador').value,
       banco: document.getElementById('admin_banco').value,
       agencia: document.getElementById('admin_agencia').value,

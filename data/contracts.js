@@ -25,7 +25,7 @@ const Contracts = {
       ]
     },
     { section: 'Locador', name: 'rg_locador', label: 'RG (com Órgão Emissor)', type: 'text' },
-    { section: 'Locador', name: 'doc_locador', label: 'CPF', type: 'text', mask: 'cpfcnpj' },
+    { section: 'Locador', name: 'doc_locador', label: 'CPF/CNPJ', type: 'text', mask: 'cpfcnpj' },
 
     { section: 'Locatário', name: 'nome_locatario', label: 'Nome do Locatário', type: 'text' },
     {
@@ -95,7 +95,7 @@ const Contracts = {
       
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem;">
         <tr>
-          <td style="border: 1px solid black; padding: 8px;"><strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>, <span class="highlight" data-field="nac_locador">___</span>, <span class="highlight" data-field="est_civil_locador">___</span>, RG <span class="highlight" data-field="rg_locador">___</span> e CPF <span class="highlight" data-field="doc_locador">___</span>.</td>
+          <td style="border: 1px solid black; padding: 8px;"><strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> <span class="highlight" data-field="nac_locador">___</span>, <span class="highlight" data-field="est_civil_locador">___</span>, RG <span class="highlight" data-field="rg_locador">___</span> e</span> CPF/CNPJ <span class="highlight" data-field="doc_locador">___</span>.</td>
         </tr>
         <tr>
           <td style="border: 1px solid black; padding: 8px;"><strong>LOCATÁRIO:</strong> <span class="highlight" data-field="nome_locatario">___</span>, <span class="highlight" data-field="nac_locatario">___</span>, <span class="highlight" data-field="est_civil_locatario">___</span>, <span class="highlight" data-field="prof_locatario">___</span>, RG <span class="highlight" data-field="rg_locatario">___</span> e CPF <span class="highlight" data-field="doc_locatario">___</span>.</td>
@@ -138,20 +138,16 @@ const Contracts = {
 
       <p style="text-align: justify; margin-bottom: 0.5rem;"><strong>6.</strong> Ao término do presente contrato, ou quando o imóvel for devolvido, a LOCATÁRIA deverá realizar os seguintes reparos:</p>
       <ul style="margin-left: 40px; margin-bottom: 1rem; text-align: justify;">
-        <li>Pintura interna e garagem com tinta acrílica (Suvinil ou Glasurit) na cor pérola;</li>
-        <li>Pintura externa com tinta acrílica (Suvinil Stand. Rende Muito) na cor camurça;</li>
-        <li>Pintura de portão e gradil com esmalte sintético brilhante (Suvinil) na cor tabaco;</li>
-        <li>Pintura do piso das calçadas com tinta para piso (Suvinil) na cor cinza escuro;</li>
-        <li>Pintura do madeiramento e parte inferior do telhado da garagem com resina acrílica incolor;</li>
-        <li>Pintura da parte superior de todo o telhado com resina acrílica na cor telha;</li>
-        <li>Pintura das portas de madeira com verniz incolor ou na cor mogno;</li>
+        <li>Pintura interna e da garagem;</li>
+        <li>Pintura externa;</li>
+        <li>Pintura do portão e gradil;</li>
+        <li>Pintura do piso das calçadas;</li>
+        <li>Pintura do madeiramento e parte inferior do telhado da garagem;</li>
+        <li>Pintura da parte superior de todo o telhado;</li>
+        <li>Pintura das portas de madeira;</li>
       </ul>
 
-      <p style="text-align: justify; margin-bottom: 0.5rem;"><strong>7.</strong> Os LOCATÁRIOS entregarão em perfeito estado de funcionamento e sem quaisquer avarias, riscos, manchas ou outros defeitos os mobiliários e equipamentos que guarnecem a residência, conforme segue:</p>
-      <ul style="margin-left: 40px; margin-bottom: 1rem; text-align: justify;">
-        <li>01 (um) Armário de cozinha em MDF (projeto e foto anexos);</li>
-        <li>01 (um) Automatizador de portão deslizante da marca Garen com 2 controles;</li>
-      </ul>
+      <p style="text-align: justify; margin-bottom: 1rem;"><strong>7.</strong> Os LOCATÁRIOS entregarão em perfeito estado de funcionamento e sem quaisquer avarias, riscos, manchas ou outros defeitos os mobiliários e equipamentos que guarnecem a residência.</p>
 
       <p style="text-align: justify; margin-bottom: 1rem;"><strong>8.</strong> O aluguel mensal deverá ser pago mediante transferência bancária ao <strong><span class="highlight" data-field="banco">___</span></strong>, Agência <strong><span class="highlight" data-field="agencia">___</span></strong>, <strong><span class="highlight" data-field="tipo_conta">___</span></strong> <strong><span class="highlight" data-field="conta_banco">___</span></strong>, de titularidade do LOCADOR. Sobre o aluguel pago após o respectivo vencimento, incidirá multa moratória de 5% (cinco por cento) ao mês.</p>
 
@@ -200,72 +196,6 @@ const Contracts = {
           </div>
         </div>
       </div>
-
-      <!-- PAGE BREAK PARA A VISTORIA -->
-      <div style="page-break-before: always; margin-top: 50px;"></div>
-      <h1 style="text-align: center; font-size: 14pt; margin-bottom: 2rem;">TERMO DE VISTORIA DE IMÓVEL RESIDENCIAL</h1>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr>
-          <td style="border: 1px solid black; padding: 8px;"><strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>, <span class="highlight" data-field="nac_locador">___</span>, <span class="highlight" data-field="est_civil_locador">___</span>, RG <span class="highlight" data-field="rg_locador">___</span> e CPF <span class="highlight" data-field="doc_locador">___</span>.</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid black; padding: 8px;"><strong>LOCATÁRIO:</strong> <span class="highlight" data-field="nome_locatario">___</span>, <span class="highlight" data-field="nac_locatario">___</span>, <span class="highlight" data-field="est_civil_locatario">___</span>, <span class="highlight" data-field="prof_locatario">___</span>, RG <span class="highlight" data-field="rg_locatario">___</span> e CPF <span class="highlight" data-field="doc_locatario">___</span>.</td>
-        </tr>
-      </table>
-      
-      <p style="text-align: justify; margin-bottom: 1.5rem;"><strong>IMÓVEL PARA VISTORIA:</strong><br>
-      <span class="highlight" data-field="end_imovel">___</span>, CEP <span class="highlight" data-field="cep_imovel">___</span>.</p>
-      
-      <h2 style="text-align: center; font-size: 12pt; margin-top: 1rem; margin-bottom: 1rem;">LAUDO DE VISTORIA</h2>
-
-      <p style="margin-bottom: 0.2rem;">SALA</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta em Madeira 0,80x2,10m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Janela em Vidro Temperado 1,0x1,20m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Lâmpada Fluorescente</td></tr>
-      </table>
-
-      <p style="margin-bottom: 0.2rem;">COZINHA</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta Vidro Temperado de correr</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Janela em Vidro Temperado cor Fumê 1,0x1,20m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Lâmpada Fluorescente</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Armário em MDF com Bancada de Granito (projeto anexo)</td></tr>
-      </table>
-
-      <p style="margin-bottom: 0.2rem;">SUÍTE</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta em Madeira 0,80x2,10m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Janela em Vidro Temperado cor Fumê 1,0x1,20m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Lâmpada Fluorescente</td></tr>
-      </table>
-
-      <p style="margin-bottom: 0.2rem;">SUÍTE - BANHEIRO</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta em Madeira 0,80x2,10m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Box de Vidro Temperado cor Incolor</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Chuveiro</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Pia de Granito com Cuba</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Bacia/Vaso com Caixa Acoplada</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Ducha higiênica</td></tr>
-      </table>
-
-      <p style="margin-bottom: 0.2rem;">QUARTO</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta em Madeira 0,80x2,10m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Janela em Vidro Temperado cor Fumê 1,0x1,20m</td></tr>
-      </table>
-
-      <p style="margin-bottom: 0.2rem;">BANHEIRO SOCIAL</p>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem;">
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Porta em Madeira 0,80x2,10m</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Box de Vidro Temperado cor Incolor</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Chuveiro</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Pia de Granito com Cuba</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Bacia/Vaso com Caixa Acoplada</td></tr>
-        <tr><td style="border: 1px solid black; padding: 4px 8px; width: 40px; text-align: center;">01</td><td style="border: 1px solid black; padding: 4px 8px;">Ducha higiênica</td></tr>
-      </table>
     `
   },
   locacao_simples: {
@@ -278,7 +208,7 @@ const Contracts = {
     fields: [
       { section: 'Locador', name: 'nome_locador', label: 'Nome do Locador', type: 'text' },
       { section: 'Locador', name: 'rg_locador', label: 'RG do Locador', type: 'text' },
-      { section: 'Locador', name: 'doc_locador', label: 'CPF do Locador', type: 'text', mask: 'cpfcnpj' },
+      { section: 'Locador', name: 'doc_locador', label: 'CPF/CNPJ do Locador', type: 'text', mask: 'cpfcnpj' },
       { section: 'Locatário', name: 'nome_locatario', label: 'Nome do Locatário', type: 'text' },
       { section: 'Locatário', name: 'rg_locatario', label: 'RG do Locatário', type: 'text' },
       { section: 'Locatário', name: 'doc_locatario', label: 'CPF do Locatário', type: 'text', mask: 'cpfcnpj' },
@@ -296,7 +226,7 @@ const Contracts = {
       
       <h2 style="font-size: 12pt; margin-top: 1rem; margin-bottom: 0.5rem;">1. Identificação das Partes Contratantes</h2>
       <p style="text-align: justify; margin-bottom: 1rem;">
-        <strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>, portador do RG nº <span class="highlight" data-field="rg_locador">___</span> e CPF nº <span class="highlight" data-field="doc_locador">___</span>.
+        <strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> portador do RG nº <span class="highlight" data-field="rg_locador">___</span> e</span> CPF/CNPJ nº <span class="highlight" data-field="doc_locador">___</span>.
       </p>
       <p style="text-align: justify; margin-bottom: 1rem;">
         <strong>LOCATÁRIO:</strong> <span class="highlight" data-field="nome_locatario">___</span>, portador do RG nº <span class="highlight" data-field="rg_locatario">___</span> e CPF nº <span class="highlight" data-field="doc_locatario">___</span>.
