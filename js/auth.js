@@ -17,7 +17,7 @@ const AuthUI = {
       <canvas class="auth-brand-canvas"></canvas>
       <div class="auth-brand-grid"></div>
       <div class="auth-brand-logo">
-        <span class="mark">M</span> Meus Imóveis
+        <span class="mark"><svg viewBox="0 0 100 100" width="18" height="18" aria-hidden="true"><path d="M50 14 L14 44 L14 86 L40 86 L40 60 L60 60 L60 86 L86 86 L86 44 Z" fill="#F0F6FF"/></svg></span> Meus Imóveis
       </div>
       <div class="auth-brand-headline">
         <h1>Seus contratos, organizados e <em>na nuvem</em></h1>
@@ -30,14 +30,19 @@ const AuthUI = {
       <div class="auth-brand-foot">© 2026 Meus Imóveis</div>
     </div>`,
 
-  pwField(id) {
+  // newPw=true → senha sendo criada (cadastro/redefinição): exige a política do Supabase.
+  // No login (newPw falso) NÃO restringe, senão usuários antigos com senha curta travam.
+  pwField(id, newPw) {
+    const attrs = newPw ? 'required minlength="8" placeholder="Mín. 8 caracteres"' : 'required placeholder="Sua senha"';
+    const hint = newPw ? '<small class="auth-pw-hint">8+ caracteres, com maiúscula, minúscula, número e símbolo.</small>' : '';
     return `
       <label class="auth-label">
         <span>SENHA</span>
         <div class="auth-pw-wrap">
-          <input type="password" id="${id}" class="auth-input" required minlength="6" placeholder="Mín. 6 caracteres">
+          <input type="password" id="${id}" class="auth-input" ${attrs}>
           <span class="auth-pw-toggle" onclick="AuthUI.togglePw(this)">${this.eyeIcon}</span>
         </div>
+        ${hint}
       </label>`;
   },
 
@@ -74,12 +79,10 @@ const AuthUI = {
               <p class="auth-sub">Primeiro, informe o tipo de locador.</p>
               <div class="auth-type-grid">
                 <div class="auth-type-card selected" id="type-card-pf" onclick="AuthUI.selectType('pf')">
-                  <span class="ico">👤</span>
                   <div class="tt">Pessoa Física</div>
                   <div class="st">CPF</div>
                 </div>
                 <div class="auth-type-card" id="type-card-pj" onclick="AuthUI.selectType('pj')">
-                  <span class="ico">◫</span>
                   <div class="tt">Pessoa Jurídica</div>
                   <div class="st">CNPJ</div>
                 </div>
@@ -293,6 +296,7 @@ const AuthUI = {
         color: #8A92A0; display: grid; place-items: center;
       }
       .auth-pw-toggle:hover { color: #1C4E89; }
+      .auth-pw-hint { display: block; font-size: 11.5px; color: #8A92A0; margin-top: 2px; }
 
       .auth-btn {
         display: block; width: 100%; text-align: center; border: none; cursor: pointer;
@@ -315,11 +319,7 @@ const AuthUI = {
       }
       .auth-type-card:hover { border-color: #2E6DB4; }
       .auth-type-card.selected { border-color: #2E6DB4; background: #F6F9FD; }
-      .auth-type-card .ico {
-        width: 46px; height: 46px; margin: 0 auto; border-radius: 13px;
-        background: #EAF1F9; color: #1C4E89; display: grid; place-items: center; font-size: 21px;
-      }
-      .auth-type-card .tt { font-size: 15.5px; font-weight: 700; color: #16181D; margin-top: 12px; }
+      .auth-type-card .tt { font-size: 15.5px; font-weight: 700; color: #16181D; }
       .auth-type-card .st { font-size: 12.5px; font-weight: 600; color: #8A92A0; margin-top: 3px; }
 
       .auth-back {
@@ -433,7 +433,7 @@ const AuthUI = {
             <span>E-MAIL</span>
             <input type="email" class="auth-input" id="reg-email" required placeholder="voce@email.com">
           </label>
-          ${this.pwField('reg-password')}
+          ${this.pwField('reg-password', true)}
           <label class="auth-label">
             <span>${pf ? 'CPF' : 'CNPJ'} <span class="hint">· máscara automática</span></span>
             <input class="auth-input" id="reg-doc" data-mask="cpfcnpj" required placeholder="${pf ? '000.000.000-00' : '00.000.000/0000-00'}">
@@ -577,7 +577,7 @@ const AuthUI = {
 
             <form onsubmit="AuthUI.submitNewPassword(event)">
               <div class="auth-fields">
-                ${this.pwField('new-password')}
+                ${this.pwField('new-password', true)}
               </div>
               <button type="submit" class="auth-btn" id="new-password-btn" style="margin-top: 20px;">Salvar Nova Senha</button>
             </form>
@@ -634,8 +634,8 @@ const AuthUI = {
     if (msg.includes('signup is disabled') || msg.includes('Signups not allowed')) {
       return 'O cadastro de novos usuários está desativado para este projeto.';
     }
-    if (msg.includes('Password should be')) {
-      return 'A senha é muito fraca. Digite pelo menos 6 caracteres.';
+    if (msg.includes('Password should') || /weak.?password/i.test(msg)) {
+      return 'Senha fraca. Use no mínimo 8 caracteres, com letra maiúscula, minúscula, número e símbolo.';
     }
     if (msg.includes('confirm your email') || msg.includes('Email not confirmed')) {
       return 'Por favor, confirme seu endereço de e-mail antes de fazer login.';
