@@ -92,6 +92,17 @@ const Utils = {
     });
   },
 
+  // ── Escape HTML (previne XSS em interpolação para innerHTML) ──
+  esc(v) {
+    if (v == null) return '';
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   // ── Toast (feedback não-bloqueante, substitui alert) ──
   toast(msg, type = 'success') {
     let box = document.getElementById('toast-box');

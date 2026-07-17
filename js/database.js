@@ -94,12 +94,18 @@ const CloudDB = {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     const encryptedPayload = await this.encrypt(contractData, key);
     
-    const { error } = await supabaseClient
+    const { data, error } = await supabaseClient
       .from('tenant_links')
       .update({ encrypted_payload: encryptedPayload })
-      .eq('id', serverId);
-      
+      .eq('id', serverId)
+      .select('id');
+
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
+    // UPDATE que não casa nenhuma linha (link expirado/removido) NÃO gera erro no Supabase.
+    // Sem esta checagem, os dados digitados seriam descartados silenciosamente.
+    if (!data || data.length === 0) {
+      throw new Error("Este link expirou. Peça um novo link ao locador.");
+    }
     return true;
   },
 
@@ -112,9 +118,14 @@ const CloudDB = {
       .select('encrypted_payload')
       .eq('id', serverId)
       .single();
-      
-    if (error || !data) throw new Error("Contrato expirou ou não existe no servidor");
-    
-    return await this.decrypt(data.encrypted_payload, key);
+
+    if (error || !data) throw new Error("Este link expirou ou não existe mais. Peça um novo link ao locador.");
+
+    try {
+      return await this.decrypt(data.encrypted_payload, key);
+    } catch (e) {
+      // decrypt AES-GCM com chave errada rejeita com mensagem vazia — traduz para algo acionável.
+      throw new Error("Chave do link incorreta ou link incompleto. Copie o link inteiro que o locador enviou.");
+    }
   }
 };

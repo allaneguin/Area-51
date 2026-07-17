@@ -50,9 +50,10 @@ const Tenant = {
           fields: payload.f,
           cloudId: serverId,
           cloudKey: key,
-          localId: payload.localId
+          localId: payload.localId,
+          isFinalized: payload.isFinalized
         };
-        
+
         this.template = Contracts[payload.t] || (Storage._getData().customTemplates || []).find(t => t.id === payload.t);
         if (!this.template) {
           this.renderErro(container, 'Modelo não encontrado', 'Este contrato usa um modelo que não existe mais.');
@@ -60,6 +61,9 @@ const Tenant = {
         }
 
         this.renderTenantUI(container);
+        // Reabertura de um link já finalizado: mostra estado read-only, sem formulário editável
+        // nem botão de reenvio (evita reenvio acidental sobrescrevendo a nuvem).
+        if (payload.isFinalized) this.showAlreadyFinalized();
       }).catch(err => {
         console.error(err);
         this.renderErro(container, 'Não foi possível abrir', err.message);
@@ -96,6 +100,26 @@ const Tenant = {
       
       this.renderTenantUI(container);
     }
+  },
+
+  // Estado read-only exibido ao reabrir um link cujo contrato já foi finalizado.
+  // Reaproveita o padrão visual do "Dados enviados!", mantendo o #preview-content no DOM p/ o PDF.
+  showAlreadyFinalized() {
+    document.querySelectorAll('.tenant-header, .tenant-property, .tenant-doc-label, .tenant-doc, .tenant-footnote')
+      .forEach(el => el.classList.add('tenant-hidden'));
+
+    const card = document.querySelector('.tenant-form-card');
+    if (!card) return;
+
+    card.className = 'tenant-state';
+    card.innerHTML = `
+      <div class="tenant-state-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <h1>Contrato já preenchido</h1>
+      <p>Os dados deste contrato já foram enviados ao locador. Não é necessário preencher novamente.</p>
+      <button class="btn btn-secondary" onclick="Tenant.downloadPDF()">Baixar PDF</button>
+    `;
   },
 
   renderTenantUI(container) {
@@ -188,7 +212,7 @@ const Tenant = {
       let inputHtml = '';
       const val = this.contract.fields[f.name] || '';
       if (f.type === 'textarea') {
-        inputHtml = `<textarea class="form-textarea" data-field="${f.name}">${val}</textarea>`;
+        inputHtml = `<textarea class="form-textarea" data-field="${f.name}">${Utils.esc(val)}</textarea>`;
       } else if (f.type === 'select') {
         inputHtml = `<select class="form-input" data-field="${f.name}">`;
         f.options.forEach(opt => {
@@ -196,7 +220,7 @@ const Tenant = {
         });
         inputHtml += `</select>`;
       } else {
-        inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${val}" ${f.mask ? `data-mask="${f.mask}"` : ''}>`;
+        inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${Utils.esc(val)}" ${f.mask ? `data-mask="${f.mask}"` : ''}>`;
       }
 
       // Nome, endereço e textos longos ocupam a linha inteira do grid
@@ -310,7 +334,7 @@ const Tenant = {
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <h1>Dados enviados!</h1>
-        <p>${primeiroNome ? primeiroNome + ', recebemos' : 'Recebemos'} suas informações. Agora envie-as ao locador — ele vai revisar e gerar o contrato final para assinatura.</p>
+        <p>${primeiroNome ? Utils.esc(primeiroNome) + ', recebemos' : 'Recebemos'} suas informações. Agora envie-as ao locador — ele vai revisar e gerar o contrato final para assinatura.</p>
 
         <a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-whatsapp">
           <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>

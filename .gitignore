@@ -25,3 +25,7 @@ Thumbs.db
 .env.production.local
 *.pem
 *.key
+
+# Documentos com dados pessoais reais (LGPD) — nunca versionar/publicar
+*.docx
+extracted_contract.txt

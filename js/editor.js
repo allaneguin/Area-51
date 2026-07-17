@@ -52,7 +52,7 @@ const Editor = {
     container.innerHTML = `
       <div class="editor-toolbar animate-fade-in-down">
         <div class="editor-toolbar-main">
-          <input type="text" id="contract-name" class="form-input editor-toolbar-title" value="${this.contract.name}" ${isReadOnly ? 'disabled' : ''}>
+          <input type="text" id="contract-name" class="form-input editor-toolbar-title" value="${Utils.esc(this.contract.name)}" ${isReadOnly ? 'disabled' : ''}>
           <span id="editor-contract-status" class="badge-status ${status.class}">${status.label}</span>
         </div>
         <div class="editor-toolbar-actions">
@@ -168,7 +168,7 @@ const Editor = {
         const readOnlyAttr = f.readonly ? 'readonly style="background-color: var(--bg);"' : '';
         
         if (f.type === 'textarea') {
-          inputHtml = `<textarea class="form-textarea" data-field="${f.name}" ${disabledAttr} ${readOnlyAttr}>${val}</textarea>`;
+          inputHtml = `<textarea class="form-textarea" data-field="${f.name}" ${disabledAttr} ${readOnlyAttr}>${Utils.esc(val)}</textarea>`;
         } else if (f.type === 'select') {
           inputHtml = `<select class="form-input" data-field="${f.name}" ${disabledAttr} ${readOnlyAttr}>`;
           f.options.forEach(opt => {
@@ -177,7 +177,7 @@ const Editor = {
           });
           inputHtml += `</select>`;
         } else {
-          inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${val}" ${f.mask ? `data-mask="${f.mask}"` : ''} ${disabledAttr} ${readOnlyAttr}>`;
+          inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${Utils.esc(val)}" ${f.mask ? `data-mask="${f.mask}"` : ''} ${disabledAttr} ${readOnlyAttr}>`;
         }
         
         html += `<div class="form-group">
@@ -332,57 +332,70 @@ const Editor = {
       localId: this.contract.id
     };
     
+    const restoreBtn = () => {
+      if (btn) {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      }
+    };
+
     const finalize = (serverId, key) => {
       const baseUrl = window.location.href.split('#')[0];
       const url = `${baseUrl}#tenant?id=${serverId}&key=${key}`;
-      
+
       navigator.clipboard.writeText(url).then(() => {
         Utils.toast('Link seguro copiado! Envie no WhatsApp do inquilino para ele preencher.');
       }).catch(() => {
         // ponytail: prompt nativo como fallback — deixa o usuário copiar a URL na mão
         prompt('Não foi possível copiar automaticamente. Copie o link abaixo:', url);
       });
-      
-      if (btn) {
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-      }
+
+      restoreBtn();
     };
-    
+
+    const createNewLink = () => {
+      const key = CloudDB.generateKey();
+      return CloudDB.saveContract(payload, key).then(serverId => {
+        this.contract.cloudId = serverId;
+        this.contract.cloudKey = key;
+        // Salva as chaves de nuvem no localStorage do locador
+        Storage.update(this.contract.id, { cloudId: serverId, cloudKey: key });
+        finalize(serverId, key);
+      });
+    };
+
     if (this.contract.cloudId && this.contract.cloudKey) {
-      // Se já existe no servidor, atualiza e copia o link
-      CloudDB.updateContract(this.contract.cloudId, payload, this.contract.cloudKey)
-        .then(() => {
-          finalize(this.contract.cloudId, this.contract.cloudKey);
+      // Relê a nuvem antes de sobrescrever: se o inquilino já finalizou, NÃO apaga os dados dele.
+      CloudDB.loadContract(this.contract.cloudId, this.contract.cloudKey)
+        .then(cloudPayload => {
+          if (cloudPayload.isFinalized) {
+            Utils.toast('O inquilino já preencheu este contrato — apenas copiei o link novamente.');
+            finalize(this.contract.cloudId, this.contract.cloudKey);
+            return;
+          }
+          return CloudDB.updateContract(this.contract.cloudId, payload, this.contract.cloudKey)
+            .then(() => finalize(this.contract.cloudId, this.contract.cloudKey));
         })
         .catch(err => {
-          Utils.toast('Erro ao atualizar contrato no servidor: ' + err.message, 'error');
-          if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
+          // Link expirou/sumiu: limpa a referência e gera um novo automaticamente
+          if (/expir|não existe|inexistente/i.test(err.message)) {
+            this.contract.cloudId = null;
+            this.contract.cloudKey = null;
+            Storage.update(this.contract.id, { cloudId: null, cloudKey: null });
+            createNewLink().catch(e2 => {
+              Utils.toast('Erro ao gerar novo link: ' + e2.message, 'error');
+              restoreBtn();
+            });
+            return;
           }
+          Utils.toast('Erro ao atualizar contrato no servidor: ' + err.message, 'error');
+          restoreBtn();
         });
     } else {
-      // Se é novo, gera chave, salva e cria ID
-      const key = CloudDB.generateKey();
-      CloudDB.saveContract(payload, key)
-        .then(serverId => {
-          this.contract.cloudId = serverId;
-          this.contract.cloudKey = key;
-          // Salva as chaves de nuvem no localStorage do locador
-          Storage.update(this.contract.id, {
-            cloudId: serverId,
-            cloudKey: key
-          });
-          finalize(serverId, key);
-        })
-        .catch(err => {
-          Utils.toast('Erro ao salvar contrato seguro no servidor: ' + err.message, 'error');
-          if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
-          }
-        });
+      createNewLink().catch(err => {
+        Utils.toast('Erro ao salvar contrato seguro no servidor: ' + err.message, 'error');
+        restoreBtn();
+      });
     }
   },
 

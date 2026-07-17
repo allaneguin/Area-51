@@ -41,7 +41,7 @@ const Dashboard = {
           </div>
           <div class="contract-row-info">
             <div class="contract-row-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              ${c.name || 'Contrato sem nome'}
+              ${Utils.esc(c.name || 'Contrato sem nome')}
               <span class="badge-status ${status.class}">${status.label}</span>
             </div>
             <div class="contract-row-meta">${Contracts[c.templateId]?.title || 'Modelo Desconhecido'}</div>

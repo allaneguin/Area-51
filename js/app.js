@@ -28,9 +28,25 @@ const App = {
 
         // Exibir/esconder botão de Logout na sidebar
         this.updateAuthSidebarUI();
-        
+
+        const newUid = user ? user.id : null;
+
+        // TOKEN_REFRESHED (~1x/h) e SIGNED_IN de refoco reemitem com o MESMO usuário.
+        // Re-sincronizar/re-renderizar aí destruiria um formulário em edição — então ignora.
+        if (newUid === this._lastUid && event !== 'PASSWORD_RECOVERY') {
+          return;
+        }
+
+        // Login de outro usuário ou logout: descarta caches em memória do usuário anterior
+        // (senão contratos/perfil de A poderiam renderizar para B no mesmo navegador).
+        if (newUid !== this._lastUid) {
+          Storage.contractsCache = [];
+          Storage.profileCache = {};
+        }
+        this._lastUid = newUid;
+
         // Sincronizar dados locais com a nuvem no primeiro login
-        if (user && typeof Storage !== 'undefined' && Storage.syncLocalDataToCloud) {
+        if (user && Storage.syncLocalDataToCloud) {
           Storage.syncLocalDataToCloud().then(() => {
             this.handleRoute();
           });
@@ -40,7 +56,17 @@ const App = {
       });
       // Listener para cliques normais ou mudanças manuais de hash
       window.addEventListener('hashchange', () => this.handleRoute());
+    } else if (SUPABASE_ENABLED) {
+      // Supabase deveria estar ativo, mas o SDK não carregou (CDN bloqueado/fora do ar).
+      // Fail-closed: mostra erro em vez de abrir o painel interno sem login.
+      this.container.innerHTML = `
+        <div style="max-width: 460px; margin: 6rem auto; text-align: center; padding: 2rem;">
+          <h2 style="margin-bottom: 0.75rem;">Não foi possível carregar o serviço</h2>
+          <p style="color: var(--text-muted); line-height: 1.5;">Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, tente novamente em alguns minutos.</p>
+          <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="window.location.reload()">Recarregar</button>
+        </div>`;
     } else {
+      // Modo offline intencional (SUPABASE_ENABLED = false)
       window.addEventListener('hashchange', () => this.handleRoute());
       this.handleRoute();
     }
@@ -78,8 +104,9 @@ const App = {
     
     const route = this.routes[path] || 'dashboard';
 
-    // Fluxo de redefinição de senha (link do e-mail)
-    if (SupabaseActive && this.passwordRecovery) {
+    // Fluxo de redefinição de senha (link do e-mail).
+    // A rota do inquilino (#tenant) passa direto — ele não pode ser bloqueado pelo recovery do locador.
+    if (SupabaseActive && this.passwordRecovery && route !== 'tenant') {
       document.body.classList.add('tenant-mode');
       AuthUI.renderNewPassword(this.container);
       return;

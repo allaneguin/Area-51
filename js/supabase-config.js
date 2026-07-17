@@ -28,6 +28,6 @@ let SupabaseActive = false;
       console.error("❌ Erro ao inicializar Supabase:", e);
     }
   } else {
-    console.error("❌ SDK do Supabase não encontrado. Verifique a importação no index.html.");
+    console.error("❌ SDK do Supabase não encontrado. Verifique a importação no app.html.");
   }
 })();
