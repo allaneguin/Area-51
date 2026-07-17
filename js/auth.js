@@ -283,7 +283,6 @@ const AuthUI = {
 
       .auth-label { display: flex; flex-direction: column; gap: 6px; }
       .auth-label > span { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #8A92A0; }
-      .auth-label .hint { color: #2E7D52; font-weight: 600; letter-spacing: 0; }
       .auth-input, .auth-select {
         width: 100%; border: 1px solid #DDE3EC; border-radius: 10px; padding: 13px 14px;
         font-size: 14.5px; color: #16181D; background: #FFFFFF; font-family: inherit;
@@ -435,7 +434,7 @@ const AuthUI = {
           </label>
           ${this.pwField('reg-password', true)}
           <label class="auth-label">
-            <span>${pf ? 'CPF' : 'CNPJ'} <span class="hint">· máscara automática</span></span>
+            <span>${pf ? 'CPF' : 'CNPJ'}</span>
             <input class="auth-input" id="reg-doc" data-mask="cpfcnpj" required placeholder="${pf ? '000.000.000-00' : '00.000.000/0000-00'}">
           </label>
           ${pfFields}
