@@ -299,9 +299,11 @@ const Editor = {
       else el.style.borderBottom = '2px dashed var(--primary)';
     });
 
-    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto
+    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto,
+    // e o rótulo do documento vira "CNPJ" (ou "CPF" p/ pessoa física) em vez de "CPF/CNPJ".
     const pjLocador = Utils.isPJLocador(this.contract.fields);
     prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
+    prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
   },
 
   save(showAlert = false) {

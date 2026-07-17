@@ -60,7 +60,7 @@ const Admin = {
               <input type="text" class="form-input" id="admin_rg_locador" value="${profile.rg_locador || ''}">
             </div>
             <div class="form-group">
-              <label class="form-label">CPF / CNPJ</label>
+              <label class="form-label" id="admin_doc_label">${isPJ ? 'CNPJ' : 'CPF'}</label>
               <input type="text" class="form-input" id="admin_doc_locador" data-mask="cpfcnpj" value="${profile.doc_locador || ''}">
             </div>
           </div>
@@ -110,6 +110,7 @@ const Admin = {
   togglePFFields() {
     const isPJ = document.getElementById('admin_tipo_locador').value === 'pj';
     document.querySelectorAll('.pf-only').forEach(el => el.style.display = isPJ ? 'none' : '');
+    document.getElementById('admin_doc_label').textContent = isPJ ? 'CNPJ' : 'CPF';
   },
 
   save() {

@@ -95,7 +95,7 @@ const Contracts = {
       
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem;">
         <tr>
-          <td style="border: 1px solid black; padding: 8px;"><strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> <span class="highlight" data-field="nac_locador">___</span>, <span class="highlight" data-field="est_civil_locador">___</span>, RG <span class="highlight" data-field="rg_locador">___</span> e</span> CPF/CNPJ <span class="highlight" data-field="doc_locador">___</span>.</td>
+          <td style="border: 1px solid black; padding: 8px;"><strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> <span class="highlight" data-field="nac_locador">___</span>, <span class="highlight" data-field="est_civil_locador">___</span>, RG <span class="highlight" data-field="rg_locador">___</span> e</span> <span class="doc-locador-label">CPF/CNPJ</span> <span class="highlight" data-field="doc_locador">___</span>.</td>
         </tr>
         <tr>
           <td style="border: 1px solid black; padding: 8px;"><strong>LOCATÁRIO:</strong> <span class="highlight" data-field="nome_locatario">___</span>, <span class="highlight" data-field="nac_locatario">___</span>, <span class="highlight" data-field="est_civil_locatario">___</span>, <span class="highlight" data-field="prof_locatario">___</span>, RG <span class="highlight" data-field="rg_locatario">___</span> e CPF <span class="highlight" data-field="doc_locatario">___</span>.</td>
@@ -226,7 +226,7 @@ const Contracts = {
       
       <h2 style="font-size: 12pt; margin-top: 1rem; margin-bottom: 0.5rem;">1. Identificação das Partes Contratantes</h2>
       <p style="text-align: justify; margin-bottom: 1rem;">
-        <strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> portador do RG nº <span class="highlight" data-field="rg_locador">___</span> e</span> CPF/CNPJ nº <span class="highlight" data-field="doc_locador">___</span>.
+        <strong>LOCADOR:</strong> <span class="highlight" data-field="nome_locador">___</span>,<span class="pf-locador"> portador do RG nº <span class="highlight" data-field="rg_locador">___</span> e</span> <span class="doc-locador-label">CPF/CNPJ</span> nº <span class="highlight" data-field="doc_locador">___</span>.
       </p>
       <p style="text-align: justify; margin-bottom: 1rem;">
         <strong>LOCATÁRIO:</strong> <span class="highlight" data-field="nome_locatario">___</span>, portador do RG nº <span class="highlight" data-field="rg_locatario">___</span> e CPF nº <span class="highlight" data-field="doc_locatario">___</span>.

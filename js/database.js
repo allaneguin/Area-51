@@ -73,13 +73,19 @@ const CloudDB = {
     return key;
   },
 
+  // ID aleatório (não-enumerável) para o link — sempre via CSPRNG (getRandomValues/randomUUID)
+  _randomId() {
+    if (window.crypto.randomUUID) return window.crypto.randomUUID();
+    const b = window.crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  },
+
   // Save a new contract to the cloud server
   async saveContract(contractData, key) {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     const encryptedPayload = await this.encrypt(contractData, key);
-    
-    // Gerar um ID aleatório simples estilo UUID para o link
-    const linkId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+    const linkId = this._randomId();
     
     const { error } = await supabaseClient
       .from('tenant_links')
