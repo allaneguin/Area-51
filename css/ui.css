@@ -1,0 +1,155 @@
+/* ═══════════════════════════════════════════════════════
+   UI — Toasts e Modais (feedback não-bloqueante)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Toasts ── */
+.ui-toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.ui-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md, 12px);
+  background: var(--card-bg, #fff);
+  color: var(--text-main, #1E293B);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.15));
+  border-left: 4px solid var(--text-light, #94A3B8);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  animation: ui-toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-toast-out { animation: ui-toast-out 0.25s ease forwards; }
+
+.ui-toast-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+.ui-toast-icon svg { width: 100%; height: 100%; display: block; }
+
+.ui-toast-msg {
+  flex: 1;
+  white-space: pre-line; /* respeita \n das mensagens */
+  word-break: break-word;
+}
+
+.ui-toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted, #515151);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.ui-toast-close:hover { opacity: 1; }
+
+.ui-toast-success { border-left-color: var(--success, #10b981); }
+.ui-toast-success .ui-toast-icon { color: var(--success, #10b981); }
+.ui-toast-error   { border-left-color: var(--danger, #ef4444); }
+.ui-toast-error   .ui-toast-icon { color: var(--danger, #ef4444); }
+.ui-toast-warning { border-left-color: var(--warning, #f59e0b); }
+.ui-toast-warning .ui-toast-icon { color: var(--warning, #f59e0b); }
+.ui-toast-info    { border-left-color: var(--primary, #003D7A); }
+.ui-toast-info    .ui-toast-icon { color: var(--primary, #003D7A); }
+
+@keyframes ui-toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes ui-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+
+/* Em telas pequenas, toasts ocupam o topo inteiro */
+@media (max-width: 600px) {
+  .ui-toast-container {
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    max-width: none;
+  }
+}
+
+/* ── Modais ── */
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  animation: ui-overlay-in 0.2s ease;
+}
+.ui-modal-out { animation: ui-overlay-out 0.2s ease forwards; }
+
+.ui-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card-bg, #fff);
+  color: var(--text-main, #1E293B);
+  border-radius: var(--radius-lg, 20px);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-lg, 0 20px 50px rgba(0, 0, 0, 0.25));
+  animation: ui-modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-modal-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.ui-modal-msg {
+  margin: 0 0 1.5rem;
+  color: var(--text-muted, #515151);
+  line-height: 1.5;
+  white-space: pre-line;
+  word-break: break-word;
+}
+.ui-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Botão de ação destrutiva (ex.: excluir) */
+.ui-btn-danger {
+  background: var(--danger, #ef4444);
+  color: #fff;
+  border: none;
+}
+.ui-btn-danger:hover { filter: brightness(0.93); }
+
+@keyframes ui-overlay-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ui-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Respeita usuários que preferem menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  .ui-toast, .ui-modal, .ui-modal-overlay { animation: none; }
+}

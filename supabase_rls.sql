@@ -1,0 +1,104 @@
+-- ═══════════════════════════════════════════════════════════════════════
+-- Políticas de Segurança (RLS) — Meus Imóveis
+-- ═══════════════════════════════════════════════════════════════════════
+-- Cole e execute este script no SQL Editor do painel do Supabase.
+-- Ele é IDEMPOTENTE: pode ser executado mais de uma vez sem erro.
+--
+-- Modelo de segurança:
+--   • contracts / profiles  -> privados, só o dono (auth.uid()) acessa.
+--   • tenant_links          -> acessíveis de forma anônima APENAS por id
+--                              (o id UUID + a chave na URL funcionam como
+--                              "bearer token"; o payload é criptografado
+--                              no cliente via AES-GCM antes de subir).
+-- ═══════════════════════════════════════════════════════════════════════
+
+
+-- ─────────────────────────────────────────────
+-- Tabela: contracts
+-- (Confirme que a coluna id é TEXT, pois o app gera ids não-UUID
+--  via Utils.generateId(). Se for uuid, a migração local->nuvem falha.)
+-- ─────────────────────────────────────────────
+alter table public.contracts enable row level security;
+
+drop policy if exists "contracts_select_own" on public.contracts;
+create policy "contracts_select_own"
+  on public.contracts for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "contracts_insert_own" on public.contracts;
+create policy "contracts_insert_own"
+  on public.contracts for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "contracts_update_own" on public.contracts;
+create policy "contracts_update_own"
+  on public.contracts for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "contracts_delete_own" on public.contracts;
+create policy "contracts_delete_own"
+  on public.contracts for delete
+  using (auth.uid() = user_id);
+
+
+-- ─────────────────────────────────────────────
+-- Tabela: profiles  (id = auth.uid() do dono)
+-- ─────────────────────────────────────────────
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_select_own" on public.profiles;
+create policy "profiles_select_own"
+  on public.profiles for select
+  using (auth.uid() = id);
+
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own"
+  on public.profiles for insert
+  with check (auth.uid() = id);
+
+drop policy if exists "profiles_update_own" on public.profiles;
+create policy "profiles_update_own"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+
+-- ─────────────────────────────────────────────
+-- Tabela: tenant_links
+-- Acesso anônimo controlado pelo conhecimento do id (UUID) + chave na URL.
+-- O payload é criptografado no cliente, então o backend nunca vê os dados.
+-- Recomendado: coluna de expiração para links não viverem para sempre.
+-- ─────────────────────────────────────────────
+
+-- (Opcional, mas recomendado) coluna de expiração — 90 dias por padrão.
+alter table public.tenant_links
+  add column if not exists expires_at timestamptz not null default (now() + interval '90 days');
+
+alter table public.tenant_links enable row level security;
+
+-- Leitura: qualquer um (anon/authenticated) que saiba o id, desde que não expirado.
+drop policy if exists "tenant_links_select_by_id" on public.tenant_links;
+create policy "tenant_links_select_by_id"
+  on public.tenant_links for select
+  to anon, authenticated
+  using (expires_at > now());
+
+-- Inserção: permitida (o locador cria o link). O id é gerado no cliente.
+drop policy if exists "tenant_links_insert" on public.tenant_links;
+create policy "tenant_links_insert"
+  on public.tenant_links for insert
+  to anon, authenticated
+  with check (true);
+
+-- Atualização: o inquilino preenche e reenvia o payload (link ainda válido).
+drop policy if exists "tenant_links_update_by_id" on public.tenant_links;
+create policy "tenant_links_update_by_id"
+  on public.tenant_links for update
+  to anon, authenticated
+  using (expires_at > now())
+  with check (true);
+
+-- Observação: sem política de DELETE para anônimos (links não podem ser apagados
+-- por terceiros). Faça limpeza de expirados por uma rotina/cron no servidor:
+--   delete from public.tenant_links where expires_at < now();
