@@ -142,16 +142,12 @@
 }
 
 .lp-brand-mark {
-  width: 34px;
-  height: 34px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), #143A66);
   display: grid;
   place-items: center;
 }
-/* o SVG nao encosta na borda da caixa */
-.lp-brand-mark svg { width: 64%; height: 64%; }
+/* logo solto, sem caixa de fundo — o fundo do landing ja e escuro */
+.lp-brand-mark svg { height: 26px; width: auto; display: block; }
 
 .lp-nav-links { display: flex; align-items: center; gap: 4px; }
 .lp-nav-links a {
@@ -705,7 +701,7 @@
   flex-wrap: wrap;
 }
 .lp-footer .lp-brand { font-size: 15px; }
-.lp-footer .lp-brand-mark { width: 30px; height: 30px; border-radius: 8px; }
+.lp-footer .lp-brand-mark svg { height: 22px; }
 .lp-footer-copy { font-size: 13.5px; color: var(--dim); }
 .lp .lp-footer-link {
   font-size: 13.5px;
