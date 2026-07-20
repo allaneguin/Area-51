@@ -30,6 +30,9 @@ const ContractsView = {
         const tituloContrato = Utils.esc(c.name || 'Contrato sem nome');
         const status = Utils.getContractStatus(c);
 
+        // Dados do cliente que só apareciam dentro do contrato — agora ficam na lista.
+        const detalhes = Utils.dadosClienteHTML(c.fields);
+
         return `
           <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
             <div class="contract-row-icon">
@@ -40,7 +43,8 @@ const ContractsView = {
                 ${nomeCliente}
                 <span class="badge-status ${status.class}">${status.label}</span>
               </div>
-              <div class="contract-row-meta"><strong>${tituloContrato}</strong> • Início: ${inicio}</div>
+              <div class="contract-row-meta"><strong>${tituloContrato}</strong></div>
+              ${detalhes}
             </div>
             <div class="contract-row-date" style="font-size: 0.95rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 1rem;">
               ${valor}

@@ -143,10 +143,15 @@ const Editor = {
       sections[f.section].push(f);
     });
 
+    // O inquilino já preencheu? Então o locador precisa VER os dados dele nesta tela,
+    // e não uma seção oculta. Enquanto não preencheu, segue escondida como antes.
+    const temDadosLocatario = !!(this.contract.fields && this.contract.fields.nome_locatario);
+
     let html = '';
     for (const [secName, fields] of Object.entries(sections)) {
       // Ocultar as seções que vêm do AdminProfile ou que vão para o Inquilino
-      const hiddenSections = ['locatário', 'locador', 'conta p/ pagamento'];
+      const hiddenSections = ['locador', 'conta p/ pagamento'];
+      if (!temDadosLocatario) hiddenSections.push('locatário');
       const isHidden = hiddenSections.includes(secName.toLowerCase());
       
       html += `
@@ -180,7 +185,7 @@ const Editor = {
           inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${Utils.esc(val)}" ${f.mask ? `data-mask="${f.mask}"` : ''} ${disabledAttr} ${readOnlyAttr}>`;
         }
         
-        html += `<div class="form-group">
+        html += `<div class="form-group" data-group="${f.name}">
           <label class="form-label">${f.label}</label>
           ${inputHtml}
         </div>`;
@@ -189,7 +194,7 @@ const Editor = {
       html += `</div></div>`;
     }
     
-    if (sections['Locatário'] && !this.contract.isFinalized) {
+    if (sections['Locatário'] && !this.contract.isFinalized && !temDadosLocatario) {
       html += `
         <div class="form-section">
           <div style="padding: 1rem; text-align: center; color: var(--success); border: 1px dashed var(--success); border-radius: 8px; margin-bottom: 1rem;">
@@ -212,7 +217,23 @@ const Editor = {
       ` + html;
     }
 
+    // Resumo do cliente no topo: o locador abre o contrato e já vê com quem está lidando,
+    // sem ter que caçar campo por campo no formulário.
+    if (temDadosLocatario) {
+      const st = Utils.getContractStatus(this.contract);
+      html = `
+        <div class="cliente-resumo">
+          <div class="cliente-resumo-head">
+            <span class="cliente-resumo-nome">${Utils.esc(this.contract.fields.nome_locatario)}</span>
+            <span class="badge-status ${st.class}">${st.label}</span>
+          </div>
+          ${Utils.dadosClienteHTML(this.contract.fields)}
+        </div>
+      ` + html;
+    }
+
     container.innerHTML = html;
+    this.togglePrazoPersonalizado();
 
     // Attach listeners
     container.querySelectorAll('input, textarea, select').forEach(el => {
@@ -236,19 +257,13 @@ const Editor = {
           if (extensoEl) extensoEl.value = extensoVal;
         }
         
+        if (fieldName === 'prazo_extenso') this.togglePrazoPersonalizado();
+
         // Auto-calcular Data de Término
-        if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses') {
+        if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses' || fieldName === 'prazo_unidade') {
           const inicio = this.contract.fields['data_inicio'];
-          const prazoExtenso = this.contract.fields['prazo_extenso'];
-          const prazoMeses = this.contract.fields['prazo_meses'];
-          
-          let meses = 0;
-          if (prazoExtenso) {
-            meses = parseInt(prazoExtenso.split(' ')[0], 10);
-          } else if (prazoMeses) {
-            meses = parseInt(prazoMeses, 10);
-          }
-          
+          const meses = Utils.mesesDoContrato(this.contract.fields);
+
           if (inicio && meses > 0) {
             const d = new Date(inicio + 'T12:00:00Z');
             d.setMonth(d.getMonth() + meses);
@@ -271,12 +286,29 @@ const Editor = {
     });
   },
 
+  // Quantidade e unidade só fazem sentido quando o prazo escolhido é "personalizado".
+  // No locacao_simples o prazo_meses é o campo principal (não há select), então fica visível.
+  togglePrazoPersonalizado() {
+    if (!this.template.fields.some(f => f.name === 'prazo_extenso')) return;
+    const mostrar = this.contract.fields['prazo_extenso'] === 'personalizado';
+    ['prazo_meses', 'prazo_unidade'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = mostrar ? '' : 'none';
+    });
+  },
+
   updatePreview() {
     const prev = document.getElementById('preview-content');
     prev.querySelectorAll('.highlight').forEach(el => {
       const field = el.getAttribute('data-field');
       let val = this.contract.fields[field];
-      
+
+      // "personalizado" é estado do formulário, não texto de contrato:
+      // o documento recebe a frase gerada a partir dos meses digitados.
+      if (field === 'prazo_extenso' && val === 'personalizado') {
+        val = Utils.prazoPorExtenso(this.contract.fields['prazo_meses'], this.contract.fields['prazo_unidade']);
+      }
+
       // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
       if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
          const parts = val.split('-');
@@ -317,8 +349,23 @@ const Editor = {
   },
 
   generateTenantLink() {
+    // Não deixa gerar link com o contrato em branco: o aceite do inquilino só tem
+    // valor jurídico se os termos essenciais já estiverem no documento que ele vai ler.
+    const f = this.contract.fields || {};
+    const faltando = [
+      !f.valor_aluguel && 'Valor do aluguel',
+      !f.end_imovel && 'Endereço do imóvel',
+      !f.data_inicio && 'Data de início',
+      !(Utils.mesesDoContrato(f) > 0) && 'Prazo do contrato',
+      !f.dia_vencimento && 'Dia de vencimento'
+    ].filter(Boolean);
+    if (faltando.length) {
+      Utils.toast('Antes de enviar ao inquilino, preencha: ' + faltando.join(', ') + '.', 'error');
+      return;
+    }
+
     this.save(false);
-    
+
     // Mudar o botão para estado de carregamento
     const btn = document.querySelector('button[onclick="Editor.generateTenantLink()"]');
     let originalHTML = '';
@@ -342,8 +389,7 @@ const Editor = {
     };
 
     const finalize = (serverId, key) => {
-      const baseUrl = window.location.href.split('#')[0];
-      const url = `${baseUrl}#tenant?id=${serverId}&key=${key}`;
+      const url = `${Utils.shareBaseUrl()}#tenant?id=${serverId}&key=${key}`;
 
       navigator.clipboard.writeText(url).then(() => {
         Utils.toast('Link seguro copiado! Envie no WhatsApp do inquilino para ele preencher.');

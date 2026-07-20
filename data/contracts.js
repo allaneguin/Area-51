@@ -62,7 +62,16 @@ const Contracts = {
         { value: '12 (doze) meses (1 ano)', label: '12 (doze) meses (1 ano)' },
         { value: '24 (vinte e quatro) meses (2 anos)', label: '24 (vinte e quatro) meses (2 anos)' },
         { value: '30 (trinta) meses (2 anos e meio)', label: '30 (trinta) meses (2 anos e meio)' },
-        { value: '36 (trinta e seis) meses (3 anos)', label: '36 (trinta e seis) meses (3 anos)' }
+        { value: '36 (trinta e seis) meses (3 anos)', label: '36 (trinta e seis) meses (3 anos)' },
+        { value: 'personalizado', label: 'Outro (personalizar)...' }
+      ]
+    },
+    // Só aparecem quando o prazo acima é "personalizado" (visibilidade controlada em editor.js)
+    { section: 'Condições', name: 'prazo_meses', label: 'Prazo personalizado (quantidade)', type: 'number' },
+    {
+      section: 'Condições', name: 'prazo_unidade', label: 'Unidade do prazo', type: 'select', options: [
+        { value: 'meses', label: 'Meses' },
+        { value: 'anos', label: 'Anos' }
       ]
     },
     { section: 'Condições', name: 'data_inicio', label: 'Data de Início', type: 'date' },

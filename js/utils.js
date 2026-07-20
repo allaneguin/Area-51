@@ -28,7 +28,11 @@ const Utils = {
   // ── Formatação ──
   formatDate(date) {
     if (!date) return '';
-    const d = new Date(date);
+    // "2026-05-28" (sem hora) é interpretado como UTC pelo Date e, em qualquer fuso
+    // negativo — ou seja, no Brasil inteiro — voltava um dia ao formatar (27/05/2026).
+    // Ancorar no fuso local resolve. Timestamps completos seguem o caminho normal.
+    const isDateOnly = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const d = new Date(isDateOnly ? date + 'T00:00:00' : date);
     return d.toLocaleDateString('pt-BR');
   },
   formatRelativeDate(date) {
@@ -133,6 +137,92 @@ const Utils = {
     box.appendChild(el);
     setTimeout(() => el.classList.add('toast-out'), 4500);
     setTimeout(() => el.remove(), 4900);
+  },
+
+  // ── Número por extenso (1..99) ──
+  // ponytail: 1..99 cobre o universo real de um prazo de locação.
+  // Se um dia precisar de 100+, reaproveitar o convertGroup de writeBRLInWords.
+  numeroPorExtenso(n) {
+    n = parseInt(n, 10);
+    if (!n || n < 1 || n > 99) return '';
+
+    const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+    const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+    const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+
+    const t = Math.floor(n / 10);
+    const u = n % 10;
+
+    if (t === 0) return units[u];
+    if (t === 1) return teens[u];
+    return u > 0 ? tens[t] + ' e ' + units[u] : tens[t];
+  },
+
+  // ── Prazo -> frase do contrato: (18,'meses') => "18 (dezoito) meses" ──
+  prazoPorExtenso(qtd, unidade) {
+    const n = parseInt(qtd, 10);
+    const extenso = Utils.numeroPorExtenso(n);
+    if (!extenso) return '';
+
+    const emAnos = unidade === 'anos';
+    const substantivo = emAnos ? (n === 1 ? 'ano' : 'anos') : (n === 1 ? 'mês' : 'meses');
+    return `${String(n).padStart(2, '0')} (${extenso}) ${substantivo}`;
+  },
+
+  // ── Quantos meses dura o contrato ──
+  // O select por extenso manda ("30 (trinta) meses..." -> 30). Em "personalizado"
+  // o parse dá NaN de propósito e quem vale é a quantidade digitada + a unidade.
+  mesesDoContrato(fields) {
+    fields = fields || {};
+    let meses = parseInt(fields.prazo_extenso, 10);
+    if (!isNaN(meses) && meses > 0) return meses;
+
+    const qtd = parseInt(fields.prazo_meses, 10);
+    if (isNaN(qtd) || qtd <= 0) return 0;
+    return fields.prazo_unidade === 'anos' ? qtd * 12 : qtd;
+  },
+
+  // ── Base dos links compartilháveis (inquilino/importação) ──
+  // Em produção usa o atalho /c (rewrite no vercel.json): o link fica curto e
+  // sem "app.html" no meio, o que lê melhor no WhatsApp. Rodando local
+  // (file:// ou localhost, sem rewrite) mantém o caminho real.
+  shareBaseUrl(loc) {
+    loc = loc || window.location;
+    const local = loc.protocol === 'file:' || /^(localhost|127\.)/.test(loc.hostname);
+    return local ? loc.href.split('#')[0] : loc.origin + '/c';
+  },
+
+  // ── Dados do locatário exibidos na lista e no editor (uma fonte só) ──
+  dadosClienteHTML(fields) {
+    fields = fields || {};
+    const inicio = fields.data_inicio ? Utils.formatDate(fields.data_inicio) : '';
+    const termino = fields.data_termino ? Utils.formatDate(fields.data_termino) : '';
+    const periodo = inicio && termino ? `${inicio} a ${termino}` : (inicio || '');
+
+    const itens = [
+      fields.doc_locatario && ['CPF/CNPJ', Utils.maskCPFCNPJ(fields.doc_locatario)],
+      fields.rg_locatario && ['RG', fields.rg_locatario],
+      fields.prof_locatario && ['Profissão', fields.prof_locatario],
+      fields.est_civil_locatario && ['Estado civil', fields.est_civil_locatario],
+      periodo && ['Período', periodo],
+      fields.dia_vencimento && ['Vencimento', `todo dia ${fields.dia_vencimento}`],
+      fields.valor_aluguel && ['Aluguel', fields.valor_aluguel],
+      fields.indice_reajuste && ['Reajuste', fields.indice_reajuste],
+      fields.end_imovel && ['Imóvel', fields.end_imovel],
+      // Evidência do aceite do inquilino (gravada no envio, junto com o hash do texto lido)
+      fields.aceite_ts && ['Aceite do inquilino', new Date(fields.aceite_ts).toLocaleString('pt-BR') +
+        (fields.aceite_hash ? ' · doc ' + fields.aceite_hash.slice(0, 12) + '…' : '')]
+    ].filter(Boolean);
+
+    if (!itens.length) return '';
+
+    // Escape obrigatório: estes dados vêm do INQUILINO (anônimo) e vão para innerHTML.
+    return `<div class="cliente-detalhes">` + itens.map(([rotulo, valor]) => `
+      <div class="cliente-detalhe">
+        <span class="cliente-detalhe-rotulo">${rotulo}</span>
+        <span class="cliente-detalhe-valor">${Utils.esc(String(valor))}</span>
+      </div>
+    `).join('') + `</div>`;
   },
 
   // ── IDs ──

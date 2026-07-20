@@ -95,19 +95,31 @@ const CloudDB = {
     return linkId;
   },
 
-  // Update an existing contract on the cloud server
-  async updateContract(serverId, contractData, key) {
+  // Update an existing contract on the cloud server.
+  // finalize=true (envio do inquilino) trava o link no servidor: depois disso
+  // ninguém mais reescreve o payload, mesmo tendo a URL (ver supabase_finalize.sql).
+  async updateContract(serverId, contractData, key, finalize = false) {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     const encryptedPayload = await this.encrypt(contractData, key);
-    
-    const { data, error } = await supabaseClient
-      .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload });
+
+    let { data, error } = await supabaseClient
+      .rpc('set_tenant_link', finalize
+        ? { p_id: serverId, p_payload: encryptedPayload, p_finalize: true }
+        : { p_id: serverId, p_payload: encryptedPayload });
+
+    // Banco ainda sem a migração (função de 2 argumentos): reenvia no formato
+    // antigo para o envio do inquilino nunca ficar bloqueado pela migração pendente.
+    if (error && finalize && (error.code === 'PGRST202' || /p_finalize|function/i.test(error.message))) {
+      ({ data, error } = await supabaseClient
+        .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload }));
+    }
 
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
-    // A função devolve false quando nenhuma linha casou (link expirado/removido).
-    // Sem esta checagem, os dados digitados seriam descartados silenciosamente.
+    // A função devolve false quando nenhuma linha casou (link expirado,
+    // removido ou já finalizado). Sem esta checagem, os dados digitados
+    // seriam descartados silenciosamente.
     if (data !== true) {
-      throw new Error("Este link expirou. Peça um novo link ao locador.");
+      throw new Error("Este link expirou ou já foi enviado. Peça um novo link ao locador.");
     }
     return true;
   },

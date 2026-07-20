@@ -60,6 +60,10 @@ const Tenant = {
           return;
         }
 
+        // Recupera o rascunho local: se o inquilino fechou a aba no meio do
+        // preenchimento, os dados digitados voltam em vez de sumirem.
+        if (!payload.isFinalized) this.restoreDraft();
+
         this.renderTenantUI(container);
         // Reabertura de um link já finalizado: mostra estado read-only, sem formulário editável
         // nem botão de reenvio (evita reenvio acidental sobrescrevendo a nuvem).
@@ -141,6 +145,9 @@ const Tenant = {
 
       <div class="tenant-header animate-fade-in-up">
         <h1>Contrato de <em>Locação</em></h1>
+        ${this.contract.fields.nome_locador ? `
+        <p class="tenant-sender"><strong>${Utils.esc(this.contract.fields.nome_locador)}</strong> enviou este contrato para você.</p>
+        ` : ''}
         <p>Preencha seus dados pessoais abaixo para finalizar o contrato.</p>
       </div>
 
@@ -150,11 +157,11 @@ const Tenant = {
         </span>
         <div class="tenant-property-info">
           <div class="tenant-label">IMÓVEL</div>
-          <div class="tenant-property-value">${this.contract.fields.end_imovel || 'Imóvel Residencial'}</div>
+          <div class="tenant-property-value">${Utils.esc(this.contract.fields.end_imovel) || 'Não informado'}</div>
         </div>
         <div class="tenant-property-rent">
           <div class="tenant-label">ALUGUEL</div>
-          <div class="tenant-rent-value">${this.contract.fields.valor_aluguel || 'A combinar'}<span> /mês</span></div>
+          <div class="tenant-rent-value">${this.contract.fields.valor_aluguel ? Utils.esc(this.contract.fields.valor_aluguel) + '<span> /mês</span>' : 'Não informado'}</div>
         </div>
       </div>
 
@@ -200,6 +207,35 @@ const Tenant = {
     this.renderForm();
   },
   
+  // ── Rascunho local: o inquilino não perde o que digitou se fechar a aba ──
+  _draftKey() {
+    return this.contract && this.contract.cloudId ? 'tenant_draft_' + this.contract.cloudId : null;
+  },
+
+  saveDraft() {
+    const k = this._draftKey();
+    if (!k) return; // link legado base64 não tem id estável — sem rascunho
+    const draft = {};
+    this.template.fields
+      .filter(f => f.section.toLowerCase() === 'locatário')
+      .forEach(f => { if (this.contract.fields[f.name]) draft[f.name] = this.contract.fields[f.name]; });
+    try { localStorage.setItem(k, JSON.stringify(draft)); } catch (e) { /* storage cheio/bloqueado: segue sem rascunho */ }
+  },
+
+  restoreDraft() {
+    const k = this._draftKey();
+    if (!k) return;
+    try {
+      const draft = JSON.parse(localStorage.getItem(k));
+      if (draft) Object.assign(this.contract.fields, draft);
+    } catch (e) { /* rascunho corrompido: ignora */ }
+  },
+
+  clearDraft() {
+    const k = this._draftKey();
+    if (k) try { localStorage.removeItem(k); } catch (e) {}
+  },
+
   renderForm() {
     const container = document.getElementById('tenant-form-container');
     const tenantFields = this.template.fields.filter(f => f.section.toLowerCase() === 'locatário');
@@ -244,6 +280,7 @@ const Tenant = {
       el.addEventListener('input', () => {
         const fieldName = el.getAttribute('data-field');
         this.contract.fields[fieldName] = el.value;
+        this.saveDraft();
         this.updatePreview();
       });
     });
@@ -259,7 +296,13 @@ const Tenant = {
     prev.querySelectorAll('.highlight').forEach(el => {
       const field = el.getAttribute('data-field');
       let val = this.contract.fields[field];
-      
+
+      // "personalizado" é estado do formulário, não texto de contrato:
+      // o documento recebe a frase gerada a partir dos meses digitados.
+      if (field === 'prazo_extenso' && val === 'personalizado') {
+        val = Utils.prazoPorExtenso(this.contract.fields['prazo_meses'], this.contract.fields['prazo_unidade']);
+      }
+
       // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
       if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
          const parts = val.split('-');
@@ -356,6 +399,20 @@ const Tenant = {
         saveBtn.disabled = true;
       }
 
+      // Evidência do aceite: instante + SHA-256 do texto exato que o inquilino
+      // leu (contrato já com os dados dele). Viaja dentro do payload cifrado e
+      // chega ao painel do locador. Se o contrato mudar depois, o hash não bate.
+      const registrarAceite = () => {
+        this.contract.fields.aceite_ts = new Date().toISOString();
+        const prev = document.getElementById('preview-content');
+        const texto = prev ? prev.innerText : '';
+        return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))
+          .then(buf => {
+            this.contract.fields.aceite_hash = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+          })
+          .catch(() => { /* ambiente sem crypto.subtle: envia só o timestamp */ });
+      };
+
       const payload = {
         t: this.contract.templateId,
         f: this.contract.fields,
@@ -363,8 +420,11 @@ const Tenant = {
         isFinalized: true
       };
 
-      CloudDB.updateContract(this.contract.cloudId, payload, this.contract.cloudKey).then(() => {
-        const importUrl = window.location.origin + window.location.pathname + '#import?id=' + this.contract.cloudId + '&key=' + this.contract.cloudKey;
+      registrarAceite().then(() =>
+        CloudDB.updateContract(this.contract.cloudId, payload, this.contract.cloudKey, true)
+      ).then(() => {
+        this.clearDraft();
+        const importUrl = Utils.shareBaseUrl() + '#import?id=' + this.contract.cloudId + '&key=' + this.contract.cloudKey;
         const waText = encodeURIComponent("Olá! Preenchi os meus dados no contrato com segurança. Segue o link para você visualizar/importar no seu painel:\n\n" + importUrl);
         const waUrl = "https://wa.me/?text=" + waText;
         
