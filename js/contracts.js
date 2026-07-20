@@ -22,10 +22,12 @@ const ContractsView = {
       }
       
       return contracts.map(c => {
-        const nomeCliente = c.fields && c.fields.nome_locatario ? c.fields.nome_locatario : 'Locatário não preenchido';
-        const valor = c.fields && c.fields.valor_aluguel ? c.fields.valor_aluguel : 'R$ ---';
+        // Escape obrigatório: nome/valor/título vêm de dados preenchidos pelo INQUILINO
+        // (anônimo) e são injetados via innerHTML na sessão autenticada do locador.
+        const nomeCliente = Utils.esc(c.fields && c.fields.nome_locatario ? c.fields.nome_locatario : 'Locatário não preenchido');
+        const valor = Utils.esc(c.fields && c.fields.valor_aluguel ? c.fields.valor_aluguel : 'R$ ---');
         const inicio = c.fields && c.fields.data_inicio ? Utils.formatDate(c.fields.data_inicio) : '---';
-        const tituloContrato = c.name || 'Contrato sem nome';
+        const tituloContrato = Utils.esc(c.name || 'Contrato sem nome');
         const status = Utils.getContractStatus(c);
 
         return `

@@ -86,11 +86,11 @@ const CloudDB = {
     const encryptedPayload = await this.encrypt(contractData, key);
 
     const linkId = this._randomId();
-    
+
+    // Via RPC: o id é argumento obrigatório, então a operação toca uma linha só.
     const { error } = await supabaseClient
-      .from('tenant_links')
-      .insert([{ id: linkId, encrypted_payload: encryptedPayload }]);
-      
+      .rpc('create_tenant_link', { p_id: linkId, p_payload: encryptedPayload });
+
     if (error) throw new Error("Falha ao salvar link seguro no Supabase: " + error.message);
     return linkId;
   },
@@ -101,15 +101,12 @@ const CloudDB = {
     const encryptedPayload = await this.encrypt(contractData, key);
     
     const { data, error } = await supabaseClient
-      .from('tenant_links')
-      .update({ encrypted_payload: encryptedPayload })
-      .eq('id', serverId)
-      .select('id');
+      .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload });
 
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
-    // UPDATE que não casa nenhuma linha (link expirado/removido) NÃO gera erro no Supabase.
+    // A função devolve false quando nenhuma linha casou (link expirado/removido).
     // Sem esta checagem, os dados digitados seriam descartados silenciosamente.
-    if (!data || data.length === 0) {
+    if (data !== true) {
       throw new Error("Este link expirou. Peça um novo link ao locador.");
     }
     return true;
@@ -120,15 +117,12 @@ const CloudDB = {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     
     const { data, error } = await supabaseClient
-      .from('tenant_links')
-      .select('encrypted_payload')
-      .eq('id', serverId)
-      .single();
+      .rpc('get_tenant_link', { p_id: serverId });
 
     if (error || !data) throw new Error("Este link expirou ou não existe mais. Peça um novo link ao locador.");
 
     try {
-      return await this.decrypt(data.encrypted_payload, key);
+      return await this.decrypt(data, key);
     } catch (e) {
       // decrypt AES-GCM com chave errada rejeita com mensagem vazia — traduz para algo acionável.
       throw new Error("Chave do link incorreta ou link incompleto. Copie o link inteiro que o locador enviou.");
