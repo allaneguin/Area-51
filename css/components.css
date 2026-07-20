@@ -93,8 +93,8 @@
 .form-input, .form-textarea, .form-select {
   width: 100%;
   padding: 12px 14px;
-  background-color: #FBFCFE;
-  border: 1px solid #DDE3EC;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 10px;
   color: var(--text-main);
   font-family: var(--font-sans);
@@ -117,7 +117,7 @@ select.form-input, select.form-select {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
-  background-color: #ffffff;
+  background-color: var(--card-bg);
 }
 
 .form-input::placeholder { color: var(--text-light); }
@@ -202,6 +202,17 @@ select.form-input, select.form-select {
 
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; transition: color var(--transition); }
 
+/* .nav-item tambem e usado em <button> (ex.: alternador de tema), que e uma acao e
+   nao um destino — assim ele nunca casa com a regra de "item ativo" do updateNav. */
+button.nav-item {
+  width: 100%;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
 .nav-item:hover {
   background-color: rgba(233, 231, 226, 0.08);
   color: #FFFFFF;
@@ -217,7 +228,7 @@ select.form-input, select.form-select {
 .seg-tabs {
   display: flex;
   gap: 6px;
-  background: #EDF0F5;
+  background: var(--seg-bg);
   border-radius: var(--radius-md);
   padding: 5px;
   width: fit-content;
@@ -266,7 +277,7 @@ select.form-input, select.form-select {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: 60px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
@@ -302,7 +313,7 @@ select.form-input, select.form-select {
 }
 
 .btn-icon:hover {
-  background: rgba(0,0,0,0.05);
+  background: var(--icon-hover-bg);
 }
 
 .btn-icon svg {
@@ -470,3 +481,31 @@ select.form-input, select.form-select {
   from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ═══ Ajustes de modo escuro para cores fixas ═══ */
+/* a seta do select vive dentro de uma url(): var() nao interpola ali, entao repete a regra */
+[data-theme="dark"] select.form-input,
+[data-theme="dark"] select.form-select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A2A9B6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+/* header mobile fica escuro: logo precisa clarear (no claro ele e azul escuro) */
+[data-theme="dark"] .mobile-header .sidebar-logo { color: var(--sidebar-title); }
+
+/* Botao primario: o gradiente do tema claro fica invertido no escuro (topo mais
+   escuro que a base) e o brilho branco do :hover lavava o texto ate sumir. */
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(180deg, #3E82CE, #2A5F9E);
+}
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(180deg, #4A8FD8, #326CAE);
+}
+[data-theme="dark"] .btn::after {
+  background: linear-gradient(rgba(255, 255, 255, 0.05), transparent);
+}
+/* vermelho escuro do badge "Vencido" some no fundo escuro */
+[data-theme="dark"] .badge-status-expired { color: var(--danger); }
+
+/* ═══ Alternador de tema (sidebar) ═══ */
+.theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-icon-moon { display: none; }
+[data-theme="dark"] .theme-icon-sun { display: inline-block; }

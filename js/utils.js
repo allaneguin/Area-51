@@ -92,6 +92,22 @@ const Utils = {
     });
   },
 
+  // ── Tema claro/escuro ──
+  // O tema inicial é aplicado por um script inline no <head> (evita flash).
+  // Aqui só alternamos e persistimos a escolha.
+  toggleTheme() {
+    const el = document.documentElement;
+    const isDark = el.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      el.removeAttribute('data-theme');
+    } else {
+      el.setAttribute('data-theme', 'dark');
+    }
+    try {
+      localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    } catch (e) { /* localStorage bloqueado: tema vale só nesta sessão */ }
+  },
+
   // ── Escape HTML (previne XSS em interpolação para innerHTML) ──
   esc(v) {
     if (v == null) return '';

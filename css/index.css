@@ -27,6 +27,14 @@
   --border-light: #E3E8EF;
   --border-focus: #C9D6E6;
 
+  --input-bg: #FBFCFE;
+  --input-border: #DDE3EC;
+  --seg-bg: #EDF0F5;
+  --icon-hover-bg: rgba(0, 0, 0, 0.05);
+  /* hover: no tema claro escurecemos; no escuro clareamos (ver bloco dark) */
+  --row-hover-bg: #F8FAFC;
+  --overlay-hover: rgba(0, 0, 0, 0.04);
+
   --success: #2E7D52;
   --success-bg: #E8F2EC;
   --warning: #9A6B1F;
@@ -50,6 +58,45 @@
 
   --transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   --sidebar-width: 240px;
+}
+
+/* ═══ Modo escuro ═══
+   Só troca as cores; metricas/tipografia continuam do :root.
+   O documento do contrato (.preview-document) tem cor fixa de proposito:
+   ele e "papel" e vira PDF impresso, entao NUNCA escurece. */
+[data-theme="dark"] {
+  --primary: #3B7DD8;
+  --primary-hover: #4E8FE4;
+  --accent: #6BA8E8;
+  --primary-light: rgba(59, 125, 216, 0.18);
+
+  --surface-bg: #0F1115;
+  --card-bg: #171A21;
+
+  --text-main: #E9E7E2;
+  --text-muted: #A2A9B6;
+  --text-light: #7C8492;
+
+  --border-light: #262B34;
+  --border-focus: #3B4654;
+
+  --input-bg: #1E222B;
+  --input-border: #2E3540;
+  --seg-bg: #1E222B;
+  --icon-hover-bg: rgba(255, 255, 255, 0.08);
+  --row-hover-bg: rgba(255, 255, 255, 0.045);
+  --overlay-hover: rgba(255, 255, 255, 0.06);
+
+  --success: #5DD48F;
+  --success-bg: rgba(93, 212, 143, 0.13);
+  --warning: #E8B45C;
+  --warning-bg: rgba(232, 180, 92, 0.13);
+  --danger: #F0736B;
+  --danger-bg: rgba(240, 115, 107, 0.15);
+
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 6px 16px rgba(59, 125, 216, 0.30);
 }
 
 *, *::before, *::after {

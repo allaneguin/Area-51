@@ -49,7 +49,7 @@
   transition: background var(--transition);
 }
 .editor-toolbar-title:hover, .editor-toolbar-title:focus {
-  background: rgba(0, 0, 0, 0.04) !important;
+  background: var(--overlay-hover) !important;
   border-color: var(--border-light) !important;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .form-section {
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid var(--border-light);
 }
 .form-section:last-child {
   border-bottom: none;
@@ -82,7 +82,7 @@
 }
 
 .form-section-header:hover {
-  background: rgba(0,0,0,0.02);
+  background: var(--overlay-hover);
 }
 
 .form-section-header h3 {
@@ -111,7 +111,7 @@
 .form-section-body {
   padding: 1.5rem;
   background: rgba(0,0,0,0.02);
-  border-top: 1px solid rgba(0,0,0,0.05);
+  border-top: 1px solid var(--border-light);
 }
 
 /* Preview Panel */
@@ -241,11 +241,11 @@
   display: none;
   margin-left: auto;
   color: var(--text-muted);
-  background: rgba(0,0,0,0.05);
+  background: var(--icon-hover-bg);
   border-radius: 50%;
   padding: 0.5rem;
 }
-.close-preview-btn:hover { background: rgba(0,0,0,0.1); }
+.close-preview-btn:hover { background: var(--overlay-hover); }
 
 @media(max-width: 1024px) {
   .editor-layout {
