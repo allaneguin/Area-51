@@ -147,17 +147,14 @@ select.form-input, select.form-select {
 }
 
 .sidebar-logo {
-  width: 36px;
-  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), #143A66);
+  /* logo solto, sem caixa: a cor vem do contexto (sidebar escura x header claro) */
+  color: var(--sidebar-title);
 }
-/* o SVG nao encosta na borda da caixa */
-.sidebar-logo svg { width: 64%; height: 64%; }
+.sidebar-logo svg { height: 26px; width: auto; display: block; }
 
 .sidebar-title {
   font-weight: 700;
@@ -280,9 +277,10 @@ select.form-input, select.form-select {
 }
 
 .mobile-header .sidebar-logo {
-  width: 32px;
-  height: 32px;
+  /* fundo do header mobile e claro: logo em azul escuro para contrastar */
+  color: #143A66;
 }
+.mobile-header .sidebar-logo svg { height: 24px; }
 
 .mobile-header .sidebar-title {
   font-size: 1.1rem;
