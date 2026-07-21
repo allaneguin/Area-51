@@ -49,8 +49,7 @@ const ContractsView = {
                 ${dataCriacao ? ` · <span style="font-size: 0.85rem; color: var(--text-muted);">Iniciado em <strong>${dataCriacao}</strong></span>` : ''}
               </div>
               ${detalhes}
-            </div>`
-,StartLine:30,TargetContent:
+            </div>
             <div class="contract-row-date" style="font-size: 0.95rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 1rem;">
               ${valor}
               <button class="btn-icon" style="color: var(--danger, #ef4444); padding: 0.25rem;" onclick="event.stopPropagation(); ContractsView.deleteContract('${c.id}')" title="Excluir Contrato">

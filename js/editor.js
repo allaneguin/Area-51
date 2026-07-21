@@ -479,14 +479,7 @@ const Editor = {
 
     const finalize = (serverId, key) => {
       const url = `${Utils.shareBaseUrl()}#tenant?id=${serverId}&key=${key}`;
-
-      navigator.clipboard.writeText(url).then(() => {
-        Utils.toast('Link seguro copiado! Envie no WhatsApp do inquilino para ele preencher.');
-      }).catch(() => {
-        // ponytail: prompt nativo como fallback — deixa o usuário copiar a URL na mão
-        prompt('Não foi possível copiar automaticamente. Copie o link abaixo:', url);
-      });
-
+      Utils.showShareModal(url);
       restoreBtn();
     };
 

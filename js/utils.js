@@ -210,6 +210,85 @@ const Utils = {
     return local ? loc.href.split('#')[0] : loc.origin + '/c';
   },
 
+  // ── Modal de Compartilhamento do Link (Substitui prompt nativo no celular) ──
+  showShareModal(url) {
+    let copied = false;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(() => {
+        copied = true;
+        Utils.toast('Link seguro copiado para a área de transferência!', 'success');
+      }).catch(() => {});
+    }
+
+    const oldModal = document.getElementById('app-share-modal');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'app-share-modal';
+    modal.className = 'share-modal-overlay';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;';
+
+    modal.innerHTML = `
+      <div style="background:var(--card-bg, #FFFFFF); border:1px solid var(--border-light, #CBD5E1); border-radius:16px; max-width:440px; width:100%; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2); text-align:center; animation: fadeInScale 0.2s ease-out;">
+        <div style="width:48px; height:48px; border-radius:12px; background:var(--primary-light, #EFF6FF); color:var(--primary, #1E40AF); display:grid; place-items:center; margin:0 auto 16px;">
+          <svg style="width:24px; height:24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+        </div>
+        <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-main, #0F172A); margin:0 0 6px;">Link do Inquilino Gerado!</h3>
+        <p style="font-size:0.875rem; color:var(--text-muted, #64748B); margin:0 0 16px; line-height:1.4;">
+          ${copied ? 'O link foi copiado! Você também pode compartilhá-lo ou copiá-lo abaixo:' : 'Envie este link para o inquilino preencher os dados e assinar:'}
+        </p>
+
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+          <input type="text" readonly id="share-modal-input" value="${Utils.esc(url)}"
+            style="flex:1; font-size:0.85rem; padding:10px 12px; border:1px solid #CBD5E1; border-radius:8px; background:#F8FAFC; color:#1E293B; outline:none;"
+            onclick="this.select()">
+          <button type="button" class="btn btn-primary" style="padding:10px 16px; font-size:0.85rem; white-space:nowrap;"
+            onclick="Utils.copyInput('share-modal-input')">
+            📋 Copiar
+          </button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${navigator.share ? `
+            <button type="button" class="btn btn-whatsapp" style="width:100%; justify-content:center; padding:12px; font-size:0.9rem;"
+              onclick="navigator.share({ title: 'Contrato de Locação', text: 'Olá! Por favor, preencha seus dados para o contrato de locação:', url: '${Utils.esc(url)}' }).catch(() => {})">
+              📱 Compartilhar no WhatsApp / Apps
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-secondary" style="width:100%; justify-content:center; padding:10px; font-size:0.85rem;"
+            onclick="document.getElementById('app-share-modal').remove()">
+            Fechar
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('share-modal-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  },
+
+  copyInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.focus();
+    input.select();
+    try {
+      document.execCommand('copy');
+      Utils.toast('Link copiado para a área de transferência!', 'success');
+    } catch (e) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          Utils.toast('Link copiado para a área de transferência!', 'success');
+        });
+      }
+    }
+  },
+
   // ── Dados do locatário exibidos na lista e no editor (uma fonte só) ──
   dadosClienteHTML(fields, createdAt) {
     fields = fields || {};
