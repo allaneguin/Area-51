@@ -48,7 +48,7 @@ const Dashboard = {
               ${Utils.esc(c.name || 'Contrato sem nome')}
               <span class="badge-status ${status.class}">${status.label}</span>
             </div>
-            <div class="contract-row-meta">${Contracts[c.templateId]?.title || 'Modelo Desconhecido'}</div>
+            <div class="contract-row-meta">${Contracts[c.templateId]?.title || 'Modelo Desconhecido'}${c.createdAt ? ` · Iniciado em <strong>${Utils.formatDate(c.createdAt)}</strong>` : ''}</div>
           </div>
           <div class="contract-row-date" style="display: flex; align-items: center; gap: 1rem;">
             ${Utils.formatRelativeDate(c.updatedAt)}

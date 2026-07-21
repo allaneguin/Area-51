@@ -211,18 +211,21 @@ const Utils = {
   },
 
   // ── Dados do locatário exibidos na lista e no editor (uma fonte só) ──
-  dadosClienteHTML(fields) {
+  dadosClienteHTML(fields, createdAt) {
     fields = fields || {};
+    const dataCriacao = createdAt ? Utils.formatDate(createdAt) : '';
     const inicio = fields.data_inicio ? Utils.formatDate(fields.data_inicio) : '';
     const termino = fields.data_termino ? Utils.formatDate(fields.data_termino) : '';
     const periodo = inicio && termino ? `${inicio} a ${termino}` : (inicio || '');
 
     const itens = [
+      dataCriacao && ['Iniciado em', dataCriacao],
       fields.doc_locatario && ['CPF/CNPJ', Utils.maskCPFCNPJ(fields.doc_locatario)],
       fields.rg_locatario && ['RG', fields.rg_locatario],
       fields.prof_locatario && ['Profissão', fields.prof_locatario],
       fields.est_civil_locatario && ['Estado civil', fields.est_civil_locatario],
-      periodo && ['Período', periodo],
+      inicio && ['Início Locação', inicio],
+      periodo && ['Período Vigência', periodo],
       fields.dia_vencimento && ['Vencimento', `todo dia ${fields.dia_vencimento}`],
       fields.valor_aluguel && ['Aluguel', fields.valor_aluguel],
       fields.indice_reajuste && ['Reajuste', fields.indice_reajuste],

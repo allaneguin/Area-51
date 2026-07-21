@@ -29,9 +29,10 @@ const ContractsView = {
         const inicio = c.fields && c.fields.data_inicio ? Utils.formatDate(c.fields.data_inicio) : '---';
         const tituloContrato = Utils.esc(c.name || 'Contrato sem nome');
         const status = Utils.getContractStatus(c);
+        const dataCriacao = c.createdAt ? Utils.formatDate(c.createdAt) : '';
 
         // Dados do cliente que só apareciam dentro do contrato — agora ficam na lista.
-        const detalhes = Utils.dadosClienteHTML(c.fields);
+        const detalhes = Utils.dadosClienteHTML(c.fields, c.createdAt);
 
         return `
           <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
@@ -43,9 +44,13 @@ const ContractsView = {
                 ${nomeCliente}
                 <span class="badge-status ${status.class}">${status.label}</span>
               </div>
-              <div class="contract-row-meta"><strong>${tituloContrato}</strong></div>
+              <div class="contract-row-meta">
+                <strong>${tituloContrato}</strong>
+                ${dataCriacao ? ` · <span style="font-size: 0.85rem; color: var(--text-muted);">Iniciado em <strong>${dataCriacao}</strong></span>` : ''}
+              </div>
               ${detalhes}
-            </div>
+            </div>`
+,StartLine:30,TargetContent:
             <div class="contract-row-date" style="font-size: 0.95rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 1rem;">
               ${valor}
               <button class="btn-icon" style="color: var(--danger, #ef4444); padding: 0.25rem;" onclick="event.stopPropagation(); ContractsView.deleteContract('${c.id}')" title="Excluir Contrato">
