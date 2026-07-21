@@ -375,13 +375,26 @@ const Tenant = {
 
     if (!video) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const maxDim = 600;
+    let w = video.videoWidth || 640;
+    let h = video.videoHeight || 480;
+    if (w > maxDim || h > maxDim) {
+      if (w > h) {
+        h = Math.round((h * maxDim) / w);
+        w = maxDim;
+      } else {
+        w = Math.round((w * maxDim) / h);
+        h = maxDim;
+      }
+    }
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
     this.contract.fields.selfie_locatario = dataUrl;
 
     if (pImg && pContainer) {
@@ -428,23 +441,45 @@ const Tenant = {
     const file = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      this.contract.fields.selfie_locatario = dataUrl;
-      
-      const pContainer = document.getElementById('selfie-preview-container');
-      const pImg = document.getElementById('selfie-preview-img');
-      const btnOpen = document.getElementById('btn-open-camera');
-      const btnRetake = document.getElementById('btn-retake-selfie');
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 600;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
 
-      if (pImg && pContainer) {
-        pImg.src = dataUrl;
-        pContainer.style.display = 'block';
-      }
-      if (btnOpen) btnOpen.style.display = 'none';
-      if (btnRetake) btnRetake.style.display = 'inline-block';
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        this.contract.fields.selfie_locatario = dataUrl;
+        
+        const pContainer = document.getElementById('selfie-preview-container');
+        const pImg = document.getElementById('selfie-preview-img');
+        const btnOpen = document.getElementById('btn-open-camera');
+        const btnRetake = document.getElementById('btn-retake-selfie');
 
-      this.saveDraft();
-      this.updatePreview();
+        if (pImg && pContainer) {
+          pImg.src = dataUrl;
+          pContainer.style.display = 'block';
+        }
+        if (btnOpen) btnOpen.style.display = 'none';
+        if (btnRetake) btnRetake.style.display = 'inline-block';
+
+        this.saveDraft();
+        this.updatePreview();
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   },
