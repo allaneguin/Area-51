@@ -114,6 +114,8 @@ node js/dashboard.test.js
 ```
 index.html              landing page
 app.html                aplicação (SPA com router por hash)
+termos.html             termos de uso e política de privacidade (LGPD)
+fonts/                  fontes auto-hospedadas (woff2)
 js/
   app.js                rotas e bootstrap
   auth.js               login, cadastro PF/PJ, recuperação de senha
@@ -138,7 +140,6 @@ supabase_rls.sql        políticas de RLS
 - Apenas **2 modelos** de contrato, ambos residenciais — a aba Comercial fica sempre vazia. `customTemplates` é lido do localStorage mas não há UI para criar.
 - **Não há assinatura eletrônica.** O fluxo termina em aceite por checkbox e PDF por impressão. A landing menciona "assine cada contrato" — o texto está à frente do que existe.
 - Escritas no Supabase são *fire-and-forget*: o cache local já foi alterado e o erro só vai para o console. Divergência silenciosa é possível.
-- O caminho legado de payload base64 na URL ainda coexiste com o fluxo cifrado.
 - Cobertura de testes mínima, só 2 funções do dashboard. Sem CI e sem linter.
 
 ---

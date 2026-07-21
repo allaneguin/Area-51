@@ -2,7 +2,7 @@
    TENANT — tela do inquilino (rota #tenant)
    Sem sidebar, sem bottom-nav: e uma pagina publica.
    ═══════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+@import url('fonts.css');
 
 body.tenant-mode {
   background: var(--surface-bg);

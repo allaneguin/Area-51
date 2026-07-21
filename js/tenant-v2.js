@@ -72,33 +72,8 @@ const Tenant = {
     }
     
     if (param.startsWith('data=')) {
-      // Legado Base64
-      let tId = '';
-      try {
-        const b64 = param.split('=')[1];
-        const str = decodeURIComponent(Array.prototype.map.call(atob(b64), function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const payload = JSON.parse(str);
-        
-        tId = payload.t;
-        this.contract = {
-          templateId: payload.t,
-          fields: payload.f
-        };
-        
-        this.template = Contracts[payload.t] || (Storage._getData().customTemplates || []).find(t => t.id === payload.t);
-        if (!this.template) {
-          this.renderErro(container, 'Modelo não encontrado', 'Este contrato usa um modelo que não existe mais.');
-          return;
-        }
-
-      } catch (e) {
-        this.renderErro(container, 'Não foi possível ler o link', 'O link pode estar quebrado ou incompleto.');
-        return;
-      }
-      
-      this.renderTenantUI(container);
+      // Fluxo legado base64 desativado: os dados pessoais viajavam legíveis na URL.
+      this.renderErro(container, 'Link antigo desativado', 'Este formato de link foi descontinuado por segurança. Peça um novo link ao locador.');
     }
   },
 
@@ -191,7 +166,7 @@ const Tenant = {
         </button>
       </div>
 
-      <p class="tenant-footnote">Seus dados são enviados apenas ao locador responsável por este contrato.</p>
+      <p class="tenant-footnote">Seus dados são enviados apenas ao locador responsável por este contrato e tratados conforme a <a href="termos.html" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
     `;
 
     this.renderForm();
@@ -375,33 +350,8 @@ const Tenant = {
       });
 
     } else {
-      // Modo legado Base64
-      const payload = {
-        t: this.contract.templateId,
-        f: this.contract.fields
-      };
-      const str = JSON.stringify(payload);
-      const b64 = btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-          return String.fromCharCode('0x' + p1);
-      }));
-      
-      const importUrl = window.location.origin + window.location.pathname + '#import?data=' + b64;
-      const waText = encodeURIComponent("Olá! Preenchi os meus dados no contrato. Segue o link para você importar no painel:\n\n" + importUrl);
-      const waUrl = "https://wa.me/?text=" + waText;
-      
-      // Se estiver testando no mesmo computador, já salva direto no dashboard (localStorage)
-      if (typeof Storage !== 'undefined') {
-        try {
-          Storage.create({
-            name: 'Contrato Finalizado - ' + (this.contract.fields.nome_locatario || 'Inquilino'),
-            templateId: this.contract.templateId,
-            fields: this.contract.fields,
-            isFinalized: true
-          });
-        } catch(e) {}
-      }
-      
-      saveFinishedUI(waUrl);
+      // Sem cloudId/cloudKey só acontecia em links legados base64, já desativados.
+      Utils.toast('Este link antigo não é mais suportado. Peça um novo link ao locador.', 'error');
     }
   },
 

@@ -329,6 +329,10 @@ const AuthUI = {
       .auth-switch { cursor: pointer; text-align: center; margin-top: 22px; font-size: 14px; color: #5C6470; }
       .auth-switch b { font-weight: 700; color: #1C4E89; }
 
+      .auth-accept { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; font-size: 13.5px; line-height: 1.45; color: #5C6470; cursor: pointer; }
+      .auth-accept input { margin-top: 2px; accent-color: #1C4E89; }
+      .auth-accept a { color: #1C4E89; font-weight: 600; }
+
       .auth-error {
         padding: 11px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.4;
         margin-bottom: 18px; border: 1px solid; text-align: left;
@@ -435,7 +439,11 @@ const AuthUI = {
           </label>
           ${pfFields}
         </div>
-        <button type="submit" class="auth-btn" id="reg-btn" style="margin-top: 22px;">Criar Conta</button>
+        <label class="auth-accept">
+          <input type="checkbox" id="reg-termos" required>
+          <span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos de Uso e a Política de Privacidade</a>.</span>
+        </label>
+        <button type="submit" class="auth-btn" id="reg-btn" style="margin-top: 14px;">Criar Conta</button>
       </form>
       <button class="auth-back" onclick="AuthUI.showView('type')">← Trocar tipo de locador</button>
     `;
@@ -497,7 +505,9 @@ const AuthUI = {
       nac_locador: pj ? '' : document.getElementById('reg-nac').value,
       est_civil_locador: pj ? '' : document.getElementById('reg-est-civil').value,
       rg_locador: pj ? '' : document.getElementById('reg-rg').value.trim(),
-      doc_locador: document.getElementById('reg-doc').value.trim()
+      doc_locador: document.getElementById('reg-doc').value.trim(),
+      // Evidência do aceite dos Termos de Uso/Política de Privacidade no cadastro
+      termos_aceite: { versao: '2026-07-21', em: new Date().toISOString() }
     };
 
     document.getElementById('auth-error-msg').style.display = 'none';

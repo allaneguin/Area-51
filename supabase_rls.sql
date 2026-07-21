@@ -100,5 +100,43 @@ create policy "tenant_links_update_by_id"
   with check (true);
 
 -- Observação: sem política de DELETE para anônimos (links não podem ser apagados
--- por terceiros). Faça limpeza de expirados por uma rotina/cron no servidor:
---   delete from public.tenant_links where expires_at < now();
+-- por terceiros). A limpeza de expirados é feita pelo job de cron abaixo.
+
+
+-- ─────────────────────────────────────────────
+-- Exclusão da própria conta (LGPD, art. 18)
+-- SECURITY DEFINER é necessário para apagar a linha de auth.users;
+-- o corpo trava no auth.uid() e o EXECUTE fica só com "authenticated".
+-- ─────────────────────────────────────────────
+create or replace function public.delete_own_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'Não autenticado.';
+  end if;
+  delete from public.contracts where user_id = uid;
+  delete from public.profiles  where id = uid;
+  delete from auth.users where id = uid;
+end;
+$$;
+
+revoke execute on function public.delete_own_account() from public, anon;
+grant execute on function public.delete_own_account() to authenticated;
+
+
+-- ─────────────────────────────────────────────
+-- Retenção (LGPD, art. 15/16): apaga diariamente os links expirados.
+-- cron.schedule com o mesmo nome atualiza o job — idempotente.
+-- ─────────────────────────────────────────────
+create extension if not exists pg_cron;
+select cron.schedule(
+  'purge_expired_tenant_links',
+  '15 3 * * *',
+  $job$ delete from public.tenant_links where expires_at < now() $job$
+);

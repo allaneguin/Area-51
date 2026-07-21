@@ -170,27 +170,9 @@ const App = {
         return; // Interrompe a execução normal de roteamento
       }
       
-      // Fallback para o antigo formato base64 em URL
-      try {
-        const b64 = param.split('=')[1];
-        const str = decodeURIComponent(Array.prototype.map.call(atob(b64), function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const payload = JSON.parse(str);
-        
-        const contract = {
-          name: 'Contrato Importado - ' + (payload.f.nome_locatario || 'Inquilino'),
-          templateId: payload.t,
-          fields: payload.f,
-          isFinalized: true
-        };
-        Storage.create(contract);
-        Utils.toast('Contrato importado com sucesso e salvo no seu painel!');
-        window.location.hash = '#dashboard';
-      } catch(e) {
-        Utils.toast('Erro ao importar contrato. O link pode estar quebrado.', 'error');
-        window.location.hash = '#dashboard';
-      }
+      // Formato legado base64 desativado: dados pessoais viajavam legíveis na URL.
+      Utils.toast('Este link de importação usa um formato antigo e foi desativado. Peça ao inquilino para preencher por um novo link.', 'error');
+      window.location.hash = '#dashboard';
       return; // Interrompe a execução normal de roteamento
     }
     

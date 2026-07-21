@@ -92,6 +92,15 @@ const Admin = {
             </div>
           </div>
         </div>
+
+        <div class="card" style="margin-top: 24px; border-color: rgba(220,53,69,0.35);">
+          <h3 class="section-title" style="color: #b3261e;">Excluir conta</h3>
+          <p class="page-subtitle" style="margin: 0 0 14px;">
+            Apaga permanentemente sua conta, seu perfil e todos os seus contratos (LGPD, art. 18).
+            Esta ação não pode ser desfeita.
+          </p>
+          <button class="btn" style="background: #b3261e; color: #fff;" onclick="Admin.deleteAccount()">Excluir minha conta e todos os dados</button>
+        </div>
       </div>
     `;
 
@@ -140,5 +149,34 @@ const Admin = {
       btn.innerHTML = originalText;
       btn.style.backgroundColor = '';
     }, 2000);
+  },
+
+  // Exclusão da própria conta (LGPD, art. 18): apaga contratos, perfil e o usuário via RPC.
+  deleteAccount() {
+    if (!SupabaseActive || !App.user) {
+      Utils.toast('A exclusão de conta só está disponível no modo online.', 'error');
+      return;
+    }
+    const digitado = prompt('Isso apaga sua conta, seu perfil e TODOS os seus contratos, sem volta.\n\nPara confirmar, digite: EXCLUIR');
+    if (digitado === null) return;
+    if (digitado.trim().toUpperCase() !== 'EXCLUIR') {
+      Utils.toast('Confirmação incorreta. Nada foi apagado.', 'error');
+      return;
+    }
+
+    supabaseClient.rpc('delete_own_account').then(({ error }) => {
+      if (error) throw error;
+      localStorage.removeItem(Storage.KEY);
+      localStorage.removeItem('gerador_admin_profile');
+      localStorage.removeItem('migrated_local_data_supabase_' + App.user.id);
+      // signOut pode falhar (o usuário já não existe) — segue para o reload de qualquer forma.
+      supabaseClient.auth.signOut().catch(() => {}).finally(() => {
+        window.location.hash = '#';
+        window.location.reload();
+      });
+    }).catch(err => {
+      console.error(err);
+      Utils.toast('Erro ao excluir a conta: ' + (err.message || err), 'error');
+    });
   }
 };
