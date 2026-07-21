@@ -382,5 +382,115 @@ const Utils = {
     }
     
     return result.join('');
+  },
+
+  // ── Obter IP Público (com timeout) ──
+  getIP() {
+    return Promise.race([
+      fetch('https://api.ipify.org?format=json')
+        .then(r => r.json())
+        .then(d => d.ip)
+        .catch(() => 'Não foi possível detectar'),
+      new Promise(res => setTimeout(() => res('Não detectado (Timeout)'), 3000))
+    ]);
+  },
+
+  // ── Obter Coordenadas GPS (com timeout) ──
+  getGPS() {
+    return new Promise(resolve => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          resolve({
+            lat: pos.coords.latitude.toFixed(6),
+            lng: pos.coords.longitude.toFixed(6),
+            acc: Math.round(pos.coords.accuracy)
+          });
+        },
+        () => resolve(null),
+        { timeout: 5000, enableHighAccuracy: true }
+      );
+    });
+  },
+
+  // ── Renderizar Folha de Certificado de Assinatura Eletrônica ──
+  renderCertificadoHTML(fields) {
+    fields = fields || {};
+    if (!fields.aceite_ts && !fields.assinatura_locatario && !fields.selfie_locatario) return '';
+
+    const dataAceite = fields.aceite_ts ? new Date(fields.aceite_ts).toLocaleString('pt-BR') : 'Não informado';
+    const ip = fields.ip_acesso || 'Não registrado';
+    const gpsStr = fields.geo_lat && fields.geo_lng ? `${fields.geo_lat}, ${fields.geo_lng} (Precisão ±${fields.geo_acc || 0}m)` : 'Não fornecido pelo dispositivo';
+    const hashDoc = fields.aceite_hash ? fields.aceite_hash.toUpperCase() : 'N/A';
+    const userAgent = fields.user_agent || navigator.userAgent;
+
+    return `
+      <div class="cert-page" style="page-break-before: always; margin-top: 3rem; padding-top: 2rem; border-top: 3px double #1E3A8A; font-size: 9.5pt; color: #1E293B;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <h2 style="font-size: 13pt; margin-bottom: 0.2rem; color: #0F172A; text-transform: uppercase; letter-spacing: 0.05em;">Certificado de Assinatura Eletrônica & Trilha de Auditoria</h2>
+          <p style="font-size: 8.5pt; color: #64748B; margin: 0;">Documento assinado eletronicamente nos termos do Art. 10, § 2º da MP nº 2.200-2/2001 e da Lei nº 14.063/2020.</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #CBD5E1;">
+          <tr style="background: #F8FAFC;">
+            <th colspan="2" style="border: 1px solid #CBD5E1; padding: 6px 10px; text-align: left; font-size: 9pt; color: #0F172A;">1. DADOS DO ASSINANTE (LOCATÁRIO)</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; width: 30%;"><strong>Nome Completo:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(fields.nome_locatario || '___')}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Documento (CPF):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(Utils.maskCPFCNPJ(fields.doc_locatario || ''))}</td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #CBD5E1;">
+          <tr style="background: #F8FAFC;">
+            <th colspan="2" style="border: 1px solid #CBD5E1; padding: 6px 10px; text-align: left; font-size: 9pt; color: #0F172A;">2. EVIDÊNCIAS TÉCNICAS E TRILHA DE AUDITORIA</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; width: 30%;"><strong>Data e Hora do Aceite:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${dataAceite} (UTC)</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Endereço IP:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(ip)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Geolocalização (GPS):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(gpsStr)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Hash de Integridade (SHA-256):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-family: monospace; font-size: 8.5pt; word-break: break-all;">${hashDoc}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Navegador / Dispositivo:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-size: 8pt; color: #475569;">${Utils.esc(userAgent)}</td>
+          </tr>
+        </table>
+
+        <div style="display: flex; gap: 1.5rem; justify-content: space-around; align-items: flex-start; margin-top: 1.5rem; border: 1px solid #CBD5E1; padding: 1rem; border-radius: 8px; background: #FAFAFA;">
+          ${fields.assinatura_locatario ? `
+            <div style="text-align: center; flex: 1;">
+              <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Rubrica Manuscrita Registrada:</p>
+              <img src="${fields.assinatura_locatario}" alt="Rubrica Inquilino" style="max-height: 65px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 4px;">
+            </div>
+          ` : ''}
+
+          ${fields.selfie_locatario ? `
+            <div style="text-align: center; flex: 1;">
+              <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Selfie de Validação com Documento:</p>
+              <img src="${fields.selfie_locatario}" alt="Selfie Inquilino" style="max-height: 100px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 6px; object-fit: contain;">
+            </div>
+          ` : ''}
+        </div>
+
+        <p style="text-align: center; font-size: 8pt; color: #94A3B8; margin-top: 1.5rem;">
+          Este certificado é parte integrante e indissociável do contrato de locação correspondente.
+        </p>
+      </div>
+    `;
   }
 };

@@ -409,6 +409,22 @@ const Editor = {
         el.innerHTML = '';
       }
     });
+
+    // Renderizar Certificado de Assinatura se houver trilha de auditoria
+    let certArea = prev.querySelector('.cert-page-container');
+    const certHTML = Utils.renderCertificadoHTML(this.contract.fields);
+    if (certHTML) {
+      if (certArea) {
+        certArea.innerHTML = certHTML;
+      } else {
+        certArea = document.createElement('div');
+        certArea.className = 'cert-page-container';
+        certArea.innerHTML = certHTML;
+        prev.appendChild(certArea);
+      }
+    } else if (certArea) {
+      certArea.remove();
+    }
   },
 
   save(showAlert = false) {

@@ -203,6 +203,35 @@ const Tenant = {
           </div>
         </div>
 
+        <div class="tenant-selfie-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--text-heading, #1E293B); margin-bottom: 6px; display: block;">Validação Facial (Selfie com Documento)</label>
+          <div class="selfie-card-wrap" style="border: 2px dashed #CBD5E1; border-radius: 12px; background: #FFFFFF; padding: 1.25rem; text-align: center;">
+            <div id="selfie-preview-container" style="display: none; margin-bottom: 10px;">
+              <img id="selfie-preview-img" style="max-height: 180px; max-width: 100%; border-radius: 8px; border: 1px solid #CBD5E1;" alt="Sua Selfie">
+            </div>
+            <div id="selfie-video-container" style="display: none; position: relative; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #000;">
+              <video id="selfie-video" autoplay playsinline style="width: 100%; max-height: 220px; object-fit: cover;"></video>
+            </div>
+            <p id="selfie-hint" style="font-size: 0.85rem; color: #64748B; margin-bottom: 12px; line-height: 1.4;">Tire uma foto sua segurando o seu documento para validar sua assinatura no contrato.</p>
+            
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" id="btn-open-camera" class="btn btn-secondary" style="font-size: 0.85rem; padding: 6px 14px;" onclick="Tenant.startCamera()">
+                📷 Abrir Câmera
+              </button>
+              <button type="button" id="btn-take-selfie" class="btn btn-primary" style="display: none; font-size: 0.85rem; padding: 6px 14px;" onclick="Tenant.takeSelfie()">
+                📸 Capturar Foto
+              </button>
+              <button type="button" id="btn-retake-selfie" class="btn btn-secondary" style="display: none; font-size: 0.85rem; padding: 6px 14px;" onclick="Tenant.resetSelfie()">
+                🔄 Tirar Outra Foto
+              </button>
+              <input type="file" id="selfie-file-input" accept="image/*" capture="user" style="display: none;" onchange="Tenant.handleSelfieFile(this)">
+              <button type="button" class="btn btn-secondary" style="font-size: 0.85rem; padding: 6px 14px;" onclick="document.getElementById('selfie-file-input').click()">
+                📁 Escolher Arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+
         <input type="checkbox" id="aceito_contrato" class="tenant-check-input"
           onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
         <label for="aceito_contrato" class="tenant-accept">
@@ -312,6 +341,113 @@ const Tenant = {
     this.saveDraft();
     this.updatePreview();
   },
+
+  selfieStream: null,
+
+  async startCamera() {
+    try {
+      this.selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const video = document.getElementById('selfie-video');
+      const vContainer = document.getElementById('selfie-video-container');
+      const pContainer = document.getElementById('selfie-preview-container');
+      const btnOpen = document.getElementById('btn-open-camera');
+      const btnTake = document.getElementById('btn-take-selfie');
+
+      if (video && vContainer) {
+        video.srcObject = this.selfieStream;
+        vContainer.style.display = 'block';
+        if (pContainer) pContainer.style.display = 'none';
+        if (btnOpen) btnOpen.style.display = 'none';
+        if (btnTake) btnTake.style.display = 'inline-block';
+      }
+    } catch (e) {
+      Utils.toast('Não foi possível acessar a câmera. Use o botão "Escolher Arquivo" para enviar uma foto.', 'error');
+    }
+  },
+
+  takeSelfie() {
+    const video = document.getElementById('selfie-video');
+    const vContainer = document.getElementById('selfie-video-container');
+    const pContainer = document.getElementById('selfie-preview-container');
+    const pImg = document.getElementById('selfie-preview-img');
+    const btnTake = document.getElementById('btn-take-selfie');
+    const btnRetake = document.getElementById('btn-retake-selfie');
+
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    this.contract.fields.selfie_locatario = dataUrl;
+
+    if (pImg && pContainer) {
+      pImg.src = dataUrl;
+      pContainer.style.display = 'block';
+    }
+    if (vContainer) vContainer.style.display = 'none';
+    if (btnTake) btnTake.style.display = 'none';
+    if (btnRetake) btnRetake.style.display = 'inline-block';
+
+    this.stopCameraStream();
+    this.saveDraft();
+    this.updatePreview();
+  },
+
+  stopCameraStream() {
+    if (this.selfieStream) {
+      this.selfieStream.getTracks().forEach(track => track.stop());
+      this.selfieStream = null;
+    }
+  },
+
+  resetSelfie() {
+    this.stopCameraStream();
+    delete this.contract.fields.selfie_locatario;
+    const pContainer = document.getElementById('selfie-preview-container');
+    const vContainer = document.getElementById('selfie-video-container');
+    const btnOpen = document.getElementById('btn-open-camera');
+    const btnTake = document.getElementById('btn-take-selfie');
+    const btnRetake = document.getElementById('btn-retake-selfie');
+
+    if (pContainer) pContainer.style.display = 'none';
+    if (vContainer) vContainer.style.display = 'none';
+    if (btnOpen) btnOpen.style.display = 'inline-block';
+    if (btnTake) btnTake.style.display = 'none';
+    if (btnRetake) btnRetake.style.display = 'none';
+
+    this.saveDraft();
+    this.updatePreview();
+  },
+
+  handleSelfieFile(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      this.contract.fields.selfie_locatario = dataUrl;
+      
+      const pContainer = document.getElementById('selfie-preview-container');
+      const pImg = document.getElementById('selfie-preview-img');
+      const btnOpen = document.getElementById('btn-open-camera');
+      const btnRetake = document.getElementById('btn-retake-selfie');
+
+      if (pImg && pContainer) {
+        pImg.src = dataUrl;
+        pContainer.style.display = 'block';
+      }
+      if (btnOpen) btnOpen.style.display = 'none';
+      if (btnRetake) btnRetake.style.display = 'inline-block';
+
+      this.saveDraft();
+      this.updatePreview();
+    };
+    reader.readAsDataURL(file);
+  },
   
   // ── Rascunho local: o inquilino não perde o que digitou se fechar a aba ──
   _draftKey() {
@@ -326,6 +462,7 @@ const Tenant = {
       .filter(f => f.section.toLowerCase() === 'locatário')
       .forEach(f => { if (this.contract.fields[f.name]) draft[f.name] = this.contract.fields[f.name]; });
     if (this.contract.fields.assinatura_locatario) draft.assinatura_locatario = this.contract.fields.assinatura_locatario;
+    if (this.contract.fields.selfie_locatario) draft.selfie_locatario = this.contract.fields.selfie_locatario;
     try { localStorage.setItem(k, JSON.stringify(draft)); } catch (e) { /* storage cheio/bloqueado: segue sem rascunho */ }
   },
 
@@ -554,15 +691,31 @@ const Tenant = {
       // Evidência do aceite: instante + SHA-256 do texto exato que o inquilino
       // leu (contrato já com os dados dele). Viaja dentro do payload cifrado e
       // chega ao painel do locador. Se o contrato mudar depois, o hash não bate.
-      const registrarAceite = () => {
+      const registrarAceite = async () => {
         this.contract.fields.aceite_ts = new Date().toISOString();
+        this.contract.fields.user_agent = navigator.userAgent;
+
+        try {
+          const [ip, gps] = await Promise.all([
+            Utils.getIP(),
+            Utils.getGPS()
+          ]);
+          this.contract.fields.ip_acesso = ip;
+          if (gps) {
+            this.contract.fields.geo_lat = gps.lat;
+            this.contract.fields.geo_lng = gps.lng;
+            this.contract.fields.geo_acc = gps.acc;
+          }
+        } catch (e) {
+          console.warn("Falha ao capturar evidencias de IP/GPS:", e);
+        }
+
         const prev = document.getElementById('preview-content');
         const texto = prev ? prev.innerText : '';
-        return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))
-          .then(buf => {
-            this.contract.fields.aceite_hash = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
-          })
-          .catch(() => { /* ambiente sem crypto.subtle: envia só o timestamp */ });
+        try {
+          const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+          this.contract.fields.aceite_hash = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+        } catch (e) {}
       };
 
       const payload = {
