@@ -384,18 +384,27 @@ const Utils = {
     return result.join('');
   },
 
-  // ── Obter IP Público (com timeout) ──
-  getIP() {
-    return Promise.race([
-      fetch('https://api.ipify.org?format=json')
-        .then(r => r.json())
-        .then(d => d.ip)
-        .catch(() => 'Não foi possível detectar'),
-      new Promise(res => setTimeout(() => res('Não detectado (Timeout)'), 3000))
-    ]);
+  // ── Obter IP Público (com múltiplos provedores de fallback e timeout) ──
+  async getIP() {
+    const fetchWithTimeout = (url, parseFn, ms = 3000) => {
+      return Promise.race([
+        fetch(url).then(r => r.json()).then(parseFn),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+      ]);
+    };
+
+    try {
+      return await fetchWithTimeout('https://api.ipify.org?format=json', d => d.ip, 3500);
+    } catch (e1) {
+      try {
+        return await fetchWithTimeout('https://ipapi.co/json/', d => d.ip, 3500);
+      } catch (e2) {
+        return 'Não detectado (conexão/bloqueador)';
+      }
+    }
   },
 
-  // ── Obter Coordenadas GPS (com timeout) ──
+  // ── Obter Coordenadas GPS (com permissão e timeout estendido) ──
   getGPS() {
     return new Promise(resolve => {
       if (!navigator.geolocation) return resolve(null);
@@ -407,8 +416,11 @@ const Utils = {
             acc: Math.round(pos.coords.accuracy)
           });
         },
-        () => resolve(null),
-        { timeout: 5000, enableHighAccuracy: true }
+        (err) => {
+          console.warn("GPS não obtido:", err.message);
+          resolve(null);
+        },
+        { timeout: 8000, maximumAge: 300000, enableHighAccuracy: true }
       );
     });
   },
