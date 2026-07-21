@@ -126,8 +126,15 @@ const Storage = {
         if (error) throw error;
       }
 
-      // Marca como migrado
+      // Marca como migrado e LIMPA o que subiu do bucket local compartilhado.
+      // Sem esta limpeza, outro usuário que logasse neste mesmo navegador
+      // migraria (e absorveria na conta dele) os contratos e o perfil deste.
+      // customTemplates fica: não é migrado para a nuvem.
       localStorage.setItem(migratedKey, 'true');
+      const restante = this._getData();
+      restante.contracts = [];
+      this._saveData(restante);
+      localStorage.removeItem('gerador_admin_profile');
       console.log("✅ Sincronização local -> Supabase concluída com sucesso.");
     } catch (e) {
       console.error("Erro ao sincronizar dados com o Supabase:", e);

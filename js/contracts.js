@@ -7,8 +7,8 @@ const ContractsView = {
     const allContracts = Storage.getAll();
     
     // Filtra contratos residenciais e comerciais
-    const residenciais = allContracts.filter(c => c.templateId && c.templateId.toLowerCase().includes('residencial'));
     const comerciais = allContracts.filter(c => c.templateId && c.templateId.toLowerCase().includes('comercial'));
+    const residenciais = allContracts.filter(c => !c.templateId || !c.templateId.toLowerCase().includes('comercial'));
     
     // Função auxiliar para renderizar a lista de clientes
     const renderList = (contracts, emptyMessage) => {

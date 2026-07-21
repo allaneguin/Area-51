@@ -190,6 +190,19 @@ const Tenant = {
 
         <div class="tenant-form-grid" id="tenant-form-container"></div>
 
+        <div class="tenant-signature-section" style="margin-top: 1.5rem; margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--text-heading, #1E293B); margin-bottom: 6px; display: block;">Assinatura Manuscrita (Desenhe com o dedo ou mouse)</label>
+          <div class="signature-pad-wrap" style="position: relative; border: 2px dashed #CBD5E1; border-radius: 12px; background: #FFFFFF; overflow: hidden; touch-action: none;">
+            <canvas id="signature-canvas" height="150" style="width: 100%; display: block; cursor: crosshair;"></canvas>
+            <div id="signature-placeholder" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94A3B8; pointer-events: none; font-size: 0.9rem; font-weight: 500;">
+              ✍️ Desenhe sua assinatura aqui
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 4px 12px;" onclick="Tenant.clearSignature()">Limpar Assinatura</button>
+          </div>
+        </div>
+
         <input type="checkbox" id="aceito_contrato" class="tenant-check-input"
           onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
         <label for="aceito_contrato" class="tenant-accept">
@@ -206,6 +219,99 @@ const Tenant = {
 
     this.renderForm();
   },
+
+  initSignaturePad() {
+    const canvas = document.getElementById('signature-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const placeholder = document.getElementById('signature-placeholder');
+    let isDrawing = false;
+    let hasDrawn = false;
+
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && canvas.width !== rect.width) {
+        canvas.width = rect.width;
+        canvas.height = 150;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#143A66';
+      }
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    if (this.contract.fields && this.contract.fields.assinatura_locatario) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        if (placeholder) placeholder.style.display = 'none';
+        hasDrawn = true;
+      };
+      img.src = this.contract.fields.assinatura_locatario;
+    }
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    };
+
+    const startDraw = (e) => {
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      if (placeholder) placeholder.style.display = 'none';
+    };
+
+    const moveDraw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      hasDrawn = true;
+    };
+
+    const stopDraw = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (hasDrawn) {
+        const dataUrl = canvas.toDataURL('image/png');
+        this.contract.fields.assinatura_locatario = dataUrl;
+        this.saveDraft();
+        this.updatePreview();
+      }
+    };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+  },
+
+  clearSignature() {
+    const canvas = document.getElementById('signature-canvas');
+    const placeholder = document.getElementById('signature-placeholder');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    if (placeholder) placeholder.style.display = 'flex';
+    delete this.contract.fields.assinatura_locatario;
+    this.saveDraft();
+    this.updatePreview();
+  },
   
   // ── Rascunho local: o inquilino não perde o que digitou se fechar a aba ──
   _draftKey() {
@@ -219,6 +325,7 @@ const Tenant = {
     this.template.fields
       .filter(f => f.section.toLowerCase() === 'locatário')
       .forEach(f => { if (this.contract.fields[f.name]) draft[f.name] = this.contract.fields[f.name]; });
+    if (this.contract.fields.assinatura_locatario) draft.assinatura_locatario = this.contract.fields.assinatura_locatario;
     try { localStorage.setItem(k, JSON.stringify(draft)); } catch (e) { /* storage cheio/bloqueado: segue sem rascunho */ }
   },
 
@@ -285,6 +392,9 @@ const Tenant = {
       });
     });
     
+    // Inicializar o Pad de Assinatura Canvas
+    setTimeout(() => this.initSignaturePad(), 50);
+
     // Atualizar preview logo no início com os dados já preenchidos pelo locador
     this.updatePreview();
   },
@@ -329,23 +439,65 @@ const Tenant = {
     const pjLocador = Utils.isPJLocador(this.contract.fields);
     prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
     prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
+
+    // Garantia Locatícia no texto e assinaturas
+    const tipoGarantia = this.contract.fields.tipo_garantia || 'sem_garantia';
+    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+
+    const txtGarantia = prev.querySelector('.sec-garantia-texto');
+    if (txtGarantia) {
+      if (tipoGarantia === 'caucao') {
+        const v = this.contract.fields.valor_caucao || 'R$ ___';
+        const ve = this.contract.fields.valor_caucao_extenso || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
+      } else if (tipoGarantia === 'fiador') {
+        const nf = this.contract.fields.nome_fiador || '___';
+        const df = this.contract.fields.doc_fiador || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
+      } else {
+        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
+      }
+    }
+
+    // Renderizar Imagem de Assinatura se existir
+    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
+      if (this.contract.fields && this.contract.fields.assinatura_locatario) {
+        el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+      } else {
+        el.innerHTML = '';
+      }
+    });
   },
 
   finish() {
-    // Validação de CPF
+    // Nome e documento são o mínimo para o contrato valer alguma coisa —
+    // sem eles não há parte identificada, então o envio é bloqueado (não é opcional).
+    const marcar = (el, ruim) => { if (el) el.style.borderColor = ruim ? 'red' : ''; };
+    const nomeEl = document.querySelector('#tenant-form-container [data-field="nome_locatario"]');
+    if (nomeEl && !nomeEl.value.trim()) {
+      marcar(nomeEl, true);
+      Utils.toast('Informe seu nome completo para enviar o contrato.', 'error');
+      return;
+    }
+    marcar(nomeEl, false);
+
+    // Validação de CPF/CNPJ (checksum, não só formato)
     let isValid = true;
     let errorMsg = '';
-    
+
     document.querySelectorAll('input[data-mask="cpfcnpj"]').forEach(el => {
       const val = el.value.replace(/\D/g, '');
-      if (val.length > 0 && val.length <= 11) {
-        if (!Utils.isValidCPF(val)) {
-          isValid = false;
-          errorMsg = 'O CPF informado (' + el.value + ') é inválido. Por favor, corrija.';
-          el.style.borderColor = 'red';
-        } else {
-          el.style.borderColor = '';
-        }
+      if (!val) {
+        isValid = false;
+        errorMsg = 'Informe seu CPF para enviar o contrato.';
+        marcar(el, true);
+      } else if (val.length <= 11 ? !Utils.isValidCPF(val) : !Utils.isValidCNPJ(val)) {
+        isValid = false;
+        errorMsg = 'O ' + (val.length <= 11 ? 'CPF' : 'CNPJ') + ' informado (' + el.value + ') é inválido. Por favor, corrija.';
+        marcar(el, true);
+      } else {
+        marcar(el, false);
       }
     });
 
@@ -354,7 +506,7 @@ const Tenant = {
       return;
     }
 
-    // Validação de campos vazios (opcional, mas recomendado)
+    // Demais campos (RG, profissão etc.): incompletos ainda podem seguir, com aviso
     const requiredEmpty = Array.from(document.querySelectorAll('#tenant-form-container input, #tenant-form-container select')).find(el => !el.value.trim());
     if (requiredEmpty) {
       if (!confirm('Ainda há campos vazios. Tem certeza que deseja enviar o contrato incompleto?')) {

@@ -79,6 +79,24 @@ const Utils = {
     return rest === parseInt(cpf[10]);
   },
 
+  isValidCNPJ(cnpj) {
+    cnpj = (cnpj || '').replace(/\D/g, '');
+    if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+    const digito = (base) => {
+      // pesos do CNPJ: 5..2,9..2 para o 1º dígito; 6,5..2,9..2 para o 2º
+      let peso = base.length - 7;
+      let sum = 0;
+      for (let i = 0; i < base.length; i++) {
+        sum += parseInt(base[i]) * peso--;
+        if (peso < 2) peso = 9;
+      }
+      const rest = sum % 11;
+      return rest < 2 ? 0 : 11 - rest;
+    };
+    if (digito(cnpj.slice(0, 12)) !== parseInt(cnpj[12])) return false;
+    return digito(cnpj.slice(0, 13)) === parseInt(cnpj[13]);
+  },
+
   // ── Aplicar Máscaras em Inputs ──
   applyMask(input, maskType) {
     input.addEventListener('input', () => {

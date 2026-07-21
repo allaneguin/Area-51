@@ -43,6 +43,15 @@ assert.strictEqual(Utils.mesesDoContrato({ prazo_meses: '12' }), 12);
 assert.strictEqual(Utils.mesesDoContrato({}), 0);
 assert.strictEqual(Utils.mesesDoContrato(null), 0);
 
+// isValidCNPJ: checksum de verdade, nao so comprimento
+assert.strictEqual(Utils.isValidCNPJ('11.222.333/0001-81'), true);   // valido classico
+assert.strictEqual(Utils.isValidCNPJ('11222333000181'), true);       // sem mascara
+assert.strictEqual(Utils.isValidCNPJ('11.222.333/0001-82'), false);  // digito errado
+assert.strictEqual(Utils.isValidCNPJ('11.111.111/1111-11'), false);  // repetido
+assert.strictEqual(Utils.isValidCNPJ('123'), false);
+assert.strictEqual(Utils.isValidCNPJ(''), false);
+assert.strictEqual(Utils.isValidCNPJ(undefined), false);
+
 // shareBaseUrl: curto em producao (rewrite /c no vercel.json), caminho real local
 assert.strictEqual(
   Utils.shareBaseUrl({ protocol: 'https:', hostname: 'meusimoveis.vercel.app', origin: 'https://meusimoveis.vercel.app', href: 'https://meusimoveis.vercel.app/app.html#x' }),

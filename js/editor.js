@@ -234,6 +234,7 @@ const Editor = {
 
     container.innerHTML = html;
     this.togglePrazoPersonalizado();
+    this.toggleGarantiaFields();
 
     // Attach listeners
     container.querySelectorAll('input, textarea, select').forEach(el => {
@@ -247,8 +248,11 @@ const Editor = {
         this.contract.fields[fieldName] = el.value;
         
         // Auto-preencher valor por extenso se for campo monetário
-        if (fieldName === 'valor_aluguel' || fieldName === 'valor_bonus') {
-          const targetExtensoField = fieldName === 'valor_aluguel' ? 'valor_extenso' : 'valor_bonus_extenso';
+        if (fieldName === 'valor_aluguel' || fieldName === 'valor_bonus' || fieldName === 'valor_caucao') {
+          let targetExtensoField = 'valor_extenso';
+          if (fieldName === 'valor_bonus') targetExtensoField = 'valor_bonus_extenso';
+          if (fieldName === 'valor_caucao') targetExtensoField = 'valor_caucao_extenso';
+
           const extensoVal = Utils.writeBRLInWords(el.value);
           this.contract.fields[targetExtensoField] = extensoVal;
           
@@ -258,6 +262,10 @@ const Editor = {
         }
         
         if (fieldName === 'prazo_extenso') this.togglePrazoPersonalizado();
+        if (fieldName === 'tipo_garantia') this.toggleGarantiaFields();
+
+        // CEP completo -> busca o endereço na ViaCEP
+        if (fieldName === 'cep_imovel') this.buscarCEP(el.value);
 
         // Auto-calcular Data de Término
         if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses' || fieldName === 'prazo_unidade') {
@@ -286,14 +294,50 @@ const Editor = {
     });
   },
 
-  // Quantidade e unidade só fazem sentido quando o prazo escolhido é "personalizado".
-  // No locacao_simples o prazo_meses é o campo principal (não há select), então fica visível.
+  // ponytail: ViaCEP sem chave; só preenche o endereço se ainda estiver vazio —
+  // nunca sobrescreve o que o locador digitou. Falhou/offline? Segue manual.
+  buscarCEP(cep) {
+    cep = (cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    fetch('https://viacep.com.br/ws/' + cep + '/json/')
+      .then(r => r.json())
+      .then(d => {
+        if (d.erro) return;
+        const el = document.querySelector('[data-field="end_imovel"]');
+        if (!el || el.value.trim()) return;
+        const endereco = [d.logradouro, d.bairro, d.localidade ? d.localidade + ' - ' + d.uf : '']
+          .filter(Boolean).join(', ');
+        if (!endereco) return;
+        el.value = endereco;
+        this.contract.fields['end_imovel'] = endereco;
+        this.updatePreview();
+        Utils.toast('Endereço preenchido pelo CEP — confira e complete o número.');
+      })
+      .catch(() => {});
+  },
+
   togglePrazoPersonalizado() {
     if (!this.template.fields.some(f => f.name === 'prazo_extenso')) return;
     const mostrar = this.contract.fields['prazo_extenso'] === 'personalizado';
     ['prazo_meses', 'prazo_unidade'].forEach(nome => {
       const grupo = document.querySelector(`[data-group="${nome}"]`);
       if (grupo) grupo.style.display = mostrar ? '' : 'none';
+    });
+  },
+
+  toggleGarantiaFields() {
+    if (!this.template.fields.some(f => f.name === 'tipo_garantia')) return;
+    const tipo = this.contract.fields['tipo_garantia'] || 'sem_garantia';
+    const isFiador = tipo === 'fiador';
+    const isCaucao = tipo === 'caucao';
+    
+    ['nome_fiador', 'rg_fiador', 'doc_fiador', 'end_fiador'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = isFiador ? '' : 'none';
+    });
+    ['valor_caucao', 'valor_caucao_extenso'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = isCaucao ? '' : 'none';
     });
   },
 
@@ -336,6 +380,35 @@ const Editor = {
     const pjLocador = Utils.isPJLocador(this.contract.fields);
     prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
     prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
+
+    // Garantia Locatícia no texto e assinaturas
+    const tipoGarantia = this.contract.fields.tipo_garantia || 'sem_garantia';
+    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+
+    const txtGarantia = prev.querySelector('.sec-garantia-texto');
+    if (txtGarantia) {
+      if (tipoGarantia === 'caucao') {
+        const v = this.contract.fields.valor_caucao || 'R$ ___';
+        const ve = this.contract.fields.valor_caucao_extenso || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
+      } else if (tipoGarantia === 'fiador') {
+        const nf = this.contract.fields.nome_fiador || '___';
+        const df = this.contract.fields.doc_fiador || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
+      } else {
+        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
+      }
+    }
+
+    // Renderizar Imagem de Assinatura se existir
+    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
+      if (this.contract.fields && this.contract.fields.assinatura_locatario) {
+        el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+      } else {
+        el.innerHTML = '';
+      }
+    });
   },
 
   save(showAlert = false) {

@@ -29,7 +29,11 @@ const Dashboard = {
     const recent = all.slice(0, 5);
 
     const aVencer = this.countAVencer(all);
-    const receita = all.reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
+    // Só contratos ATIVOS entram na receita — o card diz "aluguéis ativos",
+    // e vencidos/futuros somados aqui inflavam o número.
+    const receita = all
+      .filter(c => Utils.getContractStatus(c).label === 'Ativo')
+      .reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
     const receitaFmt = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
     
     let recentHtml = recent.length ? recent.map(c => {
