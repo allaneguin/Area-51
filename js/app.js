@@ -67,60 +67,20 @@ const App = {
     }
   },
   
-  // Mostra os botões "Sair" (topbar e header mobile) só quando há sessão.
+  // Mostra os controles que dependem de sessão: "Sair" (topbar e header mobile)
+  // e o acesso de administrador. Esconder é cortesia de UI — quem protege os
+  // dados é o RLS.
   updateAuthUI() {
     document.querySelectorAll('.logout-action').forEach(el => {
       el.hidden = !this.user;
     });
-    this.updateAuthSidebarUI();
+
+    const isAdmin = !!(this.user && typeof SuperAdmin !== 'undefined' && SuperAdmin.isAdmin());
+    document.querySelectorAll('.admin-action').forEach(el => {
+      el.hidden = !isAdmin;
+    });
   },
 
-  updateAuthSidebarUI() {
-    const existingLogout = document.getElementById('sidebar-nav-logout');
-    if (existingLogout) existingLogout.remove();
-    const existingSuper = document.getElementById('sidebar-nav-superadmin');
-    if (existingSuper) existingSuper.remove();
-
-    // Link de administrador: só aparece para quem tem o papel no JWT.
-    // (Esconder é cortesia de UI — quem protege os dados é o RLS.)
-    if (this.user && typeof SuperAdmin !== 'undefined' && SuperAdmin.isAdmin()) {
-      const navSection = document.querySelector('.sidebar-nav');
-      if (navSection) {
-        const superItem = document.createElement('a');
-        superItem.id = 'sidebar-nav-superadmin';
-        superItem.href = '#superadmin';
-        superItem.className = 'nav-item';
-        superItem.innerHTML = `
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px; height:20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-          <span class="nav-label">Todas as Contas</span>
-        `;
-        navSection.appendChild(superItem);
-      }
-    }
-
-    if (this.user) {
-      const navSection = document.querySelector('.sidebar-nav');
-      if (navSection) {
-        const logoutItem = document.createElement('a');
-        logoutItem.id = 'sidebar-nav-logout';
-        logoutItem.href = '#';
-        logoutItem.className = 'nav-item';
-        logoutItem.style.color = '#dc3545';
-        logoutItem.style.marginTop = '1rem';
-        logoutItem.innerHTML = `
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px; height:20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-          <span class="nav-label">Sair da Conta</span>
-        `;
-        logoutItem.addEventListener('click', (e) => {
-          e.preventDefault();
-          AuthUI.logout();
-        });
-        navSection.appendChild(logoutItem);
-      }
-    }
-  },
-  },
-  
   handleRoute() {
     const hash = window.location.hash;
     const [path, param] = hash.split('?');

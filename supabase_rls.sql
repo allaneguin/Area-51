@@ -92,11 +92,17 @@ create policy "tenant_links_insert"
   with check (true);
 
 -- Atualização: o inquilino preenche e reenvia o payload (link ainda válido).
+-- `not finalized` é obrigatório: sem ele, quem tiver a URL reescreve os dados de
+-- um contrato já enviado. Mantenha idêntico ao de supabase_schema.sql /
+-- supabase_finalize.sql — este script roda por último e sobrescreve a política.
+alter table public.tenant_links
+  add column if not exists finalized boolean not null default false;
+
 drop policy if exists "tenant_links_update_by_id" on public.tenant_links;
 create policy "tenant_links_update_by_id"
   on public.tenant_links for update
   to anon, authenticated
-  using (expires_at > now())
+  using (expires_at > now() and not finalized)
   with check (true);
 
 -- Observação: sem política de DELETE para anônimos (links não podem ser apagados

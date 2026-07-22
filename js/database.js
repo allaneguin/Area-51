@@ -96,8 +96,13 @@ const CloudDB = {
   // ID aleatório (não-enumerável) para o link — sempre via CSPRNG (getRandomValues/randomUUID)
   _randomId() {
     if (window.crypto.randomUUID) return window.crypto.randomUUID();
+    // Fallback (contexto não-seguro / Safari antigo): precisa ser um UUID válido —
+    // create_tenant_link recebe `p_id uuid` e rejeita hex sem hífens.
     const b = window.crypto.getRandomValues(new Uint8Array(16));
-    return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    b[6] = (b[6] & 0x0f) | 0x40; // versão 4
+    b[8] = (b[8] & 0x3f) | 0x80; // variante RFC 4122
+    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
   },
 
   // Save a new contract to the cloud server
@@ -129,7 +134,16 @@ const CloudDB = {
 
     // Banco ainda sem a migração (função de 2 argumentos): reenvia no formato
     // antigo para o envio do inquilino nunca ficar bloqueado pela migração pendente.
-    if (error && finalize && (error.code === 'PGRST202' || /p_finalize|function/i.test(error.message))) {
+    // PGRST202 = função não encontrada na assinatura pedida. O teste é restrito de
+    // propósito: um regex largo (/function/) mascararia erros não relacionados.
+    if (error && finalize && error.code === 'PGRST202') {
+      // A trava NÃO foi aplicada: o link segue gravável por quem tiver a URL.
+      // Quem opera precisa ver isso — é degradação silenciosa de segurança.
+      console.warn(
+        '⚠️ set_tenant_link sem p_finalize: o link do inquilino NÃO ficou travado. ' +
+        'Rode supabase_finalize.sql no Supabase.'
+      );
+      this.finalizeIndisponivel = true;
       ({ data, error } = await supabaseClient
         .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload }));
     }

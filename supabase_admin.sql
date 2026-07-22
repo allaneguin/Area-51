@@ -75,4 +75,9 @@ begin
 end;
 $$;
 
+-- O Postgres concede EXECUTE a PUBLIC por padrão em toda função nova, e `anon`
+-- herda de PUBLIC — sem o revoke abaixo, esta função SECURITY DEFINER ficaria
+-- exposta em /rest/v1/rpc sem sessão. O portão interno já devolve vazio, mas a
+-- superfície não deve existir.
+revoke execute on function public.admin_list_users() from public, anon;
 grant execute on function public.admin_list_users() to authenticated;

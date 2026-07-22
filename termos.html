@@ -190,15 +190,27 @@
         <td>Segurança, prevenção a fraudes e cumprimento do art. 15 do Marco Civil da Internet</td>
         <td>Obrigação legal (art. 7º, II) e legítimo interesse (art. 7º, IX)</td>
       </tr>
+      <tr>
+        <td>Prova do aceite do Inquilino</td>
+        <td>Imagem da assinatura desenhada na tela; fotografia (selfie) segurando documento de
+          identificação; endereço IP e, mediante permissão explícita do navegador, coordenadas
+          de geolocalização no momento do envio</td>
+        <td>Comprovar a autoria e as circunstâncias do aceite do contrato de locação</td>
+        <td>Execução de contrato e procedimentos preliminares (art. 7º, V); a geolocalização depende
+          de consentimento no próprio navegador (art. 7º, I)</td>
+      </tr>
     </table>
-    <p>Não coletamos dados pessoais sensíveis (art. 5º, II, da LGPD) e não utilizamos os dados para
-      publicidade, enriquecimento de perfil ou decisões automatizadas.</p>
+    <p>A selfie segurando documento é coletada apenas quando o Locador exige esse método e serve
+      exclusivamente como prova do aceite — não é usada para reconhecimento facial, identificação
+      biométrica ou qualquer tratamento que a caracterize como dado biométrico (art. 5º, II, da LGPD).
+      Não utilizamos os dados para publicidade, enriquecimento de perfil ou decisões automatizadas.</p>
 
     <h2>14. Cookies e armazenamento local</h2>
     <p>Não utilizamos cookies de rastreamento nem ferramentas de analytics. O navegador armazena
       localmente (localStorage) apenas: o token de sessão da autenticação, a preferência de tema
-      (claro/escuro) e, no modo offline, os dados dos contratos do próprio usuário — que permanecem no
-      dispositivo.</p>
+      (claro/escuro) e um rascunho dos campos que o Inquilino digita, para que ele não perca o
+      preenchimento se fechar a página. O rascunho fica somente no dispositivo, <b>não inclui a
+      assinatura nem a selfie</b> e é apagado assim que os dados são enviados ao Locador.</p>
 
     <h2>15. Compartilhamento e transferência internacional</h2>
     <ul>
@@ -206,8 +218,12 @@
         acima. Os servidores podem estar localizados fora do Brasil, hipótese em que a transferência
         internacional se ampara no art. 33 da LGPD e nas salvaguardas contratuais do provedor.
         <span class="marcador">[PREENCHER região do projeto Supabase — verifique no painel]</span></li>
-      <li><b>CDNs de terceiros</b> (jsDelivr e Google Fonts): ao carregar a Plataforma, seu navegador
-        requisita arquivos desses serviços, que recebem seu endereço IP como parte técnica da conexão.</li>
+      <li><b>CDN de terceiro</b> (jsDelivr): ao carregar a Plataforma, seu navegador requisita arquivos
+        desse serviço, que recebe seu endereço IP como parte técnica da conexão.</li>
+      <li><b>Serviços de consulta de IP</b> (ipify e ipapi.co): no momento em que o Inquilino envia o
+        contrato, o navegador dele consulta um desses serviços para registrar o endereço IP como prova
+        do aceite. Esses provedores estão fora do Brasil (art. 33 da LGPD).</li>
+      <li><b>ViaCEP</b>: consultado ao preencher um CEP, para completar o endereço automaticamente.</li>
       <li><b>Aplicativos de mensagem</b> (ex.: WhatsApp): somente se o usuário optar por compartilhar o
         link por esse meio.</li>
       <li>Não vendemos nem cedemos dados pessoais. Fora as hipóteses acima, dados só são compartilhados

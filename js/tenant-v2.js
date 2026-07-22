@@ -482,8 +482,10 @@ const Tenant = {
     this.template.fields
       .filter(f => f.section.toLowerCase() === 'locatário')
       .forEach(f => { if (this.contract.fields[f.name]) draft[f.name] = this.contract.fields[f.name]; });
-    if (this.contract.fields.assinatura_locatario) draft.assinatura_locatario = this.contract.fields.assinatura_locatario;
-    if (this.contract.fields.selfie_locatario) draft.selfie_locatario = this.contract.fields.selfie_locatario;
+    // Assinatura e selfie com documento NÃO entram no rascunho: ficariam em claro
+    // no localStorage de um aparelho possivelmente compartilhado, e o rascunho só
+    // é apagado no envio bem-sucedido — quem desiste no meio deixaria a foto lá.
+    // O custo é refazer os dois após um reload; os campos digitados seguem salvos.
     try { localStorage.setItem(k, JSON.stringify(draft)); } catch (e) { /* storage cheio/bloqueado: segue sem rascunho */ }
   },
 

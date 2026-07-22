@@ -6,8 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content-Security-Policy: backstop contra exfiltração em caso de XSS.
        connect/img/form travados no próprio site + Supabase; script externo só do jsdelivr. -->
-<<<<<<< HEAD
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.ipify.org https://*.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.ipify.org https://*.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
   <title>MEUS IMÓVEIS APP</title>
   <script>
     // Aplica o tema ANTES da pintura para nao piscar branco ao carregar.
@@ -154,6 +153,10 @@
             </path>
           </svg>
           <span class="nav-label">Perfil</span>
+        </a>
+        <a href="#superadmin" class="nav-item admin-action" title="Todas as contas" hidden>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          <span class="nav-label">Todas as Contas</span>
         </a>
         <span class="topbar-divider" aria-hidden="true"></span>
         <button type="button" class="nav-item topbar-icon-btn" onclick="Utils.toggleTheme()" aria-label="Alternar tema"
