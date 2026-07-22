@@ -127,6 +127,11 @@ const Tenant = {
   },
 
   renderTenantUI(container) {
+    // Métodos exigidos pelo locador. Link antigo (sem config) mostra ambos,
+    // como antes; a obrigatoriedade só vale quando o locador marcou (=== true).
+    const exigeAssinatura = this.contract.fields.exigir_assinatura !== false;
+    const exigeSelfie = this.contract.fields.exigir_selfie !== false;
+
     container.innerHTML = `
       <div class="tenant-topbar">
         <div class="tenant-brand">
@@ -190,6 +195,7 @@ const Tenant = {
 
         <div class="tenant-form-grid" id="tenant-form-container"></div>
 
+        ${exigeAssinatura ? `
         <div class="tenant-signature-section" style="margin-top: 1.5rem; margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700; color: var(--text-heading, #1E293B); margin-bottom: 6px; display: block;">Assinatura Manuscrita (Desenhe com o dedo ou mouse)</label>
           <div class="signature-pad-wrap" style="position: relative; border: 2px dashed #CBD5E1; border-radius: 12px; background: #FFFFFF; overflow: hidden; touch-action: none;">
@@ -203,7 +209,9 @@ const Tenant = {
             <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 4px 12px;" onclick="Tenant.clearSignature()">Limpar Assinatura</button>
           </div>
         </div>
+        ` : ''}
 
+        ${exigeSelfie ? `
         <div class="tenant-selfie-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
           <label class="form-label" style="font-weight: 700; color: var(--text-heading, #1E293B); margin-bottom: 6px; display: block;">Validação Facial (Selfie com Documento)</label>
           <div class="selfie-card-wrap" style="border: 2px dashed #CBD5E1; border-radius: 12px; background: #FFFFFF; padding: 1.25rem; text-align: center;">
@@ -236,6 +244,7 @@ const Tenant = {
             </div>
           </div>
         </div>
+        ` : ''}
 
         <input type="checkbox" id="aceito_contrato" class="tenant-check-input"
           onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
@@ -680,6 +689,17 @@ const Tenant = {
 
     if (!isValid) {
       Utils.toast(errorMsg, 'error');
+      return;
+    }
+
+    // Métodos exigidos pelo locador (só bloqueia quando marcado === true;
+    // link antigo sem config não trava, preservando o comportamento anterior).
+    if (this.contract.fields.exigir_assinatura === true && !this.contract.fields.assinatura_locatario) {
+      Utils.toast('Desenhe sua assinatura manuscrita para enviar o contrato.', 'error');
+      return;
+    }
+    if (this.contract.fields.exigir_selfie === true && !this.contract.fields.selfie_locatario) {
+      Utils.toast('Tire a selfie com o documento para enviar o contrato.', 'error');
       return;
     }
 

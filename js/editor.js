@@ -36,7 +36,11 @@ const Editor = {
       const mesExtenso = meses[hoje.getMonth()];
       const anoExtenso = hoje.getFullYear();
       this.contract.fields['data_assinatura'] = `${diaExtenso} de ${mesExtenso} de ${anoExtenso}`;
-      
+
+      // Métodos de validação exigidos do inquilino — o locador escolhe (padrão: ambos).
+      this.contract.fields['exigir_assinatura'] = true;
+      this.contract.fields['exigir_selfie'] = true;
+
     } else if (param.startsWith('id=')) {
       const cId = param.split('=')[1];
       this.contract = Storage.getById(cId);
@@ -194,6 +198,31 @@ const Editor = {
       html += `</div></div>`;
     }
     
+    // Métodos de validação que o inquilino terá que completar para enviar.
+    // Só editável antes de finalizar; a escolha viaja no link (fields).
+    if (!this.contract.isFinalized) {
+      const exigeAss = this.contract.fields.exigir_assinatura !== false;
+      const exigeSelfie = this.contract.fields.exigir_selfie !== false;
+      const check = (marcado, campo, label) => `
+        <label style="display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--border-light); border-radius:8px; margin-bottom:8px; cursor:pointer; font-size:14px; color:var(--text-main);">
+          <input type="checkbox" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer; flex-shrink:0;" ${marcado ? 'checked' : ''} onchange="Editor.setMetodo('${campo}', this.checked)">
+          ${label}
+        </label>`;
+      html += `
+        <div class="form-section">
+          <div class="form-section-header" onclick="this.classList.toggle('collapsed')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            <h3>Validação do Inquilino</h3>
+          </div>
+          <div class="form-section-body">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin:0 0 12px;">Escolha o que o inquilino precisará fazer para enviar o contrato. A assinatura por escrito ("Declaro que li e concordo") é sempre exigida.</p>
+            ${check(exigeAss, 'exigir_assinatura', 'Assinatura manuscrita (desenhada com o dedo/mouse)')}
+            ${check(exigeSelfie, 'exigir_selfie', 'Validação facial (selfie com documento)')}
+          </div>
+        </div>
+      `;
+    }
+
     if (sections['Locatário'] && !this.contract.isFinalized && !temDadosLocatario) {
       html += `
         <div class="form-section">
@@ -314,6 +343,11 @@ const Editor = {
         Utils.toast('Endereço preenchido pelo CEP — confira e complete o número.');
       })
       .catch(() => {});
+  },
+
+  // Liga/desliga um método de validação exigido do inquilino (guardado em fields).
+  setMetodo(campo, valor) {
+    this.contract.fields[campo] = valor;
   },
 
   togglePrazoPersonalizado() {
