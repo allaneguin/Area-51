@@ -35,3 +35,75 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ═══ Painel de suporte "Todas as Contas" (#superadmin) ═══
+   Divulgação progressiva: conta e locador em faixas de uma linha;
+   cada contrato só abre o detalhe completo quando clicado. */
+.sa-conta { margin-bottom: 12px; }
+
+/* Faixa enxuta (dados da conta, locador): valores separados por ·, não grid de rótulos */
+.sa-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border-light);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sa-strip strong { color: var(--text-main); font-weight: 600; }
+.sa-strip .sa-sep { color: var(--border-focus); user-select: none; }
+.sa-strip .sa-id { font-family: monospace; font-size: 12px; }
+.sa-strip .btn-icon { padding: 1px; vertical-align: middle; }
+.sa-strip .btn-icon svg { width: 14px; height: 14px; }
+
+/* Rótulo de seção discreto */
+.sa-secao {
+  padding: 13px 22px 3px;
+  border-top: 1px solid var(--border-light);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+/* Contrato: linha compacta clicável */
+.sa-contrato-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 22px;
+  border-top: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.sa-contrato-row:first-of-type { border-top: none; }
+.sa-contrato-row:hover { background: var(--row-hover-bg); }
+.sa-contrato-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sa-contrato-valor { font-weight: 600; color: var(--primary); font-size: 13px; white-space: nowrap; }
+.sa-chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: transform var(--transition);
+}
+.sa-contrato-row.aberto .sa-chevron { transform: rotate(90deg); }
+
+.sa-contrato-detalhe {
+  padding: 8px 22px 14px;
+  background: var(--overlay-hover);
+}
+.sa-contrato-detalhe .cliente-detalhes { margin-top: 0; }

@@ -110,31 +110,11 @@ const SuperAdmin = {
     }
   },
 
-  // Bloco de rótulo/valor reaproveitando o estilo .cliente-detalhes já existente.
-  _detalhes(pares) {
-    const itens = pares.filter(p => p && p[1]);
-    if (!itens.length) return '<p style="color: var(--text-muted); font-size: 13px; margin: 0;">Não informado.</p>';
-    return `<div class="cliente-detalhes">` + itens.map(([rotulo, valor]) => `
-      <div class="cliente-detalhe">
-        <span class="cliente-detalhe-rotulo">${rotulo}</span>
-        <span class="cliente-detalhe-valor">${Utils.esc(String(valor))}</span>
-      </div>
-    `).join('') + `</div>`;
-  },
-
-  _copiavel(rotulo, valor) {
+  // Só o botão de copiar (ícone), para embutir numa faixa.
+  _copyBtn(valor) {
     if (!valor) return '';
     const seguro = Utils.esc(String(valor)).replace(/'/g, '&#39;');
-    return `
-      <div class="cliente-detalhe">
-        <span class="cliente-detalhe-rotulo">${rotulo}</span>
-        <span class="cliente-detalhe-valor" style="display: inline-flex; align-items: center; gap: 6px;">
-          ${Utils.esc(String(valor))}
-          <button class="btn-icon" style="padding: 2px;" title="Copiar" onclick="event.stopPropagation(); SuperAdmin.copiar('${seguro}', this)">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-          </button>
-        </span>
-      </div>`;
+    return `<button class="btn-icon" title="Copiar" onclick="event.stopPropagation(); SuperAdmin.copiar('${seguro}', this)"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>`;
   },
 
   copiar(texto, btn) {
@@ -145,21 +125,22 @@ const SuperAdmin = {
     });
   },
 
-  // Ficha do locador (dono da conta), a partir do profile_data.
-  fichaLocadorHTML(profile) {
+  // Locador em uma linha só (valores separados por ·), em vez de um grid de rótulos.
+  locadorInline(profile) {
+    profile = profile || {};
     const isPJ = Utils.isPJLocador(profile);
-    const docLabel = isPJ ? 'CNPJ' : 'CPF';
-    const conta = [profile.banco, profile.agencia && ('Ag ' + profile.agencia), profile.conta_banco]
+    const doc = profile.doc_locador && ((isPJ ? 'CNPJ ' : 'CPF ') + Utils.maskCPFCNPJ(profile.doc_locador));
+    const banco = [profile.banco, profile.agencia && ('Ag ' + profile.agencia), profile.conta_banco, profile.tipo_conta]
       .filter(Boolean).join(' · ');
-    return this._detalhes([
-      ['Tipo', isPJ ? 'Pessoa Jurídica' : 'Pessoa Física'],
-      [docLabel, profile.doc_locador && Utils.maskCPFCNPJ(profile.doc_locador)],
-      !isPJ && ['RG', profile.rg_locador],
-      !isPJ && ['Estado civil', profile.est_civil_locador],
-      !isPJ && ['Nacionalidade', profile.nac_locador],
-      ['Banco', conta],
-      profile.tipo_conta && ['Tipo de conta', profile.tipo_conta]
-    ]);
+    const partes = [
+      isPJ ? 'Pessoa Jurídica' : 'Pessoa Física',
+      doc,
+      !isPJ && profile.rg_locador && ('RG ' + profile.rg_locador),
+      !isPJ && profile.est_civil_locador,
+      banco
+    ].filter(Boolean);
+    if (partes.length <= 1) return '<span style="color: var(--text-light);">Perfil ainda não preenchido.</span>';
+    return partes.map(p => Utils.esc(p)).join(' <span class="sa-sep">·</span> ');
   },
 
   renderContas(container) {
@@ -168,30 +149,34 @@ const SuperAdmin = {
     const receitaGlobal = contas.reduce((s, c) => s + c.receita, 0);
     const fmtBRL = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
+    const chevron = '<svg class="sa-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
+
     const linhas = contas.map((conta, i) => {
-      // Cada contrato: cabeçalho (locatário + status + valor) e a ficha completa dele.
-      const contratosHtml = conta.contratos.map(c => {
+      // Contrato = uma linha compacta; o detalhe completo só abre quando clicado.
+      const contratosHtml = conta.contratos.map((c, j) => {
         const status = Utils.getContractStatus({ fields: c.fields });
         const nomeLocatario = Utils.esc((c.fields && c.fields.nome_locatario) || 'Locatário não preenchido');
+        const valor = Utils.esc((c.fields && c.fields.valor_aluguel) || 'R$ ---');
+        const detalhe = Utils.dadosClienteHTML(c.fields, c.created_at) ||
+          '<p style="color: var(--text-muted); font-size: 13px; margin: 0;">Contrato ainda sem dados preenchidos.</p>';
         return `
-          <div style="padding: 12px 22px; border-top: 1px solid var(--border-light);">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-              <div class="contract-row-name" style="font-size: 13.5px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                ${nomeLocatario}
-                <span class="badge-status ${status.class}">${status.label}</span>
-              </div>
-              <div style="font-weight: 600; color: var(--primary); font-size: 13px;">${Utils.esc((c.fields && c.fields.valor_aluguel) || 'R$ ---')}</div>
-            </div>
-            <div class="contract-row-meta" style="margin: 4px 0 8px;">${Utils.esc(c.name || 'Contrato sem nome')}</div>
-            ${Utils.dadosClienteHTML(c.fields, c.created_at)}
+          <div class="sa-contrato-row" onclick="SuperAdmin.toggleContrato(${i}, ${j}, this)">
+            ${chevron}
+            <div class="sa-contrato-nome">${nomeLocatario}<span class="badge-status ${status.class}">${status.label}</span></div>
+            <div class="sa-contrato-valor">${valor}</div>
+          </div>
+          <div class="sa-contrato-detalhe" id="sa-c-${i}-${j}" style="display: none;">
+            <div class="contract-row-meta" style="margin: 0 0 8px;">${Utils.esc(c.name || 'Contrato sem nome')}</div>
+            ${detalhe}
           </div>
         `;
-      }).join('') || `<div style="padding: 14px 22px; color: var(--text-muted); font-size: 13.5px; border-top: 1px solid var(--border-light);">Nenhum contrato nesta conta.</div>`;
+      }).join('') || `<div style="padding: 14px 22px; color: var(--text-muted); font-size: 13.5px;">Nenhum contrato nesta conta.</div>`;
 
       const busca = [conta.nome, conta.email, conta.userId, conta.profile.doc_locador].filter(Boolean).join(' ').toLowerCase();
+      const idCurto = conta.userId.slice(0, 8) + '…';
 
       return `
-        <div class="recent-section sa-conta" data-busca="${Utils.esc(busca)}" style="margin-bottom: 14px;">
+        <div class="recent-section sa-conta" data-busca="${Utils.esc(busca)}">
           <div class="recent-header" style="cursor: pointer;" onclick="SuperAdmin.toggle(${i})">
             <div style="min-width: 0;">
               <h2 class="recent-title">${Utils.esc(conta.nome || conta.email || 'Conta sem perfil')}</h2>
@@ -205,22 +190,14 @@ const SuperAdmin = {
             </div>
           </div>
           <div id="sa-conta-${i}" style="display: none;">
-            <div style="padding: 16px 22px; border-top: 1px solid var(--border-light);">
-              <div class="cliente-detalhe-rotulo" style="margin-bottom: 8px;">Dados da conta</div>
-              <div class="cliente-detalhes">
-                ${this._copiavel('E-mail', conta.email)}
-                ${conta.criadoEm ? `<div class="cliente-detalhe"><span class="cliente-detalhe-rotulo">Cadastro</span><span class="cliente-detalhe-valor">${Utils.formatDate(conta.criadoEm)}</span></div>` : ''}
-                ${conta.ultimoLogin ? `<div class="cliente-detalhe"><span class="cliente-detalhe-rotulo">Último acesso</span><span class="cliente-detalhe-valor">${Utils.formatRelativeDate(conta.ultimoLogin)}</span></div>` : ''}
-                ${this._copiavel('User ID', conta.userId)}
-              </div>
+            <div class="sa-strip">
+              ${conta.email ? `<span><strong>${Utils.esc(conta.email)}</strong></span>${this._copyBtn(conta.email)}` : ''}
+              ${conta.criadoEm ? `<span class="sa-sep">·</span><span>Cadastro <strong>${Utils.formatDate(conta.criadoEm)}</strong></span>` : ''}
+              ${conta.ultimoLogin ? `<span class="sa-sep">·</span><span>Último acesso <strong>${Utils.formatRelativeDate(conta.ultimoLogin)}</strong></span>` : ''}
+              <span class="sa-sep">·</span><span>ID <span class="sa-id">${Utils.esc(idCurto)}</span></span>${this._copyBtn(conta.userId)}
             </div>
-            <div style="padding: 16px 22px; border-top: 1px solid var(--border-light);">
-              <div class="cliente-detalhe-rotulo" style="margin-bottom: 8px;">Locador (dono da conta)</div>
-              ${this.fichaLocadorHTML(conta.profile)}
-            </div>
-            <div style="padding: 12px 22px 4px; border-top: 1px solid var(--border-light);">
-              <div class="cliente-detalhe-rotulo">Contratos (${conta.total})</div>
-            </div>
+            <div class="sa-strip">${this.locadorInline(conta.profile)}</div>
+            <div class="sa-secao">Contratos (${conta.total})</div>
             ${contratosHtml}
           </div>
         </div>
@@ -269,6 +246,14 @@ const SuperAdmin = {
   toggle(i) {
     const el = document.getElementById('sa-conta-' + i);
     if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+  },
+
+  toggleContrato(i, j, rowEl) {
+    const el = document.getElementById(`sa-c-${i}-${j}`);
+    if (!el) return;
+    const aberto = el.style.display !== 'none';
+    el.style.display = aberto ? 'none' : '';
+    if (rowEl) rowEl.classList.toggle('aberto', !aberto);
   },
 
   filtrar(termo) {
