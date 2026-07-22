@@ -35,7 +35,7 @@ const Dashboard = {
       .filter(c => Utils.getContractStatus(c).label === 'Ativo')
       .reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
     const receitaFmt = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
-    
+
     let recentHtml = recent.length ? recent.map(c => {
       const status = Utils.getContractStatus(c);
       return `
@@ -120,7 +120,7 @@ const Dashboard = {
       </div>
     `;
   },
-  
+
   deleteContract(id) {
     if (confirm('Tem certeza que deseja excluir este contrato permanentemente?')) {
       Storage.delete(id);

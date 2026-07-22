@@ -23,21 +23,32 @@
 .btn::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(rgba(255,255,255,0.1), transparent);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
   opacity: 0;
   transition: opacity var(--transition);
 }
 
-.btn:hover::after { opacity: 1; }
-.btn svg { width: 18px; height: 18px; }
+.btn:hover::after {
+  opacity: 1;
+}
 
-.btn:disabled, .btn[disabled] {
+.btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn:disabled,
+.btn[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
-  pointer-events: none; /* Garante que o hover e cliques sejam ignorados */
+  pointer-events: none;
+  /* Garante que o hover e cliques sejam ignorados */
 }
 
 .btn-primary {
@@ -90,7 +101,9 @@
   letter-spacing: 0.06em;
 }
 
-.form-input, .form-textarea, .form-select {
+.form-input,
+.form-textarea,
+.form-select {
   width: 100%;
   padding: 12px 14px;
   background-color: var(--input-bg);
@@ -102,7 +115,8 @@
   transition: all var(--transition);
 }
 
-select.form-input, select.form-select {
+select.form-input,
+select.form-select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -113,15 +127,24 @@ select.form-input, select.form-select {
   padding-right: 2.5rem;
 }
 
-.form-input:focus, .form-textarea:focus, select.form-input:focus, select.form-select:focus {
+.form-input:focus,
+.form-textarea:focus,
+select.form-input:focus,
+select.form-select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
   background-color: var(--card-bg);
 }
 
-.form-input::placeholder { color: var(--text-light); }
-.form-textarea { min-height: 120px; resize: vertical; }
+.form-input::placeholder {
+  color: var(--text-light);
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
 
 /* Badges */
 .badge {
@@ -135,8 +158,15 @@ select.form-input, select.form-select {
   text-transform: uppercase;
 }
 
-.badge-blue { background-color: var(--primary-light); color: var(--primary); }
-.badge-teal { background-color: var(--success-bg); color: var(--success); }
+.badge-blue {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.badge-teal {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
 
 /* Marca e itens de navegação (superfície escura: topbar e header mobile) */
 .sidebar-logo {
@@ -147,7 +177,12 @@ select.form-input, select.form-select {
   /* logo solto, sem caixa: a cor vem do contexto (sidebar escura x header claro) */
   color: var(--sidebar-title);
 }
-.sidebar-logo svg { height: 26px; width: auto; display: block; }
+
+.sidebar-logo svg {
+  height: 26px;
+  width: auto;
+  display: block;
+}
 
 .sidebar-title {
   font-weight: 700;
@@ -170,7 +205,12 @@ select.form-input, select.form-select {
   border: 1px solid transparent;
 }
 
-.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; transition: color var(--transition); }
+.nav-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
 
 /* .nav-item tambem e usado em <button> (ex.: alternador de tema), que e uma acao e
    nao um destino — assim ele nunca casa com a regra de "item ativo" do updateNav. */
@@ -192,19 +232,26 @@ button.nav-item {
   background-color: var(--sidebar-active-bg);
   color: #FFFFFF;
 }
-.nav-item.active svg { color: #FFFFFF; }
+
+.nav-item.active svg {
+  color: #FFFFFF;
+}
 
 /* ═══ Topbar (desktop) — navegação no topo, substitui a antiga sidebar ═══ */
 .topbar {
-  display: none; /* desktop-only; exibida em ≥769px (ver media query abaixo) */
+  display: none;
+  /* desktop-only; exibida em ≥769px (ver media query abaixo) */
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 60px;
   /* Fundo sólido de propósito: com barra fixa + translucidez, o conteúdo rolando
      por trás causava repaint sujo (glitch do backdrop-filter). */
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
-  border-bottom: 1px solid rgba(233, 231, 226, 0.08); /* separa da área de conteúdo, sobretudo no tema escuro */
+  border-bottom: 1px solid rgba(233, 231, 226, 0.08);
+  /* separa da área de conteúdo, sobretudo no tema escuro */
   align-items: center;
   gap: 8px;
   padding: 0 20px;
@@ -226,7 +273,10 @@ button.nav-item {
   margin-right: 14px;
   flex-shrink: 0;
 }
-.topbar-brand:hover { opacity: 0.92; }
+
+.topbar-brand:hover {
+  opacity: 0.92;
+}
 
 .topbar-nav,
 .topbar-actions {
@@ -234,19 +284,32 @@ button.nav-item {
   align-items: center;
   gap: 4px;
 }
-.topbar-actions { margin-left: auto; }
+
+.topbar-actions {
+  margin-left: auto;
+}
 
 /* .nav-item foi desenhado para a sidebar vertical: na horizontal, tira a margem
    inferior e a largura total que button.nav-item impõe. */
-.topbar .nav-item { margin-bottom: 0; }
-.topbar button.nav-item { width: auto; }
-.topbar-icon-btn { padding: 9px; }
+.topbar .nav-item {
+  margin-bottom: 0;
+}
+
+.topbar button.nav-item {
+  width: auto;
+}
+
+.topbar-icon-btn {
+  padding: 9px;
+}
 
 /* Em repouso cada aba mostra só o ícone. Ao passar o mouse (ou focar por teclado),
    o rótulo sai de dentro do ícone: cresce a partir de largura 0 e o respiro nasce
    junto — por isso o gap do .nav-item vira 0 e o espaçamento vem da margin-left
    animada do rótulo, senão sobraria um vão fixo de 10px no estado recolhido. */
-.topbar .nav-item { gap: 0; }
+.topbar .nav-item {
+  gap: 0;
+}
 
 .topbar .nav-item .nav-label {
   max-width: 0;
@@ -256,6 +319,7 @@ button.nav-item {
   white-space: nowrap;
   transition: max-width 0.25s ease, margin-left 0.25s ease, opacity 0.2s ease;
 }
+
 .topbar .nav-item:hover .nav-label,
 .topbar .nav-item:focus-visible .nav-label {
   max-width: 160px;
@@ -264,7 +328,9 @@ button.nav-item {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .topbar .nav-item .nav-label { transition: none; }
+  .topbar .nav-item .nav-label {
+    transition: none;
+  }
 }
 
 .topbar-divider {
@@ -275,10 +341,14 @@ button.nav-item {
   flex-shrink: 0;
 }
 
-.topbar .logout-action:hover { color: var(--danger); }
+.topbar .logout-action:hover {
+  color: var(--danger);
+}
 
 @media (min-width: 769px) {
-  .topbar { display: flex; }
+  .topbar {
+    display: flex;
+  }
 }
 
 /* Segmented tabs */
@@ -305,7 +375,9 @@ button.nav-item {
   transition: all var(--transition);
 }
 
-.seg-tab:hover { color: var(--text-main); }
+.seg-tab:hover {
+  color: var(--text-main);
+}
 
 .seg-tab.active {
   background: var(--card-bg);
@@ -332,14 +404,17 @@ button.nav-item {
 .mobile-header {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 60px;
   background: var(--card-bg);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
   align-items: center;
-  gap: 10px; /* sem isto a marca fica colada no texto */
+  gap: 10px;
+  /* sem isto a marca fica colada no texto */
   padding: 0 1.25rem;
   z-index: 50;
 }
@@ -348,7 +423,10 @@ button.nav-item {
   /* fundo do header mobile e claro: logo em azul escuro para contrastar */
   color: #143A66;
 }
-.mobile-header .sidebar-logo svg { height: 24px; }
+
+.mobile-header .sidebar-logo svg {
+  height: 24px;
+}
 
 .mobile-header .sidebar-title {
   font-size: 1.1rem;
@@ -362,7 +440,10 @@ button.nav-item {
   align-items: center;
   gap: 4px;
 }
-.mobile-header-actions .logout-action:hover { color: var(--danger); }
+
+.mobile-header-actions .logout-action:hover {
+  color: var(--danger);
+}
 
 .btn-icon {
   background: transparent;
@@ -387,7 +468,9 @@ button.nav-item {
 }
 
 @media(max-width: 768px) {
-  .mobile-header { display: flex; }
+  .mobile-header {
+    display: flex;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -414,25 +497,33 @@ button.nav-item {
   width: 100%;
   border-collapse: collapse;
 }
-.print-wrap > tbody > tr > td,
-.print-wrap > thead > tr > td,
-.print-wrap > tfoot > tr > td {
+
+.print-wrap>tbody>tr>td,
+.print-wrap>thead>tr>td,
+.print-wrap>tfoot>tr>td {
   padding: 0;
   border: none;
 }
 
 /* Na tela as faixas de margem não existem */
-.print-wrap > thead,
-.print-wrap > tfoot {
+.print-wrap>thead,
+.print-wrap>tfoot {
   display: none;
 }
 
 @media print {
-  .print-wrap > thead { display: table-header-group; }
-  .print-wrap > tfoot { display: table-footer-group; }
+  .print-wrap>thead {
+    display: table-header-group;
+  }
+
+  .print-wrap>tfoot {
+    display: table-footer-group;
+  }
 
   /* a altura precisa vir do conteúdo: uma célula vazia colapsa */
-  .print-spacer-inner { height: 18mm; }
+  .print-spacer-inner {
+    height: 18mm;
+  }
 
   /* Assinaturas mais para o pé da página. É um empurrão fixo: o CSS de
      impressão não sabe quanto espaço sobrou na folha, então não dá para
@@ -440,7 +531,8 @@ button.nav-item {
   .preview-document .signature-area {
     margin-top: 35mm;
     break-inside: avoid;
-    page-break-inside: avoid; /* Chrome antigo */
+    page-break-inside: avoid;
+    /* Chrome antigo */
   }
 }
 
@@ -517,8 +609,15 @@ button.nav-item {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(-12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══ Ajustes de modo escuro para cores fixas ═══ */
@@ -527,24 +626,40 @@ button.nav-item {
 [data-theme="dark"] select.form-select {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A2A9B6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
+
 /* header mobile fica escuro: logo precisa clarear (no claro ele e azul escuro) */
-[data-theme="dark"] .mobile-header .sidebar-logo { color: var(--sidebar-title); }
+[data-theme="dark"] .mobile-header .sidebar-logo {
+  color: var(--sidebar-title);
+}
 
 /* Botao primario: o gradiente do tema claro fica invertido no escuro (topo mais
    escuro que a base) e o brilho branco do :hover lavava o texto ate sumir. */
 [data-theme="dark"] .btn-primary {
   background: linear-gradient(180deg, #3E82CE, #2A5F9E);
 }
+
 [data-theme="dark"] .btn-primary:hover {
   background: linear-gradient(180deg, #4A8FD8, #326CAE);
 }
+
 [data-theme="dark"] .btn::after {
   background: linear-gradient(rgba(255, 255, 255, 0.05), transparent);
 }
+
 /* vermelho escuro do badge "Vencido" some no fundo escuro */
-[data-theme="dark"] .badge-status-expired { color: var(--danger); }
+[data-theme="dark"] .badge-status-expired {
+  color: var(--danger);
+}
 
 /* ═══ Alternador de tema (sidebar) ═══ */
-.theme-icon-sun { display: none; }
-[data-theme="dark"] .theme-icon-moon { display: none; }
-[data-theme="dark"] .theme-icon-sun { display: inline-block; }
+.theme-icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  display: inline-block;
+}

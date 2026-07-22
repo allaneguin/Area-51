@@ -23,11 +23,25 @@
   justify-content: center;
 }
 
-.stat-icon svg { width: 24px; height: 24px; }
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
+}
 
-.stat-icon.blue { background: var(--primary-light); color: var(--primary); }
-.stat-icon.amber { background: var(--warning-bg); color: var(--warning); }
-.stat-icon.green { background: var(--success-bg); color: var(--success); }
+.stat-icon.blue {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.stat-icon.amber {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.stat-icon.green {
+  background: var(--success-bg);
+  color: var(--success);
+}
 
 .stat-value {
   font-size: 34px;
@@ -52,8 +66,14 @@
   color: var(--text-light);
   margin-top: 2px;
 }
-.stat-delta.positive { color: var(--success); }
-.stat-delta.warning { color: var(--warning); }
+
+.stat-delta.positive {
+  color: var(--success);
+}
+
+.stat-delta.warning {
+  color: var(--warning);
+}
 
 /* Recent Contracts List */
 .recent-section {
@@ -113,7 +133,10 @@
   flex-shrink: 0;
 }
 
-.contract-row-icon svg { width: 24px; height: 24px; }
+.contract-row-icon svg {
+  width: 24px;
+  height: 24px;
+}
 
 .contract-row-info {
   flex: 1;
@@ -153,8 +176,15 @@
   color: var(--primary);
 }
 
-.contract-row-delete { color: var(--danger); padding: 0.25rem; }
-.contract-row-delete svg { width: 20px; height: 20px; }
+.contract-row-delete {
+  color: var(--danger);
+  padding: 0.25rem;
+}
+
+.contract-row-delete svg {
+  width: 20px;
+  height: 20px;
+}
 
 /* Resumo do cliente no topo do editor */
 .cliente-resumo {
