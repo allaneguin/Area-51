@@ -24,6 +24,26 @@ const CloudDB = {
     );
   },
 
+  _uint8ToBase64(bytes) {
+    let binary = '';
+    const len = bytes.byteLength;
+    const chunkSize = 16384;
+    for (let i = 0; i < len; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  },
+
+  _base64ToUint8(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  },
+
   // Encrypt JSON object to URL-safe base64 string
   async encrypt(data, keyString) {
     const text = JSON.stringify(data);
@@ -39,8 +59,8 @@ const CloudDB = {
     combined.set(iv, 0);
     combined.set(new Uint8Array(encrypted), iv.length);
     
-    // Convert to URL-safe base64
-    return btoa(String.fromCharCode(...combined))
+    // Convert to URL-safe base64 sem estouro de pilha (chunking)
+    return this._uint8ToBase64(combined)
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
@@ -50,7 +70,7 @@ const CloudDB = {
   async decrypt(cipherTextBase64, keyString) {
     let base64 = cipherTextBase64.replace(/-/g, '+').replace(/_/g, '/');
     while (base64.length % 4) base64 += '=';
-    const combined = new Uint8Array(atob(base64).split("").map(c => c.charCodeAt(0)));
+    const combined = this._base64ToUint8(base64);
     const iv = combined.slice(0, 12);
     const data = combined.slice(12);
     const key = await this._importKey(keyString);
@@ -95,19 +115,31 @@ const CloudDB = {
     return linkId;
   },
 
-  // Update an existing contract on the cloud server
-  async updateContract(serverId, contractData, key) {
+  // Update an existing contract on the cloud server.
+  // finalize=true (envio do inquilino) trava o link no servidor: depois disso
+  // ninguém mais reescreve o payload, mesmo tendo a URL (ver supabase_finalize.sql).
+  async updateContract(serverId, contractData, key, finalize = false) {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     const encryptedPayload = await this.encrypt(contractData, key);
-    
-    const { data, error } = await supabaseClient
-      .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload });
+
+    let { data, error } = await supabaseClient
+      .rpc('set_tenant_link', finalize
+        ? { p_id: serverId, p_payload: encryptedPayload, p_finalize: true }
+        : { p_id: serverId, p_payload: encryptedPayload });
+
+    // Banco ainda sem a migração (função de 2 argumentos): reenvia no formato
+    // antigo para o envio do inquilino nunca ficar bloqueado pela migração pendente.
+    if (error && finalize && (error.code === 'PGRST202' || /p_finalize|function/i.test(error.message))) {
+      ({ data, error } = await supabaseClient
+        .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload }));
+    }
 
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
-    // A função devolve false quando nenhuma linha casou (link expirado/removido).
-    // Sem esta checagem, os dados digitados seriam descartados silenciosamente.
+    // A função devolve false quando nenhuma linha casou (link expirado,
+    // removido ou já finalizado). Sem esta checagem, os dados digitados
+    // seriam descartados silenciosamente.
     if (data !== true) {
-      throw new Error("Este link expirou. Peça um novo link ao locador.");
+      throw new Error("Este link expirou ou já foi enviado. Peça um novo link ao locador.");
     }
     return true;
   },

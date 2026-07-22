@@ -365,4 +365,13 @@
     color: black !important;
     border-bottom: none !important;
   }
+
+  /* Garantir que o Certificado de Autenticidade comece em uma página limpa */
+  .cert-page-container, .cert-page {
+    page-break-before: always !important;
+    break-before: page !important;
+    margin-top: 1rem !important;
+    padding-top: 1rem !important;
+  }
 }
+

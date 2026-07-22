@@ -36,7 +36,11 @@ const Editor = {
       const mesExtenso = meses[hoje.getMonth()];
       const anoExtenso = hoje.getFullYear();
       this.contract.fields['data_assinatura'] = `${diaExtenso} de ${mesExtenso} de ${anoExtenso}`;
-      
+
+      // Métodos de validação exigidos do inquilino — o locador escolhe (padrão: ambos).
+      this.contract.fields['exigir_assinatura'] = true;
+      this.contract.fields['exigir_selfie'] = true;
+
     } else if (param.startsWith('id=')) {
       const cId = param.split('=')[1];
       this.contract = Storage.getById(cId);
@@ -143,10 +147,15 @@ const Editor = {
       sections[f.section].push(f);
     });
 
+    // O inquilino já preencheu? Então o locador precisa VER os dados dele nesta tela,
+    // e não uma seção oculta. Enquanto não preencheu, segue escondida como antes.
+    const temDadosLocatario = !!(this.contract.fields && this.contract.fields.nome_locatario);
+
     let html = '';
     for (const [secName, fields] of Object.entries(sections)) {
       // Ocultar as seções que vêm do AdminProfile ou que vão para o Inquilino
-      const hiddenSections = ['locatário', 'locador', 'conta p/ pagamento'];
+      const hiddenSections = ['locador', 'conta p/ pagamento'];
+      if (!temDadosLocatario) hiddenSections.push('locatário');
       const isHidden = hiddenSections.includes(secName.toLowerCase());
       
       html += `
@@ -180,7 +189,7 @@ const Editor = {
           inputHtml = `<input type="${f.type}" class="form-input" data-field="${f.name}" value="${Utils.esc(val)}" ${f.mask ? `data-mask="${f.mask}"` : ''} ${disabledAttr} ${readOnlyAttr}>`;
         }
         
-        html += `<div class="form-group">
+        html += `<div class="form-group" data-group="${f.name}">
           <label class="form-label">${f.label}</label>
           ${inputHtml}
         </div>`;
@@ -189,7 +198,32 @@ const Editor = {
       html += `</div></div>`;
     }
     
-    if (sections['Locatário'] && !this.contract.isFinalized) {
+    // Métodos de validação que o inquilino terá que completar para enviar.
+    // Só editável antes de finalizar; a escolha viaja no link (fields).
+    if (!this.contract.isFinalized) {
+      const exigeAss = this.contract.fields.exigir_assinatura !== false;
+      const exigeSelfie = this.contract.fields.exigir_selfie !== false;
+      const check = (marcado, campo, label) => `
+        <label style="display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--border-light); border-radius:8px; margin-bottom:8px; cursor:pointer; font-size:14px; color:var(--text-main);">
+          <input type="checkbox" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer; flex-shrink:0;" ${marcado ? 'checked' : ''} onchange="Editor.setMetodo('${campo}', this.checked)">
+          ${label}
+        </label>`;
+      html += `
+        <div class="form-section">
+          <div class="form-section-header" onclick="this.classList.toggle('collapsed')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            <h3>Validação do Inquilino</h3>
+          </div>
+          <div class="form-section-body">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin:0 0 12px;">Escolha o que o inquilino precisará fazer para enviar o contrato. A assinatura por escrito ("Declaro que li e concordo") é sempre exigida.</p>
+            ${check(exigeAss, 'exigir_assinatura', 'Assinatura manuscrita (desenhada com o dedo/mouse)')}
+            ${check(exigeSelfie, 'exigir_selfie', 'Validação facial (selfie com documento)')}
+          </div>
+        </div>
+      `;
+    }
+
+    if (sections['Locatário'] && !this.contract.isFinalized && !temDadosLocatario) {
       html += `
         <div class="form-section">
           <div style="padding: 1rem; text-align: center; color: var(--success); border: 1px dashed var(--success); border-radius: 8px; margin-bottom: 1rem;">
@@ -212,7 +246,24 @@ const Editor = {
       ` + html;
     }
 
+    // Resumo do cliente no topo: o locador abre o contrato e já vê com quem está lidando,
+    // sem ter que caçar campo por campo no formulário.
+    if (temDadosLocatario) {
+      const st = Utils.getContractStatus(this.contract);
+      html = `
+        <div class="cliente-resumo">
+          <div class="cliente-resumo-head">
+            <span class="cliente-resumo-nome">${Utils.esc(this.contract.fields.nome_locatario)}</span>
+            <span class="badge-status ${st.class}">${st.label}</span>
+          </div>
+          ${Utils.dadosClienteHTML(this.contract.fields)}
+        </div>
+      ` + html;
+    }
+
     container.innerHTML = html;
+    this.togglePrazoPersonalizado();
+    this.toggleGarantiaFields();
 
     // Attach listeners
     container.querySelectorAll('input, textarea, select').forEach(el => {
@@ -226,8 +277,11 @@ const Editor = {
         this.contract.fields[fieldName] = el.value;
         
         // Auto-preencher valor por extenso se for campo monetário
-        if (fieldName === 'valor_aluguel' || fieldName === 'valor_bonus') {
-          const targetExtensoField = fieldName === 'valor_aluguel' ? 'valor_extenso' : 'valor_bonus_extenso';
+        if (fieldName === 'valor_aluguel' || fieldName === 'valor_bonus' || fieldName === 'valor_caucao') {
+          let targetExtensoField = 'valor_extenso';
+          if (fieldName === 'valor_bonus') targetExtensoField = 'valor_bonus_extenso';
+          if (fieldName === 'valor_caucao') targetExtensoField = 'valor_caucao_extenso';
+
           const extensoVal = Utils.writeBRLInWords(el.value);
           this.contract.fields[targetExtensoField] = extensoVal;
           
@@ -236,19 +290,17 @@ const Editor = {
           if (extensoEl) extensoEl.value = extensoVal;
         }
         
+        if (fieldName === 'prazo_extenso') this.togglePrazoPersonalizado();
+        if (fieldName === 'tipo_garantia') this.toggleGarantiaFields();
+
+        // CEP completo -> busca o endereço na ViaCEP
+        if (fieldName && fieldName.includes('cep')) this.buscarCEP(el.value, fieldName);
+
         // Auto-calcular Data de Término
-        if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses') {
+        if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses' || fieldName === 'prazo_unidade') {
           const inicio = this.contract.fields['data_inicio'];
-          const prazoExtenso = this.contract.fields['prazo_extenso'];
-          const prazoMeses = this.contract.fields['prazo_meses'];
-          
-          let meses = 0;
-          if (prazoExtenso) {
-            meses = parseInt(prazoExtenso.split(' ')[0], 10);
-          } else if (prazoMeses) {
-            meses = parseInt(prazoMeses, 10);
-          }
-          
+          const meses = Utils.mesesDoContrato(this.contract.fields);
+
           if (inicio && meses > 0) {
             const d = new Date(inicio + 'T12:00:00Z');
             d.setMonth(d.getMonth() + meses);
@@ -271,12 +323,71 @@ const Editor = {
     });
   },
 
+  // Consulta de CEP via Utils.fetchCEP; preenche o endereço correspondente se estiver vazio
+  async buscarCEP(cep, fieldName = 'cep_imovel') {
+    if (!cep) return;
+    const clean = String(cep).replace(/\D/g, '');
+    if (clean.length !== 8) return;
+
+    let targetFieldName = 'end_imovel';
+    if (fieldName.includes('locador')) targetFieldName = 'end_locador';
+    if (fieldName.includes('locatario')) targetFieldName = 'end_locatario';
+    if (fieldName.includes('fiador')) targetFieldName = 'end_fiador';
+
+    const data = await Utils.fetchCEP(clean);
+    if (!data || !data.enderecoCompleto) return;
+
+    const el = document.querySelector(`[data-field="${targetFieldName}"]`);
+    if (!el || el.value.trim()) return;
+
+    el.value = data.enderecoCompleto;
+    this.contract.fields[targetFieldName] = data.enderecoCompleto;
+    this.updatePreview();
+    Utils.toast('Endereço preenchido automaticamente pelo CEP — complete com o número.', 'info');
+  },
+
+  // Liga/desliga um método de validação exigido do inquilino (guardado em fields).
+  setMetodo(campo, valor) {
+    this.contract.fields[campo] = valor;
+  },
+
+  togglePrazoPersonalizado() {
+    if (!this.template.fields.some(f => f.name === 'prazo_extenso')) return;
+    const mostrar = this.contract.fields['prazo_extenso'] === 'personalizado';
+    ['prazo_meses', 'prazo_unidade'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = mostrar ? '' : 'none';
+    });
+  },
+
+  toggleGarantiaFields() {
+    if (!this.template.fields.some(f => f.name === 'tipo_garantia')) return;
+    const tipo = this.contract.fields['tipo_garantia'] || 'sem_garantia';
+    const isFiador = tipo === 'fiador';
+    const isCaucao = tipo === 'caucao';
+    
+    ['nome_fiador', 'rg_fiador', 'doc_fiador', 'end_fiador'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = isFiador ? '' : 'none';
+    });
+    ['valor_caucao', 'valor_caucao_extenso'].forEach(nome => {
+      const grupo = document.querySelector(`[data-group="${nome}"]`);
+      if (grupo) grupo.style.display = isCaucao ? '' : 'none';
+    });
+  },
+
   updatePreview() {
     const prev = document.getElementById('preview-content');
     prev.querySelectorAll('.highlight').forEach(el => {
       const field = el.getAttribute('data-field');
       let val = this.contract.fields[field];
-      
+
+      // "personalizado" é estado do formulário, não texto de contrato:
+      // o documento recebe a frase gerada a partir dos meses digitados.
+      if (field === 'prazo_extenso' && val === 'personalizado') {
+        val = Utils.prazoPorExtenso(this.contract.fields['prazo_meses'], this.contract.fields['prazo_unidade']);
+      }
+
       // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
       if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
          const parts = val.split('-');
@@ -304,6 +415,51 @@ const Editor = {
     const pjLocador = Utils.isPJLocador(this.contract.fields);
     prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
     prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
+
+    // Garantia Locatícia no texto e assinaturas
+    const tipoGarantia = this.contract.fields.tipo_garantia || 'sem_garantia';
+    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+
+    const txtGarantia = prev.querySelector('.sec-garantia-texto');
+    if (txtGarantia) {
+      if (tipoGarantia === 'caucao') {
+        const v = this.contract.fields.valor_caucao || 'R$ ___';
+        const ve = this.contract.fields.valor_caucao_extenso || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
+      } else if (tipoGarantia === 'fiador') {
+        const nf = this.contract.fields.nome_fiador || '___';
+        const df = this.contract.fields.doc_fiador || '___';
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
+      } else {
+        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
+      }
+    }
+
+    // Renderizar Imagem de Assinatura se existir
+    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
+      if (this.contract.fields && this.contract.fields.assinatura_locatario) {
+        el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+      } else {
+        el.innerHTML = '';
+      }
+    });
+
+    // Renderizar Certificado de Assinatura se houver trilha de auditoria
+    let certArea = prev.querySelector('.cert-page-container');
+    const certHTML = Utils.renderCertificadoHTML(this.contract.fields);
+    if (certHTML) {
+      if (certArea) {
+        certArea.innerHTML = certHTML;
+      } else {
+        certArea = document.createElement('div');
+        certArea.className = 'cert-page-container';
+        certArea.innerHTML = certHTML;
+        prev.appendChild(certArea);
+      }
+    } else if (certArea) {
+      certArea.remove();
+    }
   },
 
   save(showAlert = false) {
@@ -317,8 +473,23 @@ const Editor = {
   },
 
   generateTenantLink() {
+    // Não deixa gerar link com o contrato em branco: o aceite do inquilino só tem
+    // valor jurídico se os termos essenciais já estiverem no documento que ele vai ler.
+    const f = this.contract.fields || {};
+    const faltando = [
+      !f.valor_aluguel && 'Valor do aluguel',
+      !f.end_imovel && 'Endereço do imóvel',
+      !f.data_inicio && 'Data de início',
+      !(Utils.mesesDoContrato(f) > 0) && 'Prazo do contrato',
+      !f.dia_vencimento && 'Dia de vencimento'
+    ].filter(Boolean);
+    if (faltando.length) {
+      Utils.toast('Antes de enviar ao inquilino, preencha: ' + faltando.join(', ') + '.', 'error');
+      return;
+    }
+
     this.save(false);
-    
+
     // Mudar o botão para estado de carregamento
     const btn = document.querySelector('button[onclick="Editor.generateTenantLink()"]');
     let originalHTML = '';
@@ -342,16 +513,8 @@ const Editor = {
     };
 
     const finalize = (serverId, key) => {
-      const baseUrl = window.location.href.split('#')[0];
-      const url = `${baseUrl}#tenant?id=${serverId}&key=${key}`;
-
-      navigator.clipboard.writeText(url).then(() => {
-        Utils.toast('Link seguro copiado! Envie no WhatsApp do inquilino para ele preencher.');
-      }).catch(() => {
-        // ponytail: prompt nativo como fallback — deixa o usuário copiar a URL na mão
-        prompt('Não foi possível copiar automaticamente. Copie o link abaixo:', url);
-      });
-
+      const url = `${Utils.shareBaseUrl()}#tenant?id=${serverId}&key=${key}`;
+      Utils.showShareModal(url);
       restoreBtn();
     };
 

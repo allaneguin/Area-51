@@ -155,3 +155,66 @@
 
 .contract-row-delete { color: var(--danger); padding: 0.25rem; }
 .contract-row-delete svg { width: 20px; height: 20px; }
+
+/* Resumo do cliente no topo do editor */
+.cliente-resumo {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 1.5rem;
+  background: var(--bg);
+}
+
+.cliente-resumo-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cliente-resumo-nome {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-main);
+}
+
+.cliente-resumo .cliente-detalhes {
+  margin-top: 0;
+  gap: 10px 22px;
+}
+
+.cliente-resumo .cliente-detalhe-valor {
+  max-width: 42ch;
+}
+
+/* Dados do locatário na Gestão de Contratos */
+.cliente-detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 6px;
+}
+
+.cliente-detalhe {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cliente-detalhe-rotulo {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+.cliente-detalhe-valor {
+  font-size: 12.5px;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 30ch;
+}

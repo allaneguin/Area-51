@@ -144,6 +144,17 @@ a:hover {
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
 
+/* Link do inquilino: esconde a interface do locador antes da 1ª pintura
+   (a classe é aplicada no <head>). Some assim que o JS entra em tenant-mode. */
+html.is-tenant-boot #sidebar,
+html.is-tenant-boot .mobile-header,
+html.is-tenant-boot .bottom-nav { display: none !important; }
+html.is-tenant-boot #main-content {
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
 /* Layout Shell */
 #app {
   display: flex;

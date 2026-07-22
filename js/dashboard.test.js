@@ -28,4 +28,22 @@ const contratos = [
 ];
 assert.strictEqual(Dashboard.countAVencer(contratos), 1);
 
-console.log('ok — dashboard: parseValor + countAVencer');
+// Receita mensal: SO contratos ativos entram na soma (vencido e futuro ficam fora)
+const Utils = new Function(`${fs.readFileSync(path.join(__dirname, 'utils.js'), 'utf8')}; return Utils;`)();
+global.Utils = Utils;
+global.Contracts = {};
+global.Storage = {
+  getStats: () => ({ total: 3, thisMonth: 0 }),
+  getAll: () => [
+    { id: 'a', fields: { valor_aluguel: 'R$ 1.000,00', data_inicio: emDias(-30), data_termino: emDias(300) } }, // ativo
+    { id: 'b', fields: { valor_aluguel: 'R$ 5.000,00', data_inicio: emDias(-400), data_termino: emDias(-10) } }, // vencido
+    { id: 'c', fields: { valor_aluguel: 'R$ 7.000,00', data_inicio: emDias(30), data_termino: emDias(400) } },  // a iniciar
+  ],
+};
+const container = { innerHTML: '' };
+Dashboard.render(container);
+assert.ok(container.innerHTML.includes('1.000'), 'receita deve incluir o contrato ativo');
+assert.ok(!container.innerHTML.includes('13.000') && !container.innerHTML.includes('12.000'),
+  'receita nao pode somar vencidos/futuros');
+
+console.log('ok — dashboard: parseValor + countAVencer + receita so de ativos');

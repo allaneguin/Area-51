@@ -83,6 +83,12 @@ body.tenant-mode #main-content > * {
   margin: 10px 0 0;
 }
 
+/* Quem está pedindo os dados — primeiro sinal de confiança da página */
+.tenant-header .tenant-sender {
+  font-size: 15.5px;
+  color: var(--text-main);
+}
+
 /* ───────── Card do imóvel ───────── */
 .tenant-property {
   margin-top: 32px;

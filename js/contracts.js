@@ -7,8 +7,8 @@ const ContractsView = {
     const allContracts = Storage.getAll();
     
     // Filtra contratos residenciais e comerciais
-    const residenciais = allContracts.filter(c => c.templateId && c.templateId.toLowerCase().includes('residencial'));
     const comerciais = allContracts.filter(c => c.templateId && c.templateId.toLowerCase().includes('comercial'));
+    const residenciais = allContracts.filter(c => !c.templateId || !c.templateId.toLowerCase().includes('comercial'));
     
     // Função auxiliar para renderizar a lista de clientes
     const renderList = (contracts, emptyMessage) => {
@@ -28,14 +28,36 @@ const ContractsView = {
         const valor = Utils.esc(c.fields && c.fields.valor_aluguel ? c.fields.valor_aluguel : 'R$ ---');
         const inicio = c.fields && c.fields.data_inicio ? Utils.formatDate(c.fields.data_inicio) : '---';
         const tituloContrato = Utils.esc(c.name || 'Contrato sem nome');
+        const status = Utils.getContractStatus(c);
+        const dataCriacao = c.createdAt ? Utils.formatDate(c.createdAt) : '';
 
-        return Utils.contractRow(c, {
-          icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>',
-          title: nomeCliente,
-          meta: `<strong>${tituloContrato}</strong> • Início: ${inicio}`,
-          aside: `<span class="contract-row-value">${valor}</span>`,
-          onDelete: `ContractsView.deleteContract('${c.id}')`
-        });
+        // Dados do cliente que só apareciam dentro do contrato — agora ficam na lista.
+        const detalhes = Utils.dadosClienteHTML(c.fields, c.createdAt);
+
+        return `
+          <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
+            <div class="contract-row-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            </div>
+            <div class="contract-row-info">
+              <div class="contract-row-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                ${nomeCliente}
+                <span class="badge-status ${status.class}">${status.label}</span>
+              </div>
+              <div class="contract-row-meta">
+                <strong>${tituloContrato}</strong>
+                ${dataCriacao ? ` · <span style="font-size: 0.85rem; color: var(--text-muted);">Iniciado em <strong>${dataCriacao}</strong></span>` : ''}
+              </div>
+              ${detalhes}
+            </div>
+            <div class="contract-row-date" style="font-size: 0.95rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 1rem;">
+              ${valor}
+              <button class="btn-icon" style="color: var(--danger, #ef4444); padding: 0.25rem;" onclick="event.stopPropagation(); ContractsView.deleteContract('${c.id}')" title="Excluir Contrato">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
       }).join('');
     };
 

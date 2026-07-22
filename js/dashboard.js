@@ -29,19 +29,37 @@ const Dashboard = {
     const recent = all.slice(0, 5);
 
     const aVencer = this.countAVencer(all);
-    const receita = all.reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
+    // Só contratos ATIVOS entram na receita — o card diz "aluguéis ativos",
+    // e vencidos/futuros somados aqui inflavam o número.
+    const receita = all
+      .filter(c => Utils.getContractStatus(c).label === 'Ativo')
+      .reduce((soma, c) => soma + this.parseValor(c.fields && c.fields.valor_aluguel), 0);
     const receitaFmt = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
     
-    const iconDoc = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
-
-    let recentHtml = recent.length ? recent.map(c => Utils.contractRow(c, {
-      icon: iconDoc,
-      title: Utils.esc(c.name || 'Contrato sem nome'),
-      meta: Contracts[c.templateId]?.title || 'Modelo Desconhecido',
-      aside: Utils.formatRelativeDate(c.updatedAt),
-      onDelete: `Dashboard.deleteContract('${c.id}')`
-    })).join('') : `
-      <div class="empty-state">
+    let recentHtml = recent.length ? recent.map(c => {
+      const status = Utils.getContractStatus(c);
+      return `
+        <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
+          <div class="contract-row-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          </div>
+          <div class="contract-row-info">
+            <div class="contract-row-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              ${Utils.esc(c.name || 'Contrato sem nome')}
+              <span class="badge-status ${status.class}">${status.label}</span>
+            </div>
+            <div class="contract-row-meta">${Contracts[c.templateId]?.title || 'Modelo Desconhecido'}${c.createdAt ? ` · Iniciado em <strong>${Utils.formatDate(c.createdAt)}</strong>` : ''}</div>
+          </div>
+          <div class="contract-row-date" style="display: flex; align-items: center; gap: 1rem;">
+            ${Utils.formatRelativeDate(c.updatedAt)}
+            <button class="btn-icon" style="color: var(--danger, #ef4444); padding: 0.25rem;" onclick="event.stopPropagation(); Dashboard.deleteContract('${c.id}')" title="Excluir Contrato">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('') : `
+      <div class="empty-state glass">
         <p>Você ainda não criou nenhum contrato.</p>
         <a href="#templates" class="btn btn-primary">Criar Novo</a>
       </div>
