@@ -26,14 +26,7 @@ const Admin = {
           <h3 class="section-title">Dados Pessoais (Locador)</h3>
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Tipo de Locador</label>
-              <select class="form-input" id="admin_tipo_locador" onchange="Admin.togglePFFields()">
-                <option value="pf">Pessoa Física (CPF)</option>
-                <option value="pj">Pessoa Jurídica (CNPJ)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Nome Completo / Razão Social</label>
+              <label class="form-label">${isPJ ? 'Razão Social' : 'Nome Completo'}</label>
               <input type="text" class="form-input" id="admin_nome_locador" value="${profile.nome_locador || ''}">
             </div>
             <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
@@ -60,7 +53,7 @@ const Admin = {
               <input type="text" class="form-input" id="admin_rg_locador" value="${profile.rg_locador || ''}">
             </div>
             <div class="form-group">
-              <label class="form-label" id="admin_doc_label">${isPJ ? 'CNPJ' : 'CPF'}</label>
+              <label class="form-label">${isPJ ? 'CNPJ' : 'CPF'}</label>
               <input type="text" class="form-input" id="admin_doc_locador" data-mask="cpfcnpj" value="${profile.doc_locador || ''}">
             </div>
           </div>
@@ -105,7 +98,6 @@ const Admin = {
     `;
 
     // Seta os valores iniciais dos selects
-    container.querySelector('#admin_tipo_locador').value = isPJ ? 'pj' : 'pf';
     if (profile.nac_locador) container.querySelector('#admin_nac_locador').value = profile.nac_locador;
     if (profile.est_civil_locador) container.querySelector('#admin_est_civil_locador').value = profile.est_civil_locador;
     if (profile.tipo_conta) container.querySelector('#admin_tipo_conta').value = profile.tipo_conta;
@@ -116,15 +108,15 @@ const Admin = {
     });
   },
 
-  togglePFFields() {
-    const isPJ = document.getElementById('admin_tipo_locador').value === 'pj';
-    document.querySelectorAll('.pf-only').forEach(el => el.style.display = isPJ ? 'none' : '');
-    document.getElementById('admin_doc_label').textContent = isPJ ? 'CNPJ' : 'CPF';
-  },
-
   save() {
-    const isPJ = document.getElementById('admin_tipo_locador').value === 'pj';
+    // O tipo (PF/PJ) é definido no cadastro e não muda aqui — vem do perfil salvo.
+    const atual = Storage.getAdminProfile() || {};
+    const isPJ = Utils.isPJLocador(atual);
+
     const profile = {
+      // Preserva o que esta tela não edita — em especial `termos_aceite`, a
+      // evidência do aceite dos Termos gravada no cadastro.
+      ...atual,
       tipo_locador: isPJ ? 'pj' : 'pf',
       nome_locador: document.getElementById('admin_nome_locador').value,
       nac_locador: isPJ ? '' : document.getElementById('admin_nac_locador').value,

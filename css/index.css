@@ -104,6 +104,14 @@
   box-sizing: border-box;
 }
 
+/* O atributo `hidden` vem da folha do NAVEGADOR (display:none), e qualquer regra
+   de autor com display o anula — .nav-item e .btn-icon usam display:flex, então
+   elementos marcados com hidden continuavam visíveis. Esta regra devolve o
+   comportamento esperado a todo o app. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
