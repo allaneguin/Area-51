@@ -51,8 +51,6 @@ O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navega
 
 **Outros**
 - Exportação em PDF pela impressão nativa do navegador
-- **Modo offline** — com `SUPABASE_ENABLED = false`, roda inteiramente em localStorage
-- Migração automática dos dados locais para a nuvem no primeiro login
 
 ---
 
@@ -95,9 +93,7 @@ python -m http.server
 
 Depois acesse `index.html` (landing) ou `app.html` (aplicação).
 
-**Sem Supabase**, para desenvolver offline: mude `SUPABASE_ENABLED` para `false` em `js/supabase-config.js`. O app roda em localStorage, sem login.
-
-**Com Supabase**, o projeto precisa ter as tabelas `contracts`, `profiles` e `tenant_links` e as 3 RPCs já criadas. Depois rode `supabase_rls.sql` no SQL Editor e ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
+O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). O projeto precisa ter as tabelas `contracts`, `profiles` e `tenant_links` e as 3 RPCs já criadas. Depois rode `supabase_rls.sql` no SQL Editor e ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
 
 > O DDL das tabelas e das RPCs **não está versionado** — `supabase_rls.sql` só aplica as políticas e assume que as estruturas já existem. Vale versionar isso antes que a configuração se perca.
 
@@ -122,11 +118,11 @@ js/
   editor.js             formulário, preview e geração do link cifrado
   tenant-v2.js          fluxo do inquilino
   database.js           RPCs dos links
-  storage.js            CRUD com fallback localStorage
+  storage.js            CRUD de contratos e perfil no Supabase
   dashboard.js          métricas
   contracts.js          lista de contratos
   templates.js          seleção de modelos
-  pdf-v2.js             impressão
+  utils.js              máscaras, validação, linha de contrato, PDF
   supabase-config.js    configuração e chave
 data/contracts.js       modelos de contrato embutidos
 css/                    um arquivo por área
@@ -137,7 +133,7 @@ supabase_rls.sql        políticas de RLS
 
 ## 🚧 Limitações conhecidas
 
-- Apenas **2 modelos** de contrato, ambos residenciais — a aba Comercial fica sempre vazia. `customTemplates` é lido do localStorage mas não há UI para criar.
+- Apenas **2 modelos** de contrato, ambos residenciais — a aba Comercial fica sempre vazia. Não há UI para criar modelos próprios.
 - **Não há assinatura eletrônica.** O fluxo termina em aceite por checkbox e PDF por impressão. A landing menciona "assine cada contrato" — o texto está à frente do que existe.
 - Escritas no Supabase são *fire-and-forget*: o cache local já foi alterado e o erro só vai para o console. Divergência silenciosa é possível.
 - Cobertura de testes mínima, só 2 funções do dashboard. Sem CI e sem linter.

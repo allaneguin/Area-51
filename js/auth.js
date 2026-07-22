@@ -662,7 +662,7 @@ const AuthUI = {
   },
 
   logout() {
-    if (SupabaseActive && supabaseClient) {
+    if (supabaseClient) {
       supabaseClient.auth.signOut().then(() => {
         console.log("Desconectado com sucesso.");
         window.location.hash = '#';

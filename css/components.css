@@ -135,17 +135,10 @@ select.form-input, select.form-select {
   text-transform: uppercase;
 }
 
-.badge-purple { background-color: var(--primary-light); color: var(--primary); }
+.badge-blue { background-color: var(--primary-light); color: var(--primary); }
 .badge-teal { background-color: var(--success-bg); color: var(--success); }
 
-/* Sidebar Nav (tema escuro) */
-.sidebar-header {
-  padding: 22px 14px 10px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
+/* Marca e itens de navegação (superfície escura: topbar e header mobile) */
 .sidebar-logo {
   flex-shrink: 0;
   display: flex;
@@ -161,29 +154,6 @@ select.form-input, select.form-select {
   font-size: 16px;
   letter-spacing: -0.02em;
   color: var(--sidebar-title);
-}
-
-.sidebar-subtitle {
-  font-size: 10px;
-  color: var(--sidebar-section);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-}
-
-.sidebar-nav {
-  padding: 4px 14px;
-  flex: 1;
-}
-
-.nav-section-title {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--sidebar-section);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  padding: 22px 10px 8px;
-  margin-bottom: 0;
 }
 
 .nav-item {
@@ -223,6 +193,93 @@ button.nav-item {
   color: #FFFFFF;
 }
 .nav-item.active svg { color: #FFFFFF; }
+
+/* ═══ Topbar (desktop) — navegação no topo, substitui a antiga sidebar ═══ */
+.topbar {
+  display: none; /* desktop-only; exibida em ≥769px (ver media query abaixo) */
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 60px;
+  /* Fundo sólido de propósito: com barra fixa + translucidez, o conteúdo rolando
+     por trás causava repaint sujo (glitch do backdrop-filter). */
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  border-bottom: 1px solid rgba(233, 231, 226, 0.08); /* separa da área de conteúdo, sobretudo no tema escuro */
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  z-index: 50;
+}
+
+/* Foco de teclado visível sobre a barra escura */
+.topbar .nav-item:focus-visible,
+.topbar-brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+.topbar-brand:hover { opacity: 0.92; }
+
+.topbar-nav,
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar-actions { margin-left: auto; }
+
+/* .nav-item foi desenhado para a sidebar vertical: na horizontal, tira a margem
+   inferior e a largura total que button.nav-item impõe. */
+.topbar .nav-item { margin-bottom: 0; }
+.topbar button.nav-item { width: auto; }
+.topbar-icon-btn { padding: 9px; }
+
+/* Em repouso cada aba mostra só o ícone. Ao passar o mouse (ou focar por teclado),
+   o rótulo sai de dentro do ícone: cresce a partir de largura 0 e o respiro nasce
+   junto — por isso o gap do .nav-item vira 0 e o espaçamento vem da margin-left
+   animada do rótulo, senão sobraria um vão fixo de 10px no estado recolhido. */
+.topbar .nav-item { gap: 0; }
+
+.topbar .nav-item .nav-label {
+  max-width: 0;
+  opacity: 0;
+  margin-left: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.25s ease, margin-left 0.25s ease, opacity 0.2s ease;
+}
+.topbar .nav-item:hover .nav-label,
+.topbar .nav-item:focus-visible .nav-label {
+  max-width: 160px;
+  opacity: 1;
+  margin-left: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar .nav-item .nav-label { transition: none; }
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(233, 231, 226, 0.14);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.topbar .logout-action:hover { color: var(--danger); }
+
+@media (min-width: 769px) {
+  .topbar { display: flex; }
+}
 
 /* Segmented tabs */
 .seg-tabs {
@@ -299,6 +356,14 @@ button.nav-item {
   color: var(--primary);
 }
 
+.mobile-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mobile-header-actions .logout-action:hover { color: var(--danger); }
+
 .btn-icon {
   background: transparent;
   border: none;
@@ -323,24 +388,6 @@ button.nav-item {
 
 @media(max-width: 768px) {
   .mobile-header { display: flex; }
-}
-
-/* Mobile Overlay */
-.mobile-overlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 55;
-  opacity: 0;
-  transition: opacity var(--transition);
-}
-
-.mobile-overlay.active {
-  display: block;
-  opacity: 1;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -395,14 +442,6 @@ button.nav-item {
     break-inside: avoid;
     page-break-inside: avoid; /* Chrome antigo */
   }
-}
-
-/* Utilitários */
-.mt-8 {
-  margin-top: 2rem !important;
-}
-.ml-auto {
-  margin-left: auto !important;
 }
 
 /* Badges de Status de Contrato */

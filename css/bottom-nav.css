@@ -56,13 +56,14 @@
 /* Na impressao ela nao pode aparecer: e position:fixed, entao o navegador
    a repete em TODAS as paginas do PDF. */
 @media print {
-  .bottom-nav,
-  .mobile-overlay {
+  .topbar,
+  .mobile-header,
+  .bottom-nav {
     display: none !important;
   }
-  /* sem a barra, o espaco reservado para ela tambem sai */
+  /* sem as barras fixas, o espaco reservado para elas tambem sai */
   #main-content {
-    padding-bottom: 0 !important;
+    padding: 0 !important;
   }
 }
 
@@ -77,13 +78,14 @@
     padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
   
-  /* Esconder o botão hambúrguer no mobile-header */
-  .mobile-header .btn-icon {
-    display: none !important;
-  }
-  
   /* Se tiver no modo inquilino (que não precisa de nav), podemos esconder */
   body.tenant-mode .bottom-nav {
     display: none !important;
   }
+}
+
+/* Teclado aberto encurta a viewport: a barra sai para não cobrir o campo em foco.
+   Substitui o antigo bottom-nav.js (MutationObserver + listeners em cada input). */
+@media (max-width: 768px) and (max-height: 420px) {
+  .bottom-nav { display: none !important; }
 }

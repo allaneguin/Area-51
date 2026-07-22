@@ -153,10 +153,7 @@ const Admin = {
 
   // Exclusão da própria conta (LGPD, art. 18): apaga contratos, perfil e o usuário via RPC.
   deleteAccount() {
-    if (!SupabaseActive || !App.user) {
-      Utils.toast('A exclusão de conta só está disponível no modo online.', 'error');
-      return;
-    }
+    if (!App.user) return;
     const digitado = prompt('Isso apaga sua conta, seu perfil e TODOS os seus contratos, sem volta.\n\nPara confirmar, digite: EXCLUIR');
     if (digitado === null) return;
     if (digitado.trim().toUpperCase() !== 'EXCLUIR') {
@@ -166,9 +163,7 @@ const Admin = {
 
     supabaseClient.rpc('delete_own_account').then(({ error }) => {
       if (error) throw error;
-      localStorage.removeItem(Storage.KEY);
-      localStorage.removeItem('gerador_admin_profile');
-      localStorage.removeItem('migrated_local_data_supabase_' + App.user.id);
+      localStorage.removeItem(Storage.PENDING_PROFILE_KEY);
       // signOut pode falhar (o usuário já não existe) — segue para o reload de qualquer forma.
       supabaseClient.auth.signOut().catch(() => {}).finally(() => {
         window.location.hash = '#';

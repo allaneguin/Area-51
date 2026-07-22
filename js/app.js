@@ -17,7 +17,7 @@ const App = {
   init() {
     this.container = document.getElementById('main-content');
     
-    if (SupabaseActive && supabaseClient) {
+    if (supabaseClient) {
       // Registrar listener de mudanças no estado da sessão
       supabaseClient.auth.onAuthStateChange((event, session) => {
         const user = session ? session.user : null;
@@ -26,8 +26,8 @@ const App = {
         // Usuário chegou pelo link de redefinição de senha do e-mail
         if (event === 'PASSWORD_RECOVERY') this.passwordRecovery = true;
 
-        // Exibir/esconder botão de Logout na sidebar
-        this.updateAuthSidebarUI();
+        // Exibir/esconder as ações de "Sair" (topbar + header mobile)
+        this.updateAuthUI();
 
         const newUid = user ? user.id : null;
 
@@ -45,19 +45,17 @@ const App = {
         }
         this._lastUid = newUid;
 
-        // Sincronizar dados locais com a nuvem no primeiro login
-        if (user && Storage.syncLocalDataToCloud) {
-          Storage.syncLocalDataToCloud().then(() => {
-            this.handleRoute();
-          });
+        // Carrega contratos e perfil da nuvem antes de renderizar
+        if (user) {
+          Storage.loadCloudData().then(() => this.handleRoute());
         } else {
           this.handleRoute();
         }
       });
       // Listener para cliques normais ou mudanças manuais de hash
       window.addEventListener('hashchange', () => this.handleRoute());
-    } else if (SUPABASE_ENABLED) {
-      // Supabase deveria estar ativo, mas o SDK não carregou (CDN bloqueado/fora do ar).
+    } else {
+      // SDK não carregou (CDN bloqueado ou fora do ar).
       // Fail-closed: mostra erro em vez de abrir o painel interno sem login.
       this.container.innerHTML = `
         <div style="max-width: 460px; margin: 6rem auto; text-align: center; padding: 2rem;">
@@ -65,37 +63,14 @@ const App = {
           <p style="color: var(--text-muted); line-height: 1.5;">Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, tente novamente em alguns minutos.</p>
           <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="window.location.reload()">Recarregar</button>
         </div>`;
-    } else {
-      // Modo offline intencional (SUPABASE_ENABLED = false)
-      window.addEventListener('hashchange', () => this.handleRoute());
-      this.handleRoute();
     }
   },
   
-  updateAuthSidebarUI() {
-    const existingLogout = document.getElementById('sidebar-nav-logout');
-    if (existingLogout) existingLogout.remove();
-
-    if (this.user) {
-      const navSection = document.querySelector('.sidebar-nav');
-      if (navSection) {
-        const logoutItem = document.createElement('a');
-        logoutItem.id = 'sidebar-nav-logout';
-        logoutItem.href = '#';
-        logoutItem.className = 'nav-item';
-        logoutItem.style.color = '#dc3545';
-        logoutItem.style.marginTop = '1rem';
-        logoutItem.innerHTML = `
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px; height:20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-          <span class="nav-label">Sair da Conta</span>
-        `;
-        logoutItem.addEventListener('click', (e) => {
-          e.preventDefault();
-          AuthUI.logout();
-        });
-        navSection.appendChild(logoutItem);
-      }
-    }
+  // Mostra os botões "Sair" (topbar e header mobile) só quando há sessão.
+  updateAuthUI() {
+    document.querySelectorAll('.logout-action').forEach(el => {
+      el.hidden = !this.user;
+    });
   },
   
   handleRoute() {
@@ -106,14 +81,14 @@ const App = {
 
     // Fluxo de redefinição de senha (link do e-mail).
     // A rota do inquilino (#tenant) passa direto — ele não pode ser bloqueado pelo recovery do locador.
-    if (SupabaseActive && this.passwordRecovery && route !== 'tenant') {
+    if (this.passwordRecovery && route !== 'tenant') {
       document.body.classList.add('tenant-mode');
       AuthUI.renderNewPassword(this.container);
       return;
     }
 
-    // Interceptação de login se Supabase estiver ativo
-    if (SupabaseActive && !this.user && route !== 'tenant') {
+    // Interceptação de login
+    if (!this.user && route !== 'tenant') {
       document.body.classList.add('tenant-mode'); // Esconde sidebar/navbar
       AuthUI.render(this.container);
       return;
@@ -184,17 +159,7 @@ const App = {
     }
 
     this.updateNav(route);
-    
-    // Close sidebar on mobile after navigation
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('mobile-overlay');
-    if (sidebar && sidebar.classList.contains('open')) {
-      sidebar.classList.remove('open');
-    }
-    if (overlay && overlay.classList.contains('active')) {
-      overlay.classList.remove('active');
-    }
-    
+
     if (route === 'dashboard') Dashboard.render(this.container);
     else if (route === 'templates') Templates.render(this.container);
     else if (route === 'contracts') ContractsView.render(this.container);
@@ -206,9 +171,7 @@ const App = {
   updateNav(route) {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.remove('active');
-      // O botão "Sair da Conta" também é um .nav-item com href="#", mas nunca deve
-      // ficar ativo — ignora para não confundir com o item selecionado.
-      if (el.id === 'sidebar-nav-logout') return;
+      // Botões de ação (Tema, Sair) são .nav-item sem href — nunca casam, nunca ficam ativos.
       if (el.getAttribute('href') === '#' + route || (route==='dashboard' && el.getAttribute('href')==='#')) {
         el.classList.add('active');
       }

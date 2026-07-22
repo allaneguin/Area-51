@@ -12,7 +12,7 @@ body.tenant-mode {
   min-height: 100vh;
 }
 
-body.tenant-mode #sidebar,
+body.tenant-mode .topbar,
 body.tenant-mode .mobile-header,
 body.tenant-mode .bottom-nav {
   display: none !important;

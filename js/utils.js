@@ -41,24 +41,14 @@ const Utils = {
     if (diff < 604800) return Math.floor(diff/86400) + 'd atrás';
     return Utils.formatDate(date);
   },
-  dateExtended(dateStr) {
-    if (!dateStr) return '____________________';
-    const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return dateStr;
-    const day = parseInt(parts[0]);
-    const month = parseInt(parts[1]) - 1;
-    const year = parts[2];
-    return `${day} de ${months[month] || '___'} de ${year}`;
-  },
+
   // ── Validação ──
-  isCNPJ(v) {
-    return (v || '').replace(/\D/g, '').length > 11;
-  },
-  // Locador é PJ? Vale a escolha explícita do perfil; sem ela, infere pelo documento
+  // Locador é PJ? Vale a escolha explícita do perfil; sem ela, infere pelo
+  // documento (mais de 11 dígitos = CNPJ).
   isPJLocador(fields) {
     fields = fields || {};
-    return fields.tipo_locador ? fields.tipo_locador === 'pj' : Utils.isCNPJ(fields.doc_locador);
+    if (fields.tipo_locador) return fields.tipo_locador === 'pj';
+    return (fields.doc_locador || '').replace(/\D/g, '').length > 11;
   },
   isValidCPF(cpf) {
     cpf = cpf.replace(/\D/g,'');
@@ -171,6 +161,29 @@ const Utils = {
     }
   },
 
+  // ── Linha de contrato — mesma estrutura no dashboard e na gestão de contratos ──
+  contractRow(c, { icon, title, meta, aside, onDelete }) {
+    const status = Utils.getContractStatus(c);
+    return `
+      <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
+        <div class="contract-row-icon">${icon}</div>
+        <div class="contract-row-info">
+          <div class="contract-row-name">
+            ${title}
+            <span class="badge-status ${status.class}">${status.label}</span>
+          </div>
+          <div class="contract-row-meta">${meta}</div>
+        </div>
+        <div class="contract-row-date">
+          ${aside}
+          <button class="btn-icon contract-row-delete" title="Excluir contrato"
+            onclick="event.stopPropagation(); ${onDelete}">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        </div>
+      </div>`;
+  },
+
   // ── Escrever valor BRL por extenso ──
   writeBRLInWords(amountStr) {
     if (!amountStr) return '';
@@ -276,3 +289,15 @@ const Utils = {
     return result.join('');
   }
 };
+
+// ── Exportação em PDF (impressão nativa do navegador) ──
+// nomeSugerido: o Chrome usa o title da página como nome do arquivo .pdf
+function generatePDF(nomeSugerido) {
+  const inputName = document.getElementById('contract-name');
+  const nome = nomeSugerido || (inputName && inputName.value) || 'Contrato';
+
+  const originalTitle = document.title;
+  document.title = nome;
+  window.print();
+  document.title = originalTitle;
+}

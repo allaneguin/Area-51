@@ -1,43 +1,29 @@
 // ═══════════════════════════════════════════════════════
-// Storage — CRUD de contratos integrado com Supabase/localStorage
+// Storage — contratos e perfil do locador (Supabase)
 // ═══════════════════════════════════════════════════════
 
 const Storage = {
-  KEY: 'gerador_contratos_data',
+  // O perfil digitado no cadastro fica aqui até existir sessão: com confirmação de
+  // e-mail pendente não há auth.uid(), e o RLS barra a escrita em profiles.
+  PENDING_PROFILE_KEY: 'perfil_pendente',
+
   contractsCache: [],
   profileCache: {},
 
-  // ── Métodos Auxiliares LocalStorage (Fallback Offline) ──
-  _getData() {
-    try {
-      return JSON.parse(localStorage.getItem(this.KEY)) || { contracts: [] };
-    } catch {
-      return { contracts: [] };
-    }
-  },
-
-  _saveData(data) {
-    localStorage.setItem(this.KEY, JSON.stringify(data));
-  },
-
-  // ── Sincronização e Carga com a Nuvem (Supabase) ──
+  // ── Carga inicial (roda a cada login) ──
   async loadCloudData() {
-    if (!SupabaseActive || !supabaseClient) return;
-    
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
       const user = session ? session.user : null;
       if (!user) return;
-      
-      const uid = user.id;
 
-      // 1. Carregar Contratos do Supabase
+      await this._flushPendingProfile(user.id);
+
       const { data: dbContracts, error: dbError } = await supabaseClient
         .from('contracts')
         .select('*');
-        
       if (dbError) throw dbError;
-        
+
       this.contractsCache = dbContracts.map(item => ({
         id: item.id,
         name: item.name,
@@ -49,227 +35,128 @@ const Storage = {
         createdAt: item.created_at,
         updatedAt: item.updated_at
       }));
-      
-      // Ordena por updatedAt decrescente
-      this.contractsCache.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-      // 2. Carregar Perfil do Supabase
-      const { data: profileRecords, error: profileError } = await supabaseClient
+      const { data: profileRecord, error: profileError } = await supabaseClient
         .from('profiles')
         .select('profile_data')
-        .eq('id', uid)
+        .eq('id', user.id)
         .maybeSingle();
-        
       if (profileError) throw profileError;
-      
-      if (profileRecords && profileRecords.profile_data) {
-        this.profileCache = profileRecords.profile_data;
-      } else {
-        this.profileCache = {};
-      }
-      
+
+      this.profileCache = (profileRecord && profileRecord.profile_data) || {};
+
       console.log(`📦 Dados do Supabase carregados: ${this.contractsCache.length} contratos.`);
     } catch (e) {
       console.error("Erro ao carregar dados do Supabase:", e);
     }
   },
 
-  async syncLocalDataToCloud() {
-    if (!SupabaseActive || !supabaseClient) return;
-    
+  // Sobe o perfil guardado no cadastro, se houver, e descarta o rascunho local.
+  async _flushPendingProfile(uid) {
+    let pending = null;
     try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      const user = session ? session.user : null;
-      if (!user) return;
-      
-      const uid = user.id;
-      const migratedKey = `migrated_local_data_supabase_${uid}`;
-
-      if (localStorage.getItem(migratedKey)) {
-        // Já migrado, apenas carrega dados do banco para o cache
-        await this.loadCloudData();
-        return;
-      }
-
-      // Importa contratos locais do localStorage
-      const localData = this._getData();
-      if (localData.contracts && localData.contracts.length > 0) {
-        console.log(`Migrando ${localData.contracts.length} contratos locais para o Supabase...`);
-        
-        const contractsToInsert = localData.contracts.map(contract => ({
-          id: contract.id,
-          user_id: uid,
-          name: contract.name,
-          template_id: contract.templateId,
-          fields: contract.fields,
-          is_finalized: !!contract.isFinalized,
-          cloud_id: contract.cloudId || null,
-          cloud_key: contract.cloudKey || null,
-          created_at: contract.createdAt || new Date().toISOString(),
-          updated_at: contract.updatedAt || new Date().toISOString()
-        }));
-
-        const { error } = await supabaseClient
-          .from('contracts')
-          .upsert(contractsToInsert, { onConflict: 'id' });
-          
-        if (error) throw error;
-      }
-
-      // Importa perfil local do localStorage
-      const localProfile = JSON.parse(localStorage.getItem('gerador_admin_profile')) || {};
-      if (Object.keys(localProfile).length > 0) {
-        const { error } = await supabaseClient
-          .from('profiles')
-          .upsert({ id: uid, profile_data: localProfile });
-          
-        if (error) throw error;
-      }
-
-      // Marca como migrado
-      localStorage.setItem(migratedKey, 'true');
-      console.log("✅ Sincronização local -> Supabase concluída com sucesso.");
-    } catch (e) {
-      console.error("Erro ao sincronizar dados com o Supabase:", e);
+      pending = JSON.parse(localStorage.getItem(this.PENDING_PROFILE_KEY));
+    } catch {
+      localStorage.removeItem(this.PENDING_PROFILE_KEY);
+      return;
     }
+    if (!pending) return;
 
-    // Carrega o cache atualizado
-    await this.loadCloudData();
+    const { error } = await supabaseClient
+      .from('profiles')
+      .upsert({ id: uid, profile_data: pending });
+
+    if (error) {
+      console.error("Erro ao enviar o perfil do cadastro:", error);
+      return; // mantém o rascunho para tentar de novo no próximo login
+    }
+    localStorage.removeItem(this.PENDING_PROFILE_KEY);
   },
 
-  // ── Listar todos os contratos ──
+  // ── Contratos ──
   getAll() {
-    if (SupabaseActive && App.user) {
-      return this.contractsCache.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    }
-    return this._getData().contracts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    return this.contractsCache.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   },
 
-  // ── Buscar por ID ──
   getById(id) {
-    if (SupabaseActive && App.user) {
-      return this.contractsCache.find(c => c.id === id) || null;
-    }
-    return this._getData().contracts.find(c => c.id === id) || null;
+    return this.contractsCache.find(c => c.id === id) || null;
   },
 
-  // ── Criar novo contrato ──
   create(contract) {
     const now = new Date().toISOString();
     const newContract = {
       id: Utils.generateId(),
       ...contract,
+      userId: App.user.id,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     };
 
-    if (SupabaseActive && App.user) {
-      newContract.userId = App.user.id;
-      
-      // Salva no cache local
-      this.contractsCache.push(newContract);
-      
-      // Salva na nuvem no background
-      supabaseClient
-        .from('contracts')
-        .insert({
-          id: newContract.id,
-          user_id: App.user.id,
-          name: newContract.name,
-          template_id: newContract.templateId,
-          fields: newContract.fields,
-          is_finalized: !!newContract.isFinalized,
-          cloud_id: newContract.cloudId || null,
-          cloud_key: newContract.cloudKey || null,
-          created_at: newContract.createdAt,
-          updated_at: newContract.updatedAt
-        })
-        .then(({ error }) => {
-          if (error) console.error("Erro ao salvar contrato no Supabase:", error);
-        });
-        
-      return newContract;
-    }
+    this.contractsCache.push(newContract);
 
-    // Fallback Offline
-    const data = this._getData();
-    data.contracts.push(newContract);
-    this._saveData(data);
+    supabaseClient
+      .from('contracts')
+      .insert({
+        id: newContract.id,
+        user_id: App.user.id,
+        name: newContract.name,
+        template_id: newContract.templateId,
+        fields: newContract.fields,
+        is_finalized: !!newContract.isFinalized,
+        cloud_id: newContract.cloudId || null,
+        cloud_key: newContract.cloudKey || null,
+        created_at: newContract.createdAt,
+        updated_at: newContract.updatedAt
+      })
+      .then(({ error }) => {
+        if (error) console.error("Erro ao salvar contrato no Supabase:", error);
+      });
+
     return newContract;
   },
 
-  // ── Atualizar contrato ──
   update(id, updates) {
-    const now = new Date().toISOString();
-    
-    if (SupabaseActive && App.user) {
-      const idx = this.contractsCache.findIndex(c => c.id === id);
-      if (idx === -1) return null;
-      
-      this.contractsCache[idx] = {
-        ...this.contractsCache[idx],
-        ...updates,
-        updatedAt: now
-      };
-
-      // Salva na nuvem no background
-      const item = this.contractsCache[idx];
-      supabaseClient
-        .from('contracts')
-        .update({
-          name: item.name,
-          template_id: item.templateId,
-          fields: item.fields,
-          is_finalized: !!item.isFinalized,
-          cloud_id: item.cloudId || null,
-          cloud_key: item.cloudKey || null,
-          updated_at: item.updatedAt
-        })
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) console.error("Erro ao atualizar contrato no Supabase:", error);
-        });
-
-      return this.contractsCache[idx];
-    }
-
-    // Fallback Offline
-    const data = this._getData();
-    const idx = data.contracts.findIndex(c => c.id === id);
+    const idx = this.contractsCache.findIndex(c => c.id === id);
     if (idx === -1) return null;
-    data.contracts[idx] = {
-      ...data.contracts[idx],
+
+    const item = {
+      ...this.contractsCache[idx],
       ...updates,
-      updatedAt: now,
+      updatedAt: new Date().toISOString()
     };
-    this._saveData(data);
-    return data.contracts[idx];
+    this.contractsCache[idx] = item;
+
+    supabaseClient
+      .from('contracts')
+      .update({
+        name: item.name,
+        template_id: item.templateId,
+        fields: item.fields,
+        is_finalized: !!item.isFinalized,
+        cloud_id: item.cloudId || null,
+        cloud_key: item.cloudKey || null,
+        updated_at: item.updatedAt
+      })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error("Erro ao atualizar contrato no Supabase:", error);
+      });
+
+    return item;
   },
 
-  // ── Excluir contrato ──
   delete(id) {
-    if (SupabaseActive && App.user) {
-      this.contractsCache = this.contractsCache.filter(c => c.id !== id);
-      
-      // Exclui na nuvem no background
-      supabaseClient
-        .from('contracts')
-        .delete()
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) console.error("Erro ao excluir contrato no Supabase:", error);
-        });
-        
-      return;
-    }
+    this.contractsCache = this.contractsCache.filter(c => c.id !== id);
 
-    // Fallback Offline
-    const data = this._getData();
-    data.contracts = data.contracts.filter(c => c.id !== id);
-    this._saveData(data);
+    supabaseClient
+      .from('contracts')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error("Erro ao excluir contrato no Supabase:", error);
+      });
   },
 
-  // ── Estatísticas ──
   getStats() {
     const contracts = this.getAll();
     const now = new Date();
@@ -277,51 +164,28 @@ const Storage = {
       const d = new Date(c.createdAt);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-    return {
-      total: contracts.length,
-      thisMonth: thisMonth.length,
-    };
+    return { total: contracts.length, thisMonth: thisMonth.length };
   },
 
-  // ── Buscar contratos ──
-  search(query) {
-    if (!query) return this.getAll();
-    const q = query.toLowerCase();
-    return this.getAll().filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.templateId && c.templateId.toLowerCase().includes(q)) ||
-      (c.fields && JSON.stringify(c.fields).toLowerCase().includes(q))
-    );
-  },
-
-  // ── Perfil do Admin ──
+  // ── Perfil do locador ──
   getAdminProfile() {
-    if (SupabaseActive && App.user) {
-      return this.profileCache;
-    }
-    try {
-      return JSON.parse(localStorage.getItem('gerador_admin_profile')) || {};
-    } catch {
-      return {};
-    }
+    return this.profileCache;
   },
 
   saveAdminProfile(profile) {
-    if (SupabaseActive && App.user) {
-      this.profileCache = profile;
-      
-      // Salva na nuvem no background
-      supabaseClient
-        .from('profiles')
-        .upsert({ id: App.user.id, profile_data: profile })
-        .then(({ error }) => {
-          if (error) console.error("Erro ao salvar perfil no Supabase:", error);
-        });
-        
+    // Cadastro com confirmação de e-mail pendente: ainda não há sessão para gravar.
+    if (!App.user) {
+      localStorage.setItem(this.PENDING_PROFILE_KEY, JSON.stringify(profile));
       return;
     }
-    
-    // Fallback Offline
-    localStorage.setItem('gerador_admin_profile', JSON.stringify(profile));
+
+    this.profileCache = profile;
+
+    supabaseClient
+      .from('profiles')
+      .upsert({ id: App.user.id, profile_data: profile })
+      .then(({ error }) => {
+        if (error) console.error("Erro ao salvar perfil no Supabase:", error);
+      });
   }
 };

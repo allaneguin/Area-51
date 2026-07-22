@@ -54,7 +54,7 @@ const Tenant = {
           isFinalized: payload.isFinalized
         };
 
-        this.template = Contracts[payload.t] || (Storage._getData().customTemplates || []).find(t => t.id === payload.t);
+        this.template = Contracts[payload.t];
         if (!this.template) {
           this.renderErro(container, 'Modelo não encontrado', 'Este contrato usa um modelo que não existe mais.');
           return;

@@ -22,17 +22,17 @@
 }
 
 .template-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.template-card-icon svg { width: 20px; height: 20px; }
-.template-card-icon.purple { background: var(--primary-light); color: var(--primary); }
+.template-card-icon svg { width: 28px; height: 28px; }
+.template-card-icon.blue { background: var(--primary-light); color: var(--primary); }
 .template-card-icon.teal { background: var(--success-bg); color: var(--success); }
 
 .template-card h3 {

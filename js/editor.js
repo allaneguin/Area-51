@@ -12,7 +12,7 @@ const Editor = {
     if (param.startsWith('template=')) {
       isNew = true;
       const tId = param.split('=')[1];
-      this.template = Contracts[tId] || (Storage._getData().customTemplates || []).find(t => t.id === tId);
+      this.template = Contracts[tId];
       if (!this.template) { window.location.hash = '#templates'; return; }
       
       this.contract = {
@@ -41,7 +41,7 @@ const Editor = {
       const cId = param.split('=')[1];
       this.contract = Storage.getById(cId);
       if (!this.contract) { window.location.hash = '#dashboard'; return; }
-      this.template = Contracts[this.contract.templateId] || (Storage._getData().customTemplates || []).find(t => t.id === this.contract.templateId);
+      this.template = Contracts[this.contract.templateId];
     } else {
       window.location.hash = '#dashboard'; return;
     }
@@ -74,8 +74,8 @@ const Editor = {
       </div>
 
       <div class="editor-layout">
-        <div class="editor-form-panel glass" id="form-container"></div>
-        <div class="editor-preview-panel glass" id="preview-panel">
+        <div class="editor-form-panel" id="form-container"></div>
+        <div class="editor-preview-panel" id="preview-panel">
           <div class="preview-header">
             <span>Visualização do Documento</span>
             <button class="btn-icon close-preview-btn" onclick="document.getElementById('preview-panel').classList.remove('active')" title="Fechar Visualização">
