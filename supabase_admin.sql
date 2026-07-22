@@ -41,3 +41,38 @@ create policy "profiles_select_admin"
 --     somente leitura. Se um dia precisar editar, crie política explícita.
 --   • tenant_links fica de fora: o payload é cifrado no navegador e
 --     ilegível de qualquer forma.
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- 3) Dados da conta (e-mail, cadastro, último login) para SUPORTE
+-- ───────────────────────────────────────────────────────────────────────
+-- auth.users NÃO é legível pelo cliente (nem por RLS) — é uma tabela do
+-- schema auth. Para o admin ver o e-mail/datas de cada conta, expomos uma
+-- função SECURITY DEFINER (roda com privilégio do dono) que só devolve algo
+-- se quem chama for admin. Resolve para TODAS as contas de uma vez, antigas
+-- inclusive — não depende de gravar e-mail no cadastro.
+-- ═══════════════════════════════════════════════════════════════════════
+create or replace function public.admin_list_users()
+returns table (
+  id uuid,
+  email text,
+  created_at timestamptz,
+  last_sign_in_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Portão: fora do admin, devolve vazio (nunca vaza auth.users).
+  if coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') <> 'admin' then
+    return;
+  end if;
+
+  return query
+    select u.id, u.email::text, u.created_at, u.last_sign_in_at
+      from auth.users u;
+end;
+$$;
+
+grant execute on function public.admin_list_users() to authenticated;

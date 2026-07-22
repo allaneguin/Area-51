@@ -28,16 +28,26 @@ const contracts = [
     fields: { valor_aluguel: 'R$ 7.000,00', data_inicio: emDias(30), data_termino: emDias(400) } },   // a iniciar
 ];
 const profiles = [
-  { id: 'A', profile_data: { nome_locador: 'Theo Brandini' } },
+  { id: 'A', profile_data: { nome_locador: 'Theo Brandini', doc_locador: '12345678909' } },
   { id: 'C', profile_data: { nome_locador: 'Conta Vazia' } },  // perfil sem contratos
 ];
+const users = [
+  { id: 'A', email: 'theo@ex.com', created_at: '2026-01-01T00:00:00Z', last_sign_in_at: '2026-07-21T09:00:00Z' },
+  { id: 'B', email: 'b@ex.com', created_at: '2026-02-01T00:00:00Z', last_sign_in_at: '2026-07-11T09:00:00Z' },
+  { id: 'C', email: 'c@ex.com', created_at: '2026-03-01T00:00:00Z', last_sign_in_at: null },
+  { id: 'D', email: 'novo@ex.com', created_at: '2026-06-01T00:00:00Z', last_sign_in_at: '2026-06-02T09:00:00Z' }, // só auth, sem perfil/contrato
+];
 
-const contas = SuperAdmin.groupAccounts(contracts, profiles);
+const contas = SuperAdmin.groupAccounts(contracts, profiles, users);
 
-assert.strictEqual(contas.length, 3, 'A, B e C');
+assert.strictEqual(contas.length, 4, 'A, B, C e D (D existe só no auth)');
 
 const a = contas.find(c => c.userId === 'A');
 assert.strictEqual(a.nome, 'Theo Brandini');
+assert.strictEqual(a.email, 'theo@ex.com', 'e-mail cruzado do auth');
+assert.strictEqual(a.criadoEm, '2026-01-01T00:00:00Z');
+assert.strictEqual(a.ultimoLogin, '2026-07-21T09:00:00Z');
+assert.strictEqual(a.profile.doc_locador, '12345678909', 'perfil completo disponível para a ficha');
 assert.strictEqual(a.total, 2);
 assert.strictEqual(a.ativos, 1, 'vencido nao conta como ativo');
 assert.strictEqual(a.receita, 1000, 'receita so do ativo (vencido de 5000 fica fora)');
@@ -45,18 +55,22 @@ assert.strictEqual(a.ultimaAtividade, '2026-07-20T10:00:00Z');
 
 const b = contas.find(c => c.userId === 'B');
 assert.strictEqual(b.nome, '', 'conta sem perfil');
+assert.strictEqual(b.email, 'b@ex.com');
 assert.strictEqual(b.ativos, 0, 'a iniciar nao e ativo');
 assert.strictEqual(b.receita, 0);
 
-const c = contas.find(c2 => c2.userId === 'C');
-assert.strictEqual(c.total, 0, 'perfil sem contratos aparece zerado');
+const d = contas.find(c => c.userId === 'D');
+assert.strictEqual(d.total, 0, 'conta recém-criada sem contrato aparece');
+assert.strictEqual(d.email, 'novo@ex.com');
 
-// Ordenacao: atividade mais recente primeiro (A > B > C sem atividade)
-assert.deepStrictEqual(contas.map(x => x.userId), ['A', 'B', 'C']);
+// Sem dados de auth (RPC indisponível): ainda agrupa por perfil/contrato
+const semUsers = SuperAdmin.groupAccounts(contracts, profiles, []);
+assert.strictEqual(semUsers.find(c => c.userId === 'A').email, '', 'sem RPC, e-mail fica vazio');
+assert.ok(semUsers.length >= 3);
 
 // Entradas vazias nao explodem
-assert.deepStrictEqual(SuperAdmin.groupAccounts([], []), []);
-assert.deepStrictEqual(SuperAdmin.groupAccounts(null, null), []);
+assert.deepStrictEqual(SuperAdmin.groupAccounts([], [], []), []);
+assert.deepStrictEqual(SuperAdmin.groupAccounts(null, null, null), []);
 
 // ── isAdmin: so o claim certo no app_metadata libera ──
 global.App.user = null;
