@@ -196,7 +196,14 @@ const Storage = {
           updated_at: newContract.updatedAt
         })
         .then(({ error }) => {
-          if (error) console.error("Erro ao salvar contrato no Supabase:", error);
+          if (error) {
+            console.error("Erro ao salvar contrato no Supabase:", error);
+            if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Salvo localmente, mas houve erro com a nuvem: " + error.message, "warning");
+          }
+        })
+        .catch(err => {
+          console.error("Falha de conexão com Supabase:", err);
+          if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Sem conexão com a nuvem. Salvo em modo local.", "warning");
         });
         
       return newContract;
@@ -223,7 +230,7 @@ const Storage = {
         updatedAt: now
       };
 
-      // Salva na nuvem no background
+      // Salva na nuvem no background com feedback de erro
       const item = this.contractsCache[idx];
       supabaseClient
         .from('contracts')
@@ -238,7 +245,14 @@ const Storage = {
         })
         .eq('id', id)
         .then(({ error }) => {
-          if (error) console.error("Erro ao atualizar contrato no Supabase:", error);
+          if (error) {
+            console.error("Erro ao atualizar contrato no Supabase:", error);
+            if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Atualizado localmente, mas erro na nuvem: " + error.message, "warning");
+          }
+        })
+        .catch(err => {
+          console.error("Falha de conexão com Supabase:", err);
+          if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Sem conexão com a nuvem. Salvo em modo local.", "warning");
         });
 
       return this.contractsCache[idx];
@@ -268,7 +282,14 @@ const Storage = {
         .delete()
         .eq('id', id)
         .then(({ error }) => {
-          if (error) console.error("Erro ao excluir contrato no Supabase:", error);
+          if (error) {
+            console.error("Erro ao excluir contrato no Supabase:", error);
+            if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Erro ao excluir da nuvem: " + error.message, "warning");
+          }
+        })
+        .catch(err => {
+          console.error("Falha de rede Supabase:", err);
+          if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast("Sem conexão para excluir da nuvem.", "warning");
         });
         
       return;

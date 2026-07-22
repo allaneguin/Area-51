@@ -570,9 +570,23 @@ const Tenant = {
         if (el.value) el.dispatchEvent(new Event('input'));
       }
       
-      el.addEventListener('input', () => {
+      el.addEventListener('input', async () => {
         const fieldName = el.getAttribute('data-field');
         this.contract.fields[fieldName] = el.value;
+
+        if (fieldName && fieldName.includes('cep') && el.value.replace(/\D/g, '').length === 8) {
+          const data = await Utils.fetchCEP(el.value);
+          if (data && data.enderecoCompleto) {
+            const targetField = fieldName.includes('locatario') ? 'end_locatario' : 'end_imovel';
+            const targetEl = container.querySelector(`[data-field="${targetField}"]`);
+            if (targetEl && !targetEl.value.trim()) {
+              targetEl.value = data.enderecoCompleto;
+              this.contract.fields[targetField] = data.enderecoCompleto;
+              Utils.toast('Endereço preenchido pelo CEP!', 'info');
+            }
+          }
+        }
+
         this.saveDraft();
         this.updatePreview();
       });

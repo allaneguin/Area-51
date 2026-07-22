@@ -294,7 +294,7 @@ const Editor = {
         if (fieldName === 'tipo_garantia') this.toggleGarantiaFields();
 
         // CEP completo -> busca o endereço na ViaCEP
-        if (fieldName === 'cep_imovel') this.buscarCEP(el.value);
+        if (fieldName && fieldName.includes('cep')) this.buscarCEP(el.value, fieldName);
 
         // Auto-calcular Data de Término
         if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses' || fieldName === 'prazo_unidade') {
@@ -323,26 +323,27 @@ const Editor = {
     });
   },
 
-  // ponytail: ViaCEP sem chave; só preenche o endereço se ainda estiver vazio —
-  // nunca sobrescreve o que o locador digitou. Falhou/offline? Segue manual.
-  buscarCEP(cep) {
-    cep = (cep || '').replace(/\D/g, '');
-    if (cep.length !== 8) return;
-    fetch('https://viacep.com.br/ws/' + cep + '/json/')
-      .then(r => r.json())
-      .then(d => {
-        if (d.erro) return;
-        const el = document.querySelector('[data-field="end_imovel"]');
-        if (!el || el.value.trim()) return;
-        const endereco = [d.logradouro, d.bairro, d.localidade ? d.localidade + ' - ' + d.uf : '']
-          .filter(Boolean).join(', ');
-        if (!endereco) return;
-        el.value = endereco;
-        this.contract.fields['end_imovel'] = endereco;
-        this.updatePreview();
-        Utils.toast('Endereço preenchido pelo CEP — confira e complete o número.');
-      })
-      .catch(() => {});
+  // Consulta de CEP via Utils.fetchCEP; preenche o endereço correspondente se estiver vazio
+  async buscarCEP(cep, fieldName = 'cep_imovel') {
+    if (!cep) return;
+    const clean = String(cep).replace(/\D/g, '');
+    if (clean.length !== 8) return;
+
+    let targetFieldName = 'end_imovel';
+    if (fieldName.includes('locador')) targetFieldName = 'end_locador';
+    if (fieldName.includes('locatario')) targetFieldName = 'end_locatario';
+    if (fieldName.includes('fiador')) targetFieldName = 'end_fiador';
+
+    const data = await Utils.fetchCEP(clean);
+    if (!data || !data.enderecoCompleto) return;
+
+    const el = document.querySelector(`[data-field="${targetFieldName}"]`);
+    if (!el || el.value.trim()) return;
+
+    el.value = data.enderecoCompleto;
+    this.contract.fields[targetFieldName] = data.enderecoCompleto;
+    this.updatePreview();
+    Utils.toast('Endereço preenchido automaticamente pelo CEP — complete com o número.', 'info');
   },
 
   // Liga/desliga um método de validação exigido do inquilino (guardado em fields).

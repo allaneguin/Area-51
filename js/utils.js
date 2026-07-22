@@ -508,6 +508,40 @@ const Utils = {
     });
   },
 
+  // ── Consulta de Endereço por CEP (ViaCEP) ──
+  async fetchCEP(cep) {
+    if (!cep) return null;
+    const clean = String(cep).replace(/\D/g, '');
+    if (clean.length !== 8) return null;
+
+    const fetchWithTimeout = (url, ms = 4000) => {
+      return Promise.race([
+        fetch(url).then(r => {
+          if (!r.ok) throw new Error('Falha na consulta');
+          return r.json();
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ViaCEP')), ms))
+      ]);
+    };
+
+    try {
+      const data = await fetchWithTimeout(`https://viacep.com.br/ws/${clean}/json/`);
+      if (data && !data.erro) {
+        return {
+          logradouro: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+          enderecoCompleto: [data.logradouro, data.bairro ? `Bairro ${data.bairro}` : '', data.localidade && data.uf ? `${data.localidade} - ${data.uf}` : ''].filter(Boolean).join(', ')
+        };
+      }
+      return null;
+    } catch (e) {
+      console.warn("Erro ao buscar CEP no ViaCEP:", e);
+      return null;
+    }
+  },
+
   // ── Renderizar Folha de Certificado de Assinatura Eletrônica ──
   renderCertificadoHTML(fields) {
     fields = fields || {};
