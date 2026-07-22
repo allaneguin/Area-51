@@ -11,6 +11,7 @@ const App = {
     '#contracts': 'contracts',
     '#editor': 'editor',
     '#admin': 'admin',
+    '#superadmin': 'superadmin',
     '#tenant': 'tenant'
   },
   
@@ -75,6 +76,25 @@ const App = {
   updateAuthSidebarUI() {
     const existingLogout = document.getElementById('sidebar-nav-logout');
     if (existingLogout) existingLogout.remove();
+    const existingSuper = document.getElementById('sidebar-nav-superadmin');
+    if (existingSuper) existingSuper.remove();
+
+    // Link de administrador: só aparece para quem tem o papel no JWT.
+    // (Esconder é cortesia de UI — quem protege os dados é o RLS.)
+    if (this.user && typeof SuperAdmin !== 'undefined' && SuperAdmin.isAdmin()) {
+      const navSection = document.querySelector('.sidebar-nav');
+      if (navSection) {
+        const superItem = document.createElement('a');
+        superItem.id = 'sidebar-nav-superadmin';
+        superItem.href = '#superadmin';
+        superItem.className = 'nav-item';
+        superItem.innerHTML = `
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px; height:20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+          <span class="nav-label">Todas as Contas</span>
+        `;
+        navSection.appendChild(superItem);
+      }
+    }
 
     if (this.user) {
       const navSection = document.querySelector('.sidebar-nav');
@@ -218,6 +238,7 @@ const App = {
     else if (route === 'contracts') ContractsView.render(this.container);
     else if (route === 'editor') Editor.render(this.container, param);
     else if (route === 'admin') Admin.render(this.container);
+    else if (route === 'superadmin') SuperAdmin.render(this.container);
     else if (route === 'tenant') Tenant.render(this.container, param);
   },
   

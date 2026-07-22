@@ -31,10 +31,14 @@ const Storage = {
       
       const uid = user.id;
 
-      // 1. Carregar Contratos do Supabase
+      // 1. Carregar Contratos do Supabase.
+      // Filtro explícito por dono: para o usuário comum o RLS já garante isso,
+      // mas o ADMIN enxerga todas as contas — sem o .eq() o painel normal dele
+      // misturaria contratos de todo mundo. A visão global fica só no #superadmin.
       const { data: dbContracts, error: dbError } = await supabaseClient
         .from('contracts')
-        .select('*');
+        .select('*')
+        .eq('user_id', uid);
         
       if (dbError) throw dbError;
         
