@@ -7,6 +7,9 @@ const App = {
     '': 'dashboard',
     '#': 'dashboard',
     '#dashboard': 'dashboard',
+    '#properties': 'properties',
+    '#clients': 'clients',
+    '#financial': 'financial',
     '#templates': 'templates',
     '#contracts': 'contracts',
     '#editor': 'editor',
@@ -111,7 +114,7 @@ const App = {
       if (serverId && key) {
         this.container.innerHTML = `
           <div style="text-align: center; padding: 5rem 0;">
-            <div class="spinner" style="border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
+            <div class="spinner" style="border: 4px solid var(--border-light); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
             <h3>Buscando e importando contrato de forma segura da nuvem...</h3>
           </div>
           <style>
@@ -169,6 +172,9 @@ const App = {
     this.updateNav(route);
 
     if (route === 'dashboard') Dashboard.render(this.container);
+    else if (route === 'properties') PropertiesView.render(this.container);
+    else if (route === 'clients') ClientsView.render(this.container);
+    else if (route === 'financial') FinancialView.render(this.container);
     else if (route === 'templates') Templates.render(this.container);
     else if (route === 'contracts') ContractsView.render(this.container);
     else if (route === 'editor') Editor.render(this.container, param);

@@ -151,7 +151,53 @@ const Editor = {
     // e não uma seção oculta. Enquanto não preencheu, segue escondida como antes.
     const temDadosLocatario = !!(this.contract.fields && this.contract.fields.nome_locatario);
 
+    const properties = Storage.getProperties();
+    const clients = Storage.getClients();
+    const inquilinos = clients.filter(c => c.client_type === 'Inquilino');
+    const locadores = clients.filter(c => c.client_type === 'Locador');
+
     let html = '';
+
+    if (!this.contract.isFinalized && (properties.length > 0 || clients.length > 0)) {
+      html += `
+        <div style="margin-bottom: 1.5rem; padding: 1.25rem; background: var(--primary-light); border: 1px solid var(--border-focus); border-radius: var(--radius-lg);">
+          <h4 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.95rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Preenchimento Rápido com Cadastros
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+            ${properties.length > 0 ? `
+              <div>
+                <label class="form-label">Importar Imóvel</label>
+                <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyPropertySelection(this.value)">
+                  <option value="">Selecionar...</option>
+                  ${properties.map(p => `<option value="${p.id}">${Utils.esc(p.name)} (${Utils.formatCurrency(p.rent_value || 0)})</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${inquilinos.length > 0 ? `
+              <div>
+                <label class="form-label">Importar Inquilino</label>
+                <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyClientSelection(this.value, 'locatario')">
+                  <option value="">Selecionar...</option>
+                  ${inquilinos.map(c => `<option value="${c.id}">${Utils.esc(c.name)}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${locadores.length > 0 ? `
+              <div>
+                <label class="form-label">Importar Locador</label>
+                <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyClientSelection(this.value, 'locador')">
+                  <option value="">Selecionar...</option>
+                  ${locadores.map(c => `<option value="${c.id}">${Utils.esc(c.name)}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
     for (const [secName, fields] of Object.entries(sections)) {
       // Ocultar as seções que vêm do AdminProfile ou que vão para o Inquilino
       const hiddenSections = ['locador', 'conta p/ pagamento'];
@@ -229,7 +275,7 @@ const Editor = {
           <div style="padding: 1rem; text-align: center; color: var(--success); border: 1px dashed var(--success); border-radius: 8px; margin-bottom: 1rem;">
             <p style="margin:0;"><strong>✓ Seus dados e da sua Conta Bancária foram carregados automaticamente.</strong></p>
           </div>
-          <div style="padding: 1rem; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px;">
+          <div style="padding: 1rem; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-light); border-radius: 8px;">
             <p>A seção <strong>Locatário</strong> está oculta.</p>
             <p style="font-size: 0.9em; margin-top: 5px;">Clique em "Gerar Link p/ Inquilino" para que ele mesmo preencha estes dados.</p>
           </div>
@@ -571,5 +617,51 @@ const Editor = {
       badge.className = `badge-status ${status.class}`;
       badge.textContent = status.label;
     }
+  },
+
+  applyPropertySelection(propId) {
+    if (!propId) return;
+    const prop = Storage.getProperties().find(p => p.id === propId);
+    if (!prop) return;
+
+    if (prop.address) this.contract.fields['end_imovel'] = prop.address;
+    if (prop.rent_value) {
+      this.contract.fields['valor_aluguel'] = Utils.formatCurrency(prop.rent_value);
+      this.contract.fields['valor_extenso'] = Utils.writeBRLInWords(prop.rent_value);
+    }
+    if (prop.iptu_value) this.contract.fields['valor_iptu'] = Utils.formatCurrency(prop.iptu_value);
+    if (prop.condo_value) this.contract.fields['valor_condominio'] = Utils.formatCurrency(prop.condo_value);
+
+    Utils.toast(`Imóvel "${prop.name}" importado para o contrato!`);
+    this.renderForm();
+    this.updatePreview();
+  },
+
+  applyClientSelection(clientId, role) {
+    if (!clientId) return;
+    const client = Storage.getClients().find(c => c.id === clientId);
+    if (!client) return;
+
+    if (role === 'locatario') {
+      if (client.name) this.contract.fields['nome_locatario'] = client.name;
+      if (client.document) this.contract.fields['doc_locatario'] = client.document;
+      if (client.rg) this.contract.fields['rg_locatario'] = client.rg;
+      if (client.email) this.contract.fields['email_locatario'] = client.email;
+      if (client.phone) this.contract.fields['tel_locatario'] = client.phone;
+      if (client.address) this.contract.fields['end_locatario'] = client.address;
+      if (client.profession) this.contract.fields['profissao_locatario'] = client.profession;
+      Utils.toast(`Inquilino "${client.name}" importado!`);
+    } else if (role === 'locador') {
+      if (client.name) this.contract.fields['nome_locador'] = client.name;
+      if (client.document) this.contract.fields['doc_locador'] = client.document;
+      if (client.rg) this.contract.fields['rg_locador'] = client.rg;
+      if (client.email) this.contract.fields['email_locador'] = client.email;
+      if (client.phone) this.contract.fields['tel_locador'] = client.phone;
+      if (client.address) this.contract.fields['end_locador'] = client.address;
+      Utils.toast(`Locador "${client.name}" importado!`);
+    }
+
+    this.renderForm();
+    this.updatePreview();
   }
 };

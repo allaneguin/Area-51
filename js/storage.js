@@ -8,6 +8,9 @@ const Storage = {
   PENDING_PROFILE_KEY: 'perfil_pendente',
 
   contractsCache: [],
+  propertiesCache: [],
+  clientsCache: [],
+  financialRecordsCache: [],
   profileCache: {},
 
   // ── Carga inicial (roda a cada login) ──
@@ -19,9 +22,7 @@ const Storage = {
 
       await this._flushPendingProfile(user.id);
 
-      // Filtro explícito por dono: para o usuário comum o RLS já garante isso,
-      // mas o ADMIN enxerga todas as contas — sem o .eq() o painel normal dele
-      // misturaria contratos de todo mundo. A visão global fica só no #superadmin.
+      // Carregar Contratos
       const { data: dbContracts, error: dbError } = await supabaseClient
         .from('contracts')
         .select('*')
@@ -40,6 +41,27 @@ const Storage = {
         updatedAt: item.updated_at
       }));
 
+      // Carregar Imóveis
+      const { data: dbProps } = await supabaseClient
+        .from('properties')
+        .select('*')
+        .eq('user_id', user.id);
+      this.propertiesCache = dbProps || [];
+
+      // Carregar Clientes
+      const { data: dbClients } = await supabaseClient
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id);
+      this.clientsCache = dbClients || [];
+
+      // Carregar Lançamentos Financeiros
+      const { data: dbFin } = await supabaseClient
+        .from('financial_records')
+        .select('*')
+        .eq('user_id', user.id);
+      this.financialRecordsCache = dbFin || [];
+
       const { data: profileRecord, error: profileError } = await supabaseClient
         .from('profiles')
         .select('profile_data')
@@ -49,7 +71,7 @@ const Storage = {
 
       this.profileCache = (profileRecord && profileRecord.profile_data) || {};
 
-      console.log(`📦 Dados do Supabase carregados: ${this.contractsCache.length} contratos.`);
+      console.log(`📦 Dados do Supabase carregados: ${this.contractsCache.length} contratos, ${this.propertiesCache.length} imóveis, ${this.clientsCache.length} clientes.`);
     } catch (e) {
       console.error("Erro ao carregar dados do Supabase:", e);
     }
@@ -219,5 +241,166 @@ const Storage = {
       .then(({ error }) => {
         if (error) console.error("Erro ao salvar perfil no Supabase:", error);
       });
+  },
+
+  // ── Imóveis ──
+  getProperties() {
+    return this.propertiesCache || [];
+  },
+
+  saveProperty(prop) {
+    const id = prop.id || Utils.generateId();
+    const idx = this.propertiesCache.findIndex(p => p.id === id);
+    const existing = idx >= 0 ? this.propertiesCache[idx] : {};
+    const item = { ...existing, ...prop, id, user_id: App.user ? App.user.id : null, updated_at: new Date().toISOString() };
+    if (idx >= 0) this.propertiesCache[idx] = item;
+    else this.propertiesCache.push(item);
+
+    if (supabaseClient && App.user) {
+      supabaseClient.from('properties').upsert(item).then(({ error }) => {
+        if (error) console.error("Erro ao salvar imóvel:", error);
+      });
+    }
+    return item;
+  },
+
+  deleteProperty(id) {
+    this.propertiesCache = this.propertiesCache.filter(p => p.id !== id);
+    if (supabaseClient && App.user) {
+      supabaseClient.from('properties').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Erro ao deletar imóvel:", error);
+      });
+    }
+  },
+
+  // ── Clientes ──
+  getClients() {
+    return this.clientsCache || [];
+  },
+
+  saveClient(client) {
+    const id = client.id || Utils.generateId();
+    const idx = this.clientsCache.findIndex(c => c.id === id);
+    const existing = idx >= 0 ? this.clientsCache[idx] : {};
+    const item = { ...existing, ...client, id, user_id: App.user ? App.user.id : null, updated_at: new Date().toISOString() };
+    if (idx >= 0) this.clientsCache[idx] = item;
+    else this.clientsCache.push(item);
+
+    if (supabaseClient && App.user) {
+      supabaseClient.from('clients').upsert(item).then(({ error }) => {
+        if (error) console.error("Erro ao salvar cliente:", error);
+      });
+    }
+    return item;
+  },
+
+  deleteClient(id) {
+    this.clientsCache = this.clientsCache.filter(c => c.id !== id);
+    if (supabaseClient && App.user) {
+      supabaseClient.from('clients').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Erro ao deletar cliente:", error);
+      });
+    }
+  },
+
+  // ── Gestão Financeira & Repasses ──
+  getFinancialRecords() {
+    return (this.financialRecordsCache || []).slice().sort((a, b) => new Date(b.due_date || 0) - new Date(a.due_date || 0));
+  },
+
+  saveFinancialRecord(rec) {
+    const id = rec.id || Utils.generateId();
+    const idx = this.financialRecordsCache.findIndex(r => r.id === id);
+    const existing = idx >= 0 ? this.financialRecordsCache[idx] : {};
+    const item = { ...existing, ...rec, id, user_id: App.user ? App.user.id : null, updated_at: new Date().toISOString() };
+    if (idx >= 0) this.financialRecordsCache[idx] = item;
+    else this.financialRecordsCache.push(item);
+
+    if (supabaseClient && App.user) {
+      supabaseClient.from('financial_records').upsert(item).then(({ error }) => {
+        if (error) console.error("Erro ao salvar lançamento financeiro:", error);
+      });
+    }
+    return item;
+  },
+
+  deleteFinancialRecord(id) {
+    this.financialRecordsCache = this.financialRecordsCache.filter(r => r.id !== id);
+    if (supabaseClient && App.user) {
+      supabaseClient.from('financial_records').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Erro ao deletar lançamento financeiro:", error);
+      });
+    }
+  },
+
+  // Gerar cobranças do mês corrente para todos os contratos ativos
+  generateMonthlyCharges(feePercentDefault = 10) {
+    const activeContracts = this.getAll().filter(c => c.isFinalized || (c.fields && c.fields.nome_locatario));
+    let countNew = 0;
+    const today = new Date();
+    const yearMonth = today.toISOString().slice(0, 7); // "YYYY-MM"
+
+    activeContracts.forEach(c => {
+      const tenantName = c.fields.nome_locatario || 'Inquilino';
+      const landlordName = c.fields.nome_locador || 'Locador';
+      const rawRent = c.fields.valor_aluguel ? String(c.fields.valor_aluguel).replace(/\D/g, '') : '0';
+      const rentValue = parseFloat(rawRent) / 100 || 0;
+
+      if (rentValue <= 0) return;
+
+      const desc = `Aluguel ${yearMonth} - ${c.name}`;
+      const exists = this.financialRecordsCache.some(r => r.contract_id === c.id && r.due_date && r.due_date.startsWith(yearMonth));
+
+      if (!exists) {
+        const feeValue = rentValue * (feePercentDefault / 100);
+        const netPayout = rentValue - feeValue;
+
+        // Vencimento padrão: dia 10 do mês
+        const dueDate = `${yearMonth}-10`;
+
+        this.saveFinancialRecord({
+          contract_id: c.id,
+          description: desc,
+          tenant_name: tenantName,
+          landlord_name: landlordName,
+          due_date: dueDate,
+          rent_value: rentValue,
+          fee_percent: feePercentDefault,
+          fee_value: feeValue,
+          net_payout: netPayout,
+          status: 'Pendente'
+        });
+        countNew++;
+      }
+    });
+
+    return countNew;
+  },
+
+  // Aplicar Reajuste Anual por Índice (IPCA / IGP-M) em um contrato
+  applyContractReajuste(contractId, ratePercent, indexName = 'IPCA') {
+    const contract = this.getById(contractId);
+    if (!contract || !contract.fields.valor_aluguel) return null;
+
+    const rawRent = String(contract.fields.valor_aluguel).replace(/\D/g, '');
+    const currentRent = parseFloat(rawRent) / 100 || 0;
+
+    if (currentRent <= 0) return null;
+
+    const newRent = currentRent * (1 + (ratePercent / 100));
+    const newRentFormatted = Utils.formatCurrency(newRent);
+    const newRentExtenso = Utils.writeBRLInWords(newRentFormatted);
+
+    const updatedFields = {
+      ...contract.fields,
+      valor_aluguel: newRentFormatted,
+      valor_extenso: newRentExtenso,
+      ultimo_reajuste_data: new Date().toISOString().slice(0, 10),
+      ultimo_reajuste_indice: indexName,
+      ultimo_reajuste_taxa: ratePercent
+    };
+
+    const updatedContract = this.update(contractId, { fields: updatedFields });
+    return { oldRent: currentRent, newRent, ratePercent, indexName, updatedContract };
   }
 };

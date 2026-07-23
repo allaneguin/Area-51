@@ -19,10 +19,16 @@ const Utils = {
     return digits.length <= 11 ? Utils.maskCPF(v) : Utils.maskCNPJ(v);
   },
   maskCurrency(v) {
-    let d = v.replace(/\D/g,'');
-    if (!d) return '';
+    let d = String(v || '').replace(/\D/g,'');
+    if (!d) return 'R$ 0,00';
     d = (parseInt(d) / 100).toFixed(2);
     return 'R$ ' + d.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  },
+  formatCurrency(val) {
+    if (typeof val === 'number') {
+      return 'R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return Utils.maskCurrency(String(val || '0'));
   },
 
   // ── Formatação ──
@@ -129,6 +135,9 @@ const Utils = {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  },
+  escapeHtml(v) {
+    return Utils.esc(v);
   },
 
   // ── Toast (feedback não-bloqueante, substitui alert) ──
