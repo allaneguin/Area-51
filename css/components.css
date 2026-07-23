@@ -670,11 +670,17 @@ button.nav-item {
   color: #fff;
 }
 
-/* Modal padrão: o card acompanha o tema (nada de fundo branco fixo) */
-.modal-backdrop {
+/* Modal padrão: o card acompanha o tema (nada de fundo branco fixo).
+   O seletor com #main-content é necessário: o backdrop nasce como filho
+   direto de #main-content, cujo "> *" limita filhos a 1080px centrados —
+   sem esta exceção o fundo escuro não cobre as laterais da tela. */
+.modal-backdrop,
+#main-content > .modal-backdrop {
   display: none;
   position: fixed;
   inset: 0;
+  max-width: none;
+  margin: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 9999;
   align-items: center;
