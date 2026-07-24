@@ -237,8 +237,12 @@ const SuperAdmin = {
 
       ${aviso}
 
-      <input type="text" class="form-input" placeholder="Buscar por nome, e-mail, CPF/CNPJ ou ID..."
-        oninput="SuperAdmin.filtrar(this.value)" style="margin-bottom: 16px;">
+      <!-- Num div: input é inline-block e o "margin: auto" da coluna central
+           de #main-content não centraliza inline-block — o campo escapava à esquerda. -->
+      <div style="margin-bottom: 16px;">
+        <input type="text" class="form-input" placeholder="Buscar por nome, e-mail, CPF/CNPJ ou ID..."
+          oninput="SuperAdmin.filtrar(this.value)">
+      </div>
 
       <div class="animate-fade-in-up" id="sa-lista">
         ${linhas || '<div class="empty-state glass"><p>Nenhuma conta encontrada.</p></div>'}
