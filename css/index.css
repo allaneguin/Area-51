@@ -179,6 +179,7 @@ a:hover {
 
 /* Link do inquilino: esconde a interface do locador antes da 1ª pintura
    (a classe é aplicada no <head>). Some assim que o JS entra em tenant-mode. */
+html.is-tenant-boot .topbar,
 html.is-tenant-boot #sidebar,
 html.is-tenant-boot .mobile-header,
 html.is-tenant-boot .bottom-nav {
@@ -189,6 +190,12 @@ html.is-tenant-boot #main-content {
   margin: 0 !important;
   width: 100% !important;
   padding: 0 !important;
+}
+
+/* Enquanto a tela do inquilino não assume (body ainda sem .tenant-mode),
+   nada do painel do locador pode piscar — nem o dashboard renderizado. */
+html.is-tenant-boot body:not(.tenant-mode) #main-content {
+  visibility: hidden;
 }
 
 /* Layout Shell */

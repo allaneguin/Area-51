@@ -37,9 +37,14 @@ create policy "tenant_links_update_by_id"
 -- nova NÃO substitui a antiga — criaria ambiguidade na chamada via PostgREST.
 drop function if exists public.set_tenant_link(uuid, text);
 drop function if exists public.set_tenant_link(text, text);
+drop function if exists public.set_tenant_link(uuid, text, boolean);
+drop function if exists public.set_tenant_link(text, text, boolean);
 
+-- p_id é TEXT e a comparação faz cast da coluna (id::text): funciona com a
+-- coluna id sendo text OU uuid. A versão anterior declarava p_id uuid e
+-- quebrava com "operator does not exist: text = uuid" quando a coluna é text.
 create or replace function public.set_tenant_link(
-  p_id uuid,
+  p_id text,
   p_payload text,
   p_finalize boolean default false
 )
@@ -52,14 +57,14 @@ begin
   update public.tenant_links
      set encrypted_payload = p_payload,
          finalized = finalized or p_finalize
-   where id = p_id
+   where id::text = p_id
      and expires_at > now()
      and not finalized;          -- link enviado é somente leitura
   return found;                  -- false = expirado, inexistente ou já enviado
 end;
 $$;
 
-grant execute on function public.set_tenant_link(uuid, text, boolean) to anon, authenticated;
+grant execute on function public.set_tenant_link(text, text, boolean) to anon, authenticated;
 
 -- Observação: get_tenant_link segue lendo links finalizados de propósito —
 -- é assim que o locador importa os dados pelo link de retorno (#import).

@@ -51,8 +51,8 @@ const Contracts = {
       { section: 'Locatário', name: 'doc_locatario', label: 'CPF', type: 'text', mask: 'cpfcnpj' },
 
       { section: 'Imóvel', name: 'desc_imovel', label: 'Descrição (Ex: Urbano de uso...)', type: 'textarea' },
-      { section: 'Imóvel', name: 'end_imovel', label: 'Endereço Completo do Imóvel', type: 'textarea' },
       { section: 'Imóvel', name: 'cep_imovel', label: 'CEP', type: 'text' },
+      { section: 'Imóvel', name: 'end_imovel', label: 'Endereço Completo do Imóvel', type: 'textarea' },
       { section: 'Imóvel', name: 'mat_agua', label: 'Matrícula de Água', type: 'text' },
       { section: 'Imóvel', name: 'uc_energia', label: 'Unidade Consumidora (Energia)', type: 'text' },
 
@@ -220,8 +220,8 @@ const Contracts = {
       { section: 'Locatário', name: 'doc_locatario', label: 'CPF/CNPJ do Locatário', type: 'text', mask: 'cpfcnpj' },
 
       { section: 'Imóvel', name: 'desc_imovel', label: 'Descrição do Imóvel Comercial', type: 'textarea' },
-      { section: 'Imóvel', name: 'end_imovel', label: 'Endereço Completo do Imóvel', type: 'textarea' },
       { section: 'Imóvel', name: 'cep_imovel', label: 'CEP', type: 'text' },
+      { section: 'Imóvel', name: 'end_imovel', label: 'Endereço Completo do Imóvel', type: 'textarea' },
 
       { section: 'Condições', name: 'prazo_extenso', label: 'Prazo do Contrato', type: 'select', options: [
           { value: '', label: 'Selecione o prazo...' },
