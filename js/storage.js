@@ -147,6 +147,7 @@ const Storage = {
         });
     }
 
+    this.syncClientFromContract(newContract.fields);
     return newContract;
   },
 
@@ -187,6 +188,7 @@ const Storage = {
         });
     }
 
+    this.syncClientFromContract(item.fields);
     return item;
   },
 
@@ -301,6 +303,36 @@ const Storage = {
         if (error) console.error("Erro ao deletar cliente:", error);
       });
     }
+  },
+
+  // ── Inquilino do contrato vira cadastro na aba Clientes ──
+  // Chamado a cada save de contrato (create/update), então é IDEMPOTENTE:
+  // casa pelo CPF/CNPJ e só cria quem ainda não existe. Nunca sobrescreve um
+  // cadastro existente — dado editado à mão pelo locador tem prioridade.
+  // Exige documento de propósito: é a única chave confiável para não duplicar
+  // (o inquilino é obrigado a informar CPF/CNPJ ao enviar pelo link).
+  syncClientFromContract(fields) {
+    fields = fields || {};
+    const nome = (fields.nome_locatario || '').trim();
+    const doc = (fields.doc_locatario || '').replace(/\D/g, '');
+    if (!nome || !doc) return null;
+
+    const jaExiste = this.getClients().some(c => (c.document || '').replace(/\D/g, '') === doc);
+    if (jaExiste) return null;
+
+    const cliente = this.saveClient({
+      client_type: 'Inquilino',
+      person_type: doc.length > 11 ? 'PJ' : 'PF',
+      name: nome,
+      document: fields.doc_locatario || '',
+      rg: fields.rg_locatario || '',
+      profession: fields.prof_locatario || ''
+    });
+
+    if (typeof Utils !== 'undefined' && Utils.toast) {
+      Utils.toast(nome + ' foi cadastrado(a) em Clientes.', 'info');
+    }
+    return cliente;
   },
 
   // ── Gestão Financeira & Repasses ──
