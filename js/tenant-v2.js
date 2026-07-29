@@ -237,92 +237,16 @@ const Tenant = {
 
   initSignaturePad() {
     const canvas = document.getElementById('signature-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
     const placeholder = document.getElementById('signature-placeholder');
-    let isDrawing = false;
-    let hasDrawn = false;
-
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width > 0 && canvas.width !== rect.width) {
-        canvas.width = rect.width;
-        canvas.height = 150;
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#143A66';
-      }
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    if (this.contract.fields && this.contract.fields.assinatura_locatario) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        if (placeholder) placeholder.style.display = 'none';
-        hasDrawn = true;
-      };
-      img.src = this.contract.fields.assinatura_locatario;
-    }
-
-    const getPos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-      };
-    };
-
-    const startDraw = (e) => {
-      isDrawing = true;
-      const pos = getPos(e);
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      if (placeholder) placeholder.style.display = 'none';
-    };
-
-    const moveDraw = (e) => {
-      if (!isDrawing) return;
-      e.preventDefault();
-      const pos = getPos(e);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-      hasDrawn = true;
-    };
-
-    const stopDraw = () => {
-      if (!isDrawing) return;
-      isDrawing = false;
-      if (hasDrawn) {
-        const dataUrl = canvas.toDataURL('image/png');
-        this.contract.fields.assinatura_locatario = dataUrl;
-        this.saveDraft();
-        this.updatePreview();
-      }
-    };
-
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', moveDraw);
-    canvas.addEventListener('mouseup', stopDraw);
-    canvas.addEventListener('mouseleave', stopDraw);
-
-    canvas.addEventListener('touchstart', startDraw, { passive: false });
-    canvas.addEventListener('touchmove', moveDraw, { passive: false });
-    canvas.addEventListener('touchend', stopDraw);
+    Utils.wireSignaturePad(canvas, placeholder, this.contract.fields.assinatura_locatario, (dataUrl) => {
+      this.contract.fields.assinatura_locatario = dataUrl;
+      this.saveDraft();
+      this.updatePreview();
+    });
   },
 
   clearSignature() {
-    const canvas = document.getElementById('signature-canvas');
-    const placeholder = document.getElementById('signature-placeholder');
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-    if (placeholder) placeholder.style.display = 'flex';
+    Utils.clearSignaturePad(document.getElementById('signature-canvas'), document.getElementById('signature-placeholder'));
     delete this.contract.fields.assinatura_locatario;
     this.saveDraft();
     this.updatePreview();
@@ -638,6 +562,16 @@ const Tenant = {
     prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
       if (this.contract.fields && this.contract.fields.assinatura_locatario) {
         el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+      } else {
+        el.innerHTML = '';
+      }
+    });
+
+    // Assinatura do locador: só leitura aqui (ele assina no próprio painel,
+    // não na tela pública do inquilino) — chega pronta se ele já assinou antes de gerar o link.
+    prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
+      if (this.contract.fields && this.contract.fields.assinatura_locador) {
+        el.innerHTML = `<img src="${this.contract.fields.assinatura_locador}" alt="Assinatura Locador" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
       } else {
         el.innerHTML = '';
       }

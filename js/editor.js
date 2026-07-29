@@ -269,6 +269,29 @@ const Editor = {
       `;
     }
 
+    // Assinatura do locador: sempre disponível (assina quando quiser, antes ou
+    // depois do inquilino) — diferente da validação acima, que é exigência dele.
+    html += `
+      <div class="form-section">
+        <div class="form-section-header" onclick="this.classList.toggle('collapsed')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          <h3>Assinatura do Locador</h3>
+        </div>
+        <div class="form-section-body">
+          <div style="position: relative; border: 2px dashed var(--border-light); border-radius: 10px; background: var(--card-bg); overflow: hidden; touch-action: none;">
+            <canvas id="locador-signature-canvas" height="150" style="width: 100%; display: block; cursor: crosshair;"></canvas>
+            <div id="locador-signature-placeholder" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-light); pointer-events: none; font-size: 0.9rem; font-weight: 500;">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              Desenhe sua assinatura aqui
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 4px 12px;" onclick="Editor.clearLocadorSignature()">Limpar Assinatura</button>
+          </div>
+        </div>
+      </div>
+    `;
+
     if (sections['Locatário'] && !this.contract.isFinalized && !temDadosLocatario) {
       html += `
         <div class="form-section">
@@ -310,6 +333,7 @@ const Editor = {
     container.innerHTML = html;
     this.togglePrazoPersonalizado();
     this.toggleGarantiaFields();
+    setTimeout(() => this.initLocadorSignaturePad(), 50);
 
     // Attach listeners
     container.querySelectorAll('input, textarea, select').forEach(el => {
@@ -395,6 +419,21 @@ const Editor = {
   // Liga/desliga um método de validação exigido do inquilino (guardado em fields).
   setMetodo(campo, valor) {
     this.contract.fields[campo] = valor;
+  },
+
+  initLocadorSignaturePad() {
+    const canvas = document.getElementById('locador-signature-canvas');
+    const placeholder = document.getElementById('locador-signature-placeholder');
+    Utils.wireSignaturePad(canvas, placeholder, this.contract.fields.assinatura_locador, (dataUrl) => {
+      this.contract.fields.assinatura_locador = dataUrl;
+      this.updatePreview();
+    });
+  },
+
+  clearLocadorSignature() {
+    Utils.clearSignaturePad(document.getElementById('locador-signature-canvas'), document.getElementById('locador-signature-placeholder'));
+    delete this.contract.fields.assinatura_locador;
+    this.updatePreview();
   },
 
   togglePrazoPersonalizado() {
@@ -486,6 +525,14 @@ const Editor = {
     prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
       if (this.contract.fields && this.contract.fields.assinatura_locatario) {
         el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+      } else {
+        el.innerHTML = '';
+      }
+    });
+
+    prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
+      if (this.contract.fields && this.contract.fields.assinatura_locador) {
+        el.innerHTML = `<img src="${this.contract.fields.assinatura_locador}" alt="Assinatura Locador" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
       } else {
         el.innerHTML = '';
       }

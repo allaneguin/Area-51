@@ -110,6 +110,87 @@ const Utils = {
     });
   },
 
+  // ── Pad de assinatura manuscrita (canvas) — usado pelo locador e pelo inquilino ──
+  // onChange(dataUrl) roda a cada traço solto; quem chama decide onde salvar
+  // (contract.fields.assinatura_locador ou .assinatura_locatario).
+  wireSignaturePad(canvas, placeholder, initialDataUrl, onChange) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let hasDrawn = false;
+
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && canvas.width !== rect.width) {
+        canvas.width = rect.width;
+        canvas.height = 150;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#143A66';
+      }
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    if (initialDataUrl) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        if (placeholder) placeholder.style.display = 'none';
+        hasDrawn = true;
+      };
+      img.src = initialDataUrl;
+    }
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => {
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      if (placeholder) placeholder.style.display = 'none';
+    };
+
+    const moveDraw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      hasDrawn = true;
+    };
+
+    const stopDraw = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (hasDrawn) onChange(canvas.toDataURL('image/png'));
+    };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+  },
+
+  clearSignaturePad(canvas, placeholder) {
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    if (placeholder) placeholder.style.display = 'flex';
+  },
+
   // ── Tema claro/escuro ──
   // O tema inicial é aplicado por um script inline no <head> (evita flash).
   // Aqui só alternamos e persistimos a escolha.

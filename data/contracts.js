@@ -182,6 +182,7 @@ const Contracts = {
           <div class="signature-block">
             <div class="signature-line">
               Locador: <span class="highlight" data-field="nome_locador">___</span>
+              <div class="signature-img-container" data-signature="locador"></div>
             </div>
           </div>
           <div class="signature-block">
@@ -324,6 +325,7 @@ const Contracts = {
           <div class="signature-block">
             <div class="signature-line">
               Locador: <span class="highlight" data-field="nome_locador">___</span>
+              <div class="signature-img-container" data-signature="locador"></div>
             </div>
           </div>
           <div class="signature-block">
@@ -399,6 +401,7 @@ const Contracts = {
           <div class="signature-block">
             <div class="signature-line">
               Locador: <span class="highlight" data-field="nome_locador">___</span>
+              <div class="signature-img-container" data-signature="locador"></div>
             </div>
           </div>
           <div class="signature-block">
