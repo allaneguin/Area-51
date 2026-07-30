@@ -672,9 +672,26 @@ const Editor = {
     if (!prop) return;
 
     if (prop.address) this.contract.fields['end_imovel'] = prop.address;
+    if (prop.cep) this.contract.fields['cep_imovel'] = prop.cep;
+
+    // Descrição montada das características do cadastro — só se o locador
+    // ainda não escreveu a dele (texto de contrato editado à mão tem prioridade).
+    if (!this.contract.fields['desc_imovel']) {
+      const partes = [
+        prop.type && `Imóvel ${String(prop.type).toLowerCase()}`,
+        prop.bedrooms > 0 && `${prop.bedrooms} quarto(s)`,
+        prop.bathrooms > 0 && `${prop.bathrooms} banheiro(s)`,
+        prop.parking > 0 && `${prop.parking} vaga(s) de garagem`,
+        prop.area > 0 && `${prop.area} m²`
+      ].filter(Boolean);
+      if (partes.length) this.contract.fields['desc_imovel'] = partes.join(', ');
+    }
+
     if (prop.rent_value) {
-      this.contract.fields['valor_aluguel'] = Utils.formatCurrency(prop.rent_value);
-      this.contract.fields['valor_extenso'] = Utils.writeBRLInWords(prop.rent_value);
+      // Mascara ANTES do extenso: writeBRLInWords espera valor em formato BRL
+      const valorMascarado = Utils.formatCurrency(prop.rent_value);
+      this.contract.fields['valor_aluguel'] = valorMascarado;
+      this.contract.fields['valor_extenso'] = Utils.writeBRLInWords(valorMascarado);
     }
     if (prop.iptu_value) this.contract.fields['valor_iptu'] = Utils.formatCurrency(prop.iptu_value);
     if (prop.condo_value) this.contract.fields['valor_condominio'] = Utils.formatCurrency(prop.condo_value);
@@ -696,7 +713,7 @@ const Editor = {
       if (client.email) this.contract.fields['email_locatario'] = client.email;
       if (client.phone) this.contract.fields['tel_locatario'] = client.phone;
       if (client.address) this.contract.fields['end_locatario'] = client.address;
-      if (client.profession) this.contract.fields['profissao_locatario'] = client.profession;
+      if (client.profession) this.contract.fields['prof_locatario'] = client.profession;
       Utils.toast(`Inquilino "${client.name}" importado!`);
     } else if (role === 'locador') {
       if (client.name) this.contract.fields['nome_locador'] = client.name;

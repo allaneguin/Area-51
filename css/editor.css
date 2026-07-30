@@ -201,6 +201,21 @@
   font-weight: bold;
 }
 
+/* A assinatura manuscrita ocupa o espaço em branco ACIMA da linha (como numa
+   carta real), centralizada. height = margin-top da .signature-line: o
+   container "sobe" exatamente o vão reservado; vazio, não desloca nada. */
+.preview-document .signature-img-container {
+  height: 4rem;
+  margin-top: -4rem; /* sobe o mesmo tanto que ocupa: nada abaixo se desloca */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.preview-document .signature-img-container img {
+  max-height: 55px;
+  display: block;
+}
+
 @media(max-width: 1200px) {
   .editor-layout {
     grid-template-columns: 350px 1fr;

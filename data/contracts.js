@@ -181,14 +181,14 @@ const Contracts = {
         <div class="signatures" style="margin-bottom: 2rem;">
           <div class="signature-block">
             <div class="signature-line">
-              Locador: <span class="highlight" data-field="nome_locador">___</span>
               <div class="signature-img-container" data-signature="locador"></div>
+              Locador: <span class="highlight" data-field="nome_locador">___</span>
             </div>
           </div>
           <div class="signature-block">
             <div class="signature-line">
-              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
               <div class="signature-img-container" data-signature="locatario"></div>
+              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
             </div>
           </div>
         </div>
@@ -324,14 +324,14 @@ const Contracts = {
         <div class="signatures" style="margin-bottom: 2rem;">
           <div class="signature-block">
             <div class="signature-line">
-              Locador: <span class="highlight" data-field="nome_locador">___</span>
               <div class="signature-img-container" data-signature="locador"></div>
+              Locador: <span class="highlight" data-field="nome_locador">___</span>
             </div>
           </div>
           <div class="signature-block">
             <div class="signature-line">
-              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
               <div class="signature-img-container" data-signature="locatario"></div>
+              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
             </div>
           </div>
         </div>
@@ -400,14 +400,14 @@ const Contracts = {
         <div class="signatures">
           <div class="signature-block">
             <div class="signature-line">
-              Locador: <span class="highlight" data-field="nome_locador">___</span>
               <div class="signature-img-container" data-signature="locador"></div>
+              Locador: <span class="highlight" data-field="nome_locador">___</span>
             </div>
           </div>
           <div class="signature-block">
             <div class="signature-line">
-              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
               <div class="signature-img-container" data-signature="locatario"></div>
+              Locatário: <span class="highlight" data-field="nome_locatario">___</span>
             </div>
           </div>
         </div>

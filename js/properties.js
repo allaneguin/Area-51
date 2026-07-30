@@ -90,9 +90,16 @@ const PropertiesView = {
               <input type="text" id="prop-name" class="form-input" placeholder="Ex: Apto 302 - Residencial Flores" required>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Endereço Completo *</label>
-              <input type="text" id="prop-address" class="form-input" placeholder="Rua, Número, Bairro, Cidade - UF" required>
+            <div style="display: grid; grid-template-columns: 140px 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label">CEP</label>
+                <input type="text" id="prop-cep" class="form-input" placeholder="00000-000" maxlength="9"
+                  oninput="PropertiesView.buscarCEP(this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Endereço Completo *</label>
+                <input type="text" id="prop-address" class="form-input" placeholder="Rua, Número, Bairro, Cidade - UF" required>
+              </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -160,6 +167,18 @@ const PropertiesView = {
     `;
   },
 
+  // CEP completo -> preenche o endereço via ViaCEP, sem sobrescrever o que já foi digitado
+  async buscarCEP(cep) {
+    const clean = String(cep || '').replace(/\D/g, '');
+    if (clean.length !== 8) return;
+    const data = await Utils.fetchCEP(clean);
+    if (!data || !data.enderecoCompleto) return;
+    const el = document.getElementById('prop-address');
+    if (!el || el.value.trim()) return;
+    el.value = data.enderecoCompleto;
+    Utils.toast('Endereço preenchido pelo CEP — complete com o número.', 'info');
+  },
+
   openModal(id = null) {
     const modal = document.getElementById('prop-modal');
     const title = document.getElementById('prop-modal-title');
@@ -171,6 +190,7 @@ const PropertiesView = {
         title.innerText = 'Editar Imóvel';
         document.getElementById('prop-id').value = prop.id;
         document.getElementById('prop-name').value = prop.name || '';
+        document.getElementById('prop-cep').value = prop.cep || '';
         document.getElementById('prop-address').value = prop.address || '';
         document.getElementById('prop-type').value = prop.type || 'Residencial';
         document.getElementById('prop-status').value = prop.status || 'Disponível';
@@ -200,6 +220,7 @@ const PropertiesView = {
     const propData = {
       id: id || null,
       name: document.getElementById('prop-name').value,
+      cep: document.getElementById('prop-cep').value,
       address: document.getElementById('prop-address').value,
       type: document.getElementById('prop-type').value,
       status: document.getElementById('prop-status').value,

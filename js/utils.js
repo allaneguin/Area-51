@@ -468,7 +468,10 @@ const Utils = {
   // ── Escrever valor BRL por extenso ──
   writeBRLInWords(amountStr) {
     if (!amountStr) return '';
-    const digits = amountStr.replace(/\D/g, '');
+    // Aceita número também (ex.: rent_value 1500 vindo do cadastro de imóvel).
+    // ATENÇÃO: número é tratado como REAIS; string mascarada tem os centavos embutidos.
+    if (typeof amountStr === 'number') amountStr = Utils.formatCurrency(amountStr);
+    const digits = String(amountStr).replace(/\D/g, '');
     if (!digits || parseInt(digits) === 0) return '';
     
     const value = parseInt(digits) / 100;

@@ -25,6 +25,10 @@ create table if not exists public.properties (
   updated_at timestamptz not null default now()
 );
 
+-- CEP do imóvel (adicionado depois: idempotente para bases que já criaram a tabela)
+alter table public.properties
+  add column if not exists cep text;
+
 alter table public.properties enable row level security;
 
 drop policy if exists "properties_select_own" on public.properties;
