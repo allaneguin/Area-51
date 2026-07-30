@@ -671,6 +671,11 @@ const Editor = {
     const prop = Storage.getProperties().find(p => p.id === propId);
     if (!prop) return;
 
+    // O vínculo com o cadastro: é o que permite status automático do imóvel,
+    // histórico de contratos e receita por imóvel. Vive em fields, então
+    // persiste com o contrato e sobrevive ao round-trip do link do inquilino.
+    this.contract.fields['property_id'] = prop.id;
+
     if (prop.address) this.contract.fields['end_imovel'] = prop.address;
     if (prop.cep) this.contract.fields['cep_imovel'] = prop.cep;
 

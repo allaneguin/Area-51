@@ -250,6 +250,14 @@ const Storage = {
     return this.propertiesCache || [];
   },
 
+  // Contratos vinculados a um imóvel (fields.property_id, gravado no
+  // "Importar Imóvel" do editor). É a ponte para status automático,
+  // histórico e receita por imóvel.
+  getContractsForProperty(propId) {
+    if (!propId) return [];
+    return this.getAll().filter(c => c.fields && c.fields.property_id === propId);
+  },
+
   saveProperty(prop) {
     const id = prop.id || Utils.generateId();
     const idx = this.propertiesCache.findIndex(p => p.id === id);

@@ -9,8 +9,31 @@ const PropertiesView = {
     return `<span class="badge ${classe}">${Utils.esc(status || '')}</span>`;
   },
 
+  // Status REAL do imóvel: contrato ativo vinculado manda ("Alugado" automático,
+  // sem depender de trocar o dropdown na mão). Sem contrato ativo, vale o
+  // status manual (que cobre Em Manutenção / Reservado / Disponível).
+  statusReal(prop) {
+    const ativo = Storage.getContractsForProperty(prop.id)
+      .find(c => Utils.getContractStatus(c).label === 'Ativo');
+    return {
+      status: ativo ? 'Alugado' : (prop.status || 'Disponível'),
+      contratoAtivo: ativo || null
+    };
+  },
+
   render(container) {
     const properties = Storage.getProperties();
+    const infoPorImovel = {};
+    properties.forEach(p => {
+      const { status, contratoAtivo } = this.statusReal(p);
+      const contratos = Storage.getContractsForProperty(p.id);
+      const ids = new Set(contratos.map(c => c.id));
+      const recebido = Storage.getFinancialRecords()
+        .filter(r => ids.has(r.contract_id) && r.status === 'Pago')
+        .reduce((s, r) => s + (parseFloat(r.rent_value) || 0), 0);
+      infoPorImovel[p.id] = { status, contratoAtivo, totalContratos: contratos.length, recebido };
+    });
+    const contarStatus = (s) => properties.filter(p => infoPorImovel[p.id].status === s).length;
 
     container.innerHTML = `
       <div class="page-header animate-fade-in-down">
@@ -31,15 +54,15 @@ const PropertiesView = {
         </div>
         <div class="card stat-card">
           <div class="stat-head"><span class="stat-label">Disponíveis</span></div>
-          <div class="stat-value" style="color: var(--success);">${properties.filter(p => p.status === 'Disponível').length}</div>
+          <div class="stat-value" style="color: var(--success);">${contarStatus('Disponível')}</div>
         </div>
         <div class="card stat-card">
           <div class="stat-head"><span class="stat-label">Alugados</span></div>
-          <div class="stat-value" style="color: var(--primary);">${properties.filter(p => p.status === 'Alugado').length}</div>
+          <div class="stat-value" style="color: var(--primary);">${contarStatus('Alugado')}</div>
         </div>
         <div class="card stat-card">
           <div class="stat-head"><span class="stat-label">Em Manutenção</span></div>
-          <div class="stat-value" style="color: var(--warning);">${properties.filter(p => p.status === 'Em Manutenção').length}</div>
+          <div class="stat-value" style="color: var(--warning);">${contarStatus('Em Manutenção')}</div>
         </div>
       </div>
 
@@ -51,17 +74,26 @@ const PropertiesView = {
         </div>
       ` : `
         <div class="animate-fade-in-up" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
-          ${properties.map(p => `
+          ${properties.map(p => {
+            const info = infoPorImovel[p.id];
+            const inquilinoAtual = info.contratoAtivo && info.contratoAtivo.fields.nome_locatario;
+            const vinculo = [
+              inquilinoAtual && `Alugado para <strong>${Utils.esc(inquilinoAtual)}</strong>`,
+              info.totalContratos > 0 && `${info.totalContratos} contrato${info.totalContratos === 1 ? '' : 's'}`,
+              info.recebido > 0 && `${Utils.formatCurrency(info.recebido)} recebidos`
+            ].filter(Boolean).join(' · ');
+            return `
             <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">${Utils.esc(p.name)}</h4>
-                  ${this.badgeStatus(p.status)}
+                  ${this.badgeStatus(info.status)}
                 </div>
                 <p style="color: var(--text-muted); font-size: 0.875rem; margin: 0 0 0.75rem;">${Utils.esc(p.address)}</p>
-                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: ${vinculo ? '0.5rem' : '1rem'};">
                   ${p.bedrooms || 0} quarto${p.bedrooms == 1 ? '' : 's'} · ${p.bathrooms || 0} banheiro${p.bathrooms == 1 ? '' : 's'} · ${p.parking || 0} vaga${p.parking == 1 ? '' : 's'} · ${p.area || 0} m²
                 </div>
+                ${vinculo ? `<div style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 1rem;">${vinculo}</div>` : ''}
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 0.75rem;">
                 <div>
@@ -74,7 +106,8 @@ const PropertiesView = {
                 </div>
               </div>
             </div>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       `}
 
