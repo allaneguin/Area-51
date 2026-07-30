@@ -62,11 +62,15 @@ create index if not exists tenant_links_expires_at_idx
 -- ── 4. Criar link passa a exigir sessão ──────────────────────────────────
 -- O app só gera link de dentro do editor, sempre logado: a permissão para
 -- anônimo era herança morta que permitia encher o banco de graça.
+-- ATENÇÃO ao tipo de p_id: a coluna tenant_links.id é TEXT neste banco, ainda
+-- que o DDL em supabase_schema.sql diga uuid. Declarar p_id como uuid produz
+-- "operator does not exist: text = uuid" — o mesmo erro que já quebrou o envio
+-- do inquilino em produção. Todas as três funções usam text por isso.
 drop function if exists public.create_tenant_link(uuid, text);
 drop function if exists public.create_tenant_link(text, text);
 
-create function public.create_tenant_link(p_id uuid, p_payload text)
-returns uuid
+create function public.create_tenant_link(p_id text, p_payload text)
+returns text
 language plpgsql
 security definer
 set search_path = public
@@ -104,8 +108,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_tenant_link(uuid, text) from public, anon;
-grant execute on function public.create_tenant_link(uuid, text) to authenticated;
+revoke all on function public.create_tenant_link(text, text) from public, anon;
+grant execute on function public.create_tenant_link(text, text) to authenticated;
 
 -- ── 5. set_tenant_link: uma assinatura só ────────────────────────────────
 -- Existiam versões com p_id uuid e p_id text. A versão uuid causou
@@ -161,7 +165,7 @@ grant execute on function public.set_tenant_link(text, text, boolean) to anon, a
 drop function if exists public.get_tenant_link(uuid);
 drop function if exists public.get_tenant_link(text);
 
-create function public.get_tenant_link(p_id uuid)
+create function public.get_tenant_link(p_id text)
 returns text
 language plpgsql
 security definer
@@ -174,16 +178,17 @@ begin
 
   -- Devolve inclusive link já finalizado, de propósito: é o que permite ao
   -- inquilino reabrir e ver o que assinou (a tela fica somente leitura).
+  -- id::text funciona com a coluna sendo text (que é o caso aqui) ou uuid.
   select encrypted_payload into v_payload
     from public.tenant_links
-   where id = p_id and expires_at > now();
+   where id::text = p_id and expires_at > now();
 
   return v_payload;
 end;
 $$;
 
-revoke all on function public.get_tenant_link(uuid) from public;
-grant execute on function public.get_tenant_link(uuid) to anon, authenticated;
+revoke all on function public.get_tenant_link(text) from public;
+grant execute on function public.get_tenant_link(text) to anon, authenticated;
 
 -- ── 7. Expurgo agendado, se o pg_cron existir ────────────────────────────
 -- Bloco condicional: se a extensão não estiver instalada neste projeto, só

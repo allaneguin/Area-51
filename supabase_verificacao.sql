@@ -85,7 +85,41 @@ begin
     raise exception 'FALHA 9: % tabela(s) de dados de cliente sem RLS', v_qtd;
   end if;
 
-  raise notice '===========================================';
-  raise notice 'OK - as 9 garantias de seguranca conferidas.';
-  raise notice '===========================================';
+  -- ── As funções precisam EXECUTAR, não só existir ───────────────────────
+  -- Os testes 1-9 conferem estrutura. Estrutura certa nao garante que roda:
+  -- get_tenant_link chegou a passar em todos eles declarada com p_id uuid
+  -- contra uma coluna text, e so quebrava na hora de um inquilino abrir o
+  -- link. Daqui em diante, chamada de verdade.
+
+  -- 10. Leitura do link (o caminho do inquilino).
+  begin
+    perform public.get_tenant_link('00000000-0000-4000-8000-000000000000');
+  exception when others then
+    raise exception 'FALHA 10: get_tenant_link nao executa -> %', sqlerrm;
+  end;
+
+  -- 11. Gravação do link (o envio do inquilino). Id inexistente devolve
+  --     false sem tocar em nada — nao suja o banco.
+  begin
+    perform public.set_tenant_link('00000000-0000-4000-8000-000000000000', 'verificacao', false);
+  exception when others then
+    raise exception 'FALHA 11: set_tenant_link nao executa -> %', sqlerrm;
+  end;
+
+  -- 12. Criação exige sessão. Aqui roda como postgres, sem auth.uid(),
+  --     entao TEM que ser recusada com 42501. Se aceitar, o furo continua.
+  begin
+    perform public.create_tenant_link('verificacao-sem-sessao', 'x');
+    v_txt := 'aceitou chamada sem sessao — o furo do insert livre continua aberto';
+  exception
+    when sqlstate '42501' then v_txt := 'ok';
+    when others           then v_txt := 'falhou por outro motivo -> ' || sqlerrm;
+  end;
+  if v_txt <> 'ok' then
+    raise exception 'FALHA 12: create_tenant_link %', v_txt;
+  end if;
+
+  raise notice '============================================';
+  raise notice 'OK - as 12 garantias de seguranca conferidas.';
+  raise notice '============================================';
 end $$;

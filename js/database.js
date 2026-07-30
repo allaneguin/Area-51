@@ -155,31 +155,20 @@ const CloudDB = {
 
   // Update an existing contract on the cloud server.
   // finalize=true (envio do inquilino) trava o link no servidor: depois disso
-  // ninguém mais reescreve o payload, mesmo tendo a URL (ver supabase_finalize.sql).
+  // ninguém mais reescreve o payload, mesmo tendo a URL (ver supabase_seguranca.sql).
   async updateContract(serverId, contractData, key, finalize = false) {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
     const encryptedPayload = await this.encrypt(contractData, key);
 
-    let { data, error } = await supabaseClient
+    // Sem reenvio em formato antigo: havia um caminho que, se a função de três
+    // argumentos não existisse, repetia a chamada sem p_finalize. O inquilino
+    // via "enviado com sucesso" e o link continuava gravável por quem tivesse a
+    // URL — falha disfarçada de sucesso. supabase_seguranca.sql garante a
+    // assinatura única, então erro aqui volta a ser erro visível.
+    const { data, error } = await supabaseClient
       .rpc('set_tenant_link', finalize
         ? { p_id: serverId, p_payload: encryptedPayload, p_finalize: true }
         : { p_id: serverId, p_payload: encryptedPayload });
-
-    // Banco ainda sem a migração (função de 2 argumentos): reenvia no formato
-    // antigo para o envio do inquilino nunca ficar bloqueado pela migração pendente.
-    // PGRST202 = função não encontrada na assinatura pedida. O teste é restrito de
-    // propósito: um regex largo (/function/) mascararia erros não relacionados.
-    if (error && finalize && error.code === 'PGRST202') {
-      // A trava NÃO foi aplicada: o link segue gravável por quem tiver a URL.
-      // Quem opera precisa ver isso — é degradação silenciosa de segurança.
-      console.warn(
-        '⚠️ set_tenant_link sem p_finalize: o link do inquilino NÃO ficou travado. ' +
-        'Rode supabase_finalize.sql no Supabase.'
-      );
-      this.finalizeIndisponivel = true;
-      ({ data, error } = await supabaseClient
-        .rpc('set_tenant_link', { p_id: serverId, p_payload: encryptedPayload }));
-    }
 
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
     // A função devolve false quando nenhuma linha casou (link expirado,
