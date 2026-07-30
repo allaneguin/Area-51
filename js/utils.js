@@ -221,6 +221,23 @@ const Utils = {
     return Utils.esc(v);
   },
 
+  // ── Imagem vinda de dado não confiável ──────────────────────────────────
+  // Regra canônica: só as três formas que o próprio fluxo gera (canvas
+  // .toDataURL e câmera). SVG fica de fora de propósito — carrega script.
+  // CloudDB usa este mesmo regex ao sanitizar o payload na entrada.
+  IMG_DATA_URL_OK: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]*={0,2}$/,
+
+  // Monta a tag <img> recusando o que não for imagem legítima. É a segunda
+  // camada: CloudDB barra na entrada, isto protege o que já estava gravado
+  // antes daquela checagem existir — o editor renderiza a partir do Storage,
+  // não do decrypt. Sem CSP de rede (o app depende de ~85 handlers inline),
+  // uma camada só é uma a menos do que o problema exige.
+  imgSeguro(dataUrl, alt, style) {
+    if (typeof dataUrl !== 'string') return '';
+    if (!Utils.IMG_DATA_URL_OK.test(dataUrl)) return '';
+    return `<img src="${dataUrl}" alt="${Utils.esc(alt || '')}" style="${Utils.esc(style || '')}">`;
+  },
+
   // ── Toast (feedback não-bloqueante, substitui alert) ──
   toast(msg, type = 'success') {
     let box = document.getElementById('toast-box');
@@ -698,7 +715,7 @@ const Utils = {
           </tr>
           <tr>
             <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Hash de Integridade (SHA-256):</strong></td>
-            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-family: monospace; font-size: 8.5pt; word-break: break-all;">${hashDoc}</td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-family: monospace; font-size: 8.5pt; word-break: break-all;">${Utils.esc(hashDoc)}</td>
           </tr>
           <tr>
             <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Navegador / Dispositivo:</strong></td>
@@ -710,14 +727,14 @@ const Utils = {
           ${fields.assinatura_locatario ? `
             <div style="text-align: center; flex: 1;">
               <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Rubrica Manuscrita Registrada:</p>
-              <img src="${fields.assinatura_locatario}" alt="Rubrica Inquilino" style="max-height: 65px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 4px;">
+              ${Utils.imgSeguro(fields.assinatura_locatario, 'Rubrica Inquilino', 'max-height: 65px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 4px;')}
             </div>
           ` : ''}
 
           ${fields.selfie_locatario ? `
             <div style="text-align: center; flex: 1;">
               <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Selfie de Validação com Documento:</p>
-              <img src="${fields.selfie_locatario}" alt="Selfie Inquilino" style="max-height: 100px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 6px; object-fit: contain;">
+              ${Utils.imgSeguro(fields.selfie_locatario, 'Selfie Inquilino', 'max-height: 100px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 6px; object-fit: contain;')}
             </div>
           ` : ''}
         </div>

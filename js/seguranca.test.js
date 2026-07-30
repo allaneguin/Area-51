@@ -5,9 +5,12 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-// database.js e script de browser (global), nao modulo: avalia e pega o global.
-const src = fs.readFileSync(path.join(__dirname, 'database.js'), 'utf8');
-const CloudDB = new Function(`${src}; return CloudDB;`)();
+// Scripts de browser (globais), nao modulos: avalia e pega o global.
+// Utils vem primeiro — CloudDB usa Utils.IMG_DATA_URL_OK.
+const load = (f, name) => new Function(`${fs.readFileSync(path.join(__dirname, f), 'utf8')}; return ${name};`)();
+const Utils = load('utils.js', 'Utils');
+global.Utils = Utils;
+const CloudDB = load('database.js', 'CloudDB');
 
 // ── data-URL de imagem legitima passa intacta ──
 const pngOk = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -60,4 +63,38 @@ const ciclico = { a: {} };
 ciclico.a.volta = ciclico;
 CloudDB._sanitizeDeep(ciclico); // se estourar a pilha, o teste falha aqui
 
-console.log('ok — seguranca: sanitizacao de fronteira do payload do inquilino');
+// ═══ Segunda camada: Utils.imgSeguro nos pontos de exibicao ═══
+// O editor renderiza a partir do Storage, nao do decrypt: dado envenenado
+// gravado ANTES da sanitizacao existir nao passaria pela primeira camada.
+
+// imagem legitima vira tag completa
+const tag = Utils.imgSeguro(pngOk, 'Assinatura', 'max-height: 55px;');
+assert.ok(tag.startsWith('<img src="data:image/png;base64,'), 'monta a tag');
+assert.ok(tag.includes('alt="Assinatura"'), 'alt presente');
+assert.ok(tag.includes('style="max-height: 55px;"'), 'style presente');
+
+// injecao pela data-URL: nao sai tag nenhuma
+assert.strictEqual(Utils.imgSeguro('data:image/png;base64,AA" onerror="alert(1)', 'x', 'y'), '',
+  'data-URL adulterada nao vira tag');
+assert.strictEqual(Utils.imgSeguro('data:text/html;base64,PHN2Zz4=', 'x', 'y'), '');
+assert.strictEqual(Utils.imgSeguro('javascript:alert(1)', 'x', 'y'), '');
+assert.strictEqual(Utils.imgSeguro(undefined, 'x', 'y'), '', 'ausente vira string vazia, nao "undefined"');
+assert.strictEqual(Utils.imgSeguro(null, 'x', 'y'), '');
+
+// injecao pelo alt/style: a aspa vira entidade, entao o atributo nao quebra.
+// O texto "onerror=" continua na saida — inofensivo, porque esta DENTRO do
+// valor do atributo. O que importa e nao existir aspa crua fechando alt=".
+const viaAlt = Utils.imgSeguro(pngOk, 'a" onerror="alert(1)', 'z');
+assert.ok(viaAlt.includes('&quot;'), 'aspa do alt vira entidade');
+assert.ok(!viaAlt.includes('" onerror="'), 'alt malicioso nao quebra o atributo');
+const viaStyle = Utils.imgSeguro(pngOk, 'a', 'x" onload="alert(1)');
+assert.ok(viaStyle.includes('&quot;'), 'aspa do style vira entidade');
+assert.ok(!viaStyle.includes('" onload="'), 'style malicioso nao quebra o atributo');
+
+// as duas camadas concordam: mesma regra, uma definicao so
+assert.strictEqual(CloudDB._sanitizeValue(pngOk), pngOk);
+assert.ok(Utils.imgSeguro(pngOk, '', '') !== '');
+assert.strictEqual(CloudDB._sanitizeValue('data:image/gif;base64,R0lGOD'), '');
+assert.strictEqual(Utils.imgSeguro('data:image/gif;base64,R0lGOD', '', ''), '');
+
+console.log('ok — seguranca: sanitizacao de fronteira + imgSeguro nos sinks');

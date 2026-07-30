@@ -52,15 +52,13 @@ const CloudDB = {
   // continua ligado. Por isso a validação acontece aqui, na única porta de
   // entrada, e não em cada tela — uma tela esquecida seria a brecha inteira.
 
-  // Só as três formas que o próprio fluxo gera (canvas.toDataURL e câmera).
-  // SVG fica de fora de propósito: carrega script.
-  _IMG_OK: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]*={0,2}$/,
-
   _sanitizeValue(v) {
     if (typeof v !== 'string') return v;
     // Só entra na peneira o que se apresenta como data: — texto comum passa livre.
     if (!/^\s*data:/i.test(v)) return v;
-    return this._IMG_OK.test(v) ? v : '';
+    // Regra única, definida em Utils e compartilhada com Utils.imgSeguro:
+    // duas cópias do mesmo regex divergiriam na primeira manutenção.
+    return Utils.IMG_DATA_URL_OK.test(v) ? v : '';
   },
 
   _sanitizeDeep(node, depth = 0, vistos = null) {

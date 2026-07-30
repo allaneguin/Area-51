@@ -546,12 +546,12 @@ const Tenant = {
     const txtGarantia = prev.querySelector('.sec-garantia-texto');
     if (txtGarantia) {
       if (tipoGarantia === 'caucao') {
-        const v = this.contract.fields.valor_caucao || 'R$ ___';
-        const ve = this.contract.fields.valor_caucao_extenso || '___';
+        const v = Utils.esc(this.contract.fields.valor_caucao || 'R$ ___');
+        const ve = Utils.esc(this.contract.fields.valor_caucao_extenso || '___');
         txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
       } else if (tipoGarantia === 'fiador') {
-        const nf = this.contract.fields.nome_fiador || '___';
-        const df = this.contract.fields.doc_fiador || '___';
+        const nf = Utils.esc(this.contract.fields.nome_fiador || '___');
+        const df = Utils.esc(this.contract.fields.doc_fiador || '___');
         txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
       } else {
         txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
@@ -561,7 +561,8 @@ const Tenant = {
     // Renderizar Imagem de Assinatura se existir
     prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
       if (this.contract.fields && this.contract.fields.assinatura_locatario) {
-        el.innerHTML = `<img src="${this.contract.fields.assinatura_locatario}" alt="Assinatura Locatário" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+        el.innerHTML = Utils.imgSeguro(this.contract.fields.assinatura_locatario,
+          'Assinatura Locatário', 'max-height: 55px; display: block; margin: 4px auto 0;');
       } else {
         el.innerHTML = '';
       }
@@ -571,7 +572,8 @@ const Tenant = {
     // não na tela pública do inquilino) — chega pronta se ele já assinou antes de gerar o link.
     prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
       if (this.contract.fields && this.contract.fields.assinatura_locador) {
-        el.innerHTML = `<img src="${this.contract.fields.assinatura_locador}" alt="Assinatura Locador" style="max-height: 55px; display: block; margin: 4px auto 0;">`;
+        el.innerHTML = Utils.imgSeguro(this.contract.fields.assinatura_locador,
+          'Assinatura Locador', 'max-height: 55px; display: block; margin: 4px auto 0;');
       } else {
         el.innerHTML = '';
       }
