@@ -218,6 +218,14 @@ const Tenant = {
         </div>
         ` : ''}
 
+        <div class="tenant-privacidade">
+          <strong>Ao enviar, serão registrados junto com sua assinatura:</strong>
+          data e hora, seu endereço IP, a localização do dispositivo e o navegador
+          utilizado. Servem para comprovar quem aceitou o contrato, de onde e
+          quando — é o que dá validade jurídica ao aceite eletrônico. Esses dados
+          vão apenas para o locador deste contrato, junto com o contrato assinado.
+        </div>
+
         <input type="checkbox" id="aceito_contrato" class="tenant-check-input"
           onchange="document.getElementById('btn_salvar_inquilino').disabled = !this.checked">
         <label for="aceito_contrato" class="tenant-accept">
