@@ -297,6 +297,27 @@ const Utils = {
     return fields.prazo_unidade === 'anos' ? qtd * 12 : qtd;
   },
 
+  // ── Data de término, derivada de data_inicio + prazo ──
+  // Fonte única: o editor grava o resultado em fields.data_termino ao digitar
+  // (evento de mudança do campo), e getContractStatus recorre a esta mesma
+  // conta quando esse campo nunca chegou a ser escrito — o que acontece para
+  // todo contrato salvo sem esse evento disparar (ex.: campos preenchidos por
+  // vínculo de imóvel), mesmo com prazo válido.
+  calcularDataTermino(fields) {
+    const inicio = fields && fields.data_inicio;
+    const meses = Utils.mesesDoContrato(fields);
+    if (!inicio || !(meses > 0)) return null;
+
+    const d = new Date(inicio + 'T12:00:00Z');
+    d.setMonth(d.getMonth() + meses);
+    d.setDate(d.getDate() - 1); // Ex: começa 01/06/2020, termina 31/05/2021
+
+    const ano = d.getUTCFullYear();
+    const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(d.getUTCDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  },
+
   // ── Base dos links compartilháveis (inquilino/importação) ──
   // Em produção usa o atalho /c (rewrite no vercel.json): o link fica curto e
   // sem "app.html" no meio, o que lê melhor no WhatsApp. Rodando local
@@ -435,8 +456,10 @@ const Utils = {
     }
     
     const inicio = contract.fields.data_inicio;
-    const termino = contract.fields.data_termino;
-    
+    // Respaldo: contrato com prazo valido mas sem data_termino persistida
+    // (nunca disparou o evento de mudanca do campo no editor) deriva na hora.
+    const termino = contract.fields.data_termino || Utils.calcularDataTermino(contract.fields);
+
     if (!inicio || !termino) {
       return { label: 'Pendente', class: 'badge-status-pending' };
     }

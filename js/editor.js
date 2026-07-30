@@ -368,19 +368,8 @@ const Editor = {
 
         // Auto-calcular Data de Término
         if (fieldName === 'data_inicio' || fieldName === 'prazo_extenso' || fieldName === 'prazo_meses' || fieldName === 'prazo_unidade') {
-          const inicio = this.contract.fields['data_inicio'];
-          const meses = Utils.mesesDoContrato(this.contract.fields);
-
-          if (inicio && meses > 0) {
-            const d = new Date(inicio + 'T12:00:00Z');
-            d.setMonth(d.getMonth() + meses);
-            d.setDate(d.getDate() - 1); // Ex: Começa 01/06/2020, termina 31/05/2021
-            
-            const ano = d.getUTCFullYear();
-            const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const dia = String(d.getUTCDate()).padStart(2, '0');
-            const termino = `${ano}-${mes}-${dia}`;
-            
+          const termino = Utils.calcularDataTermino(this.contract.fields);
+          if (termino) {
             this.contract.fields['data_termino'] = termino;
             const termEl = container.querySelector('[data-field="data_termino"]');
             if (termEl) termEl.value = termino;

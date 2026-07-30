@@ -43,6 +43,36 @@ assert.strictEqual(Utils.mesesDoContrato({ prazo_meses: '12' }), 12);
 assert.strictEqual(Utils.mesesDoContrato({}), 0);
 assert.strictEqual(Utils.mesesDoContrato(null), 0);
 
+// calcularDataTermino: mesma conta que o editor faz ao digitar (mes + mes, -1 dia)
+assert.strictEqual(Utils.calcularDataTermino({ data_inicio: '2026-06-01', prazo_meses: '12' }), '2027-05-31');
+assert.strictEqual(Utils.calcularDataTermino({ data_inicio: '2026-01-01', prazo_extenso: 'personalizado', prazo_meses: '1', prazo_unidade: 'anos' }), '2026-12-31');
+assert.strictEqual(Utils.calcularDataTermino({ data_inicio: '2026-06-01' }), null, 'sem prazo nao da pra derivar');
+assert.strictEqual(Utils.calcularDataTermino({ prazo_meses: '12' }), null, 'sem data_inicio nao da pra derivar');
+assert.strictEqual(Utils.calcularDataTermino(null), null);
+
+// getContractStatus: o bug real por tras do "preciso abrir o contrato pra
+// ele virar Ativo" — generateTenantLink so valida mesesDoContrato(f) > 0,
+// nunca que data_termino tenha sido de fato escrita (isso so acontecia ao
+// disparar o evento de mudanca do campo no editor). Contrato com prazo
+// valido mas sem essa gravacao ficava "Pendente" ate alguem reabrir e mexer
+// no campo. A funcao agora deriva na hora quando o campo persistido falta.
+const emDias = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const semTerminoPersistido = {
+  fields: { data_inicio: emDias(-10), prazo_meses: '12' } // sem data_termino
+};
+assert.strictEqual(Utils.getContractStatus(semTerminoPersistido).label, 'Ativo',
+  'prazo valido sem data_termino persistida deve mostrar Ativo, nao Pendente');
+
+const semPrazoNenhum = { fields: { data_inicio: emDias(-10) } };
+assert.strictEqual(Utils.getContractStatus(semPrazoNenhum).label, 'Pendente',
+  'sem prazo nenhum, Pendente continua correto');
+
+const comTerminoPersistidoVencido = {
+  fields: { data_inicio: emDias(-400), data_termino: emDias(-10), prazo_meses: '12' }
+};
+assert.strictEqual(Utils.getContractStatus(comTerminoPersistidoVencido).label, 'Vencido',
+  'data_termino persistida (mesmo com prazo diferente) continua tendo prioridade');
+
 // isValidCNPJ: checksum de verdade, nao so comprimento
 assert.strictEqual(Utils.isValidCNPJ('11.222.333/0001-81'), true);   // valido classico
 assert.strictEqual(Utils.isValidCNPJ('11222333000181'), true);       // sem mascara
