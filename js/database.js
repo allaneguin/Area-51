@@ -44,6 +44,38 @@ const CloudDB = {
     return bytes;
   },
 
+  // ── Sanitização de fronteira ────────────────────────────────────────────
+  // O payload do link é montado por quem tem a chave — inclusive o inquilino —
+  // e volta para dentro da sessão logada do locador. Vários pontos de exibição
+  // jogam esses campos em innerHTML (assinaturas, selfie), e a CSP não pode
+  // servir de rede: o app depende de ~85 handlers inline, então 'unsafe-inline'
+  // continua ligado. Por isso a validação acontece aqui, na única porta de
+  // entrada, e não em cada tela — uma tela esquecida seria a brecha inteira.
+
+  // Só as três formas que o próprio fluxo gera (canvas.toDataURL e câmera).
+  // SVG fica de fora de propósito: carrega script.
+  _IMG_OK: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]*={0,2}$/,
+
+  _sanitizeValue(v) {
+    if (typeof v !== 'string') return v;
+    // Só entra na peneira o que se apresenta como data: — texto comum passa livre.
+    if (!/^\s*data:/i.test(v)) return v;
+    return this._IMG_OK.test(v) ? v : '';
+  },
+
+  _sanitizeDeep(node, depth = 0, vistos = null) {
+    if (node === null || typeof node !== 'object') return;
+    if (depth > 12) return;
+    vistos = vistos || new Set();
+    if (vistos.has(node)) return; // payload com ciclo não pode travar o carregamento
+    vistos.add(node);
+    for (const k of Object.keys(node)) {
+      const v = node[k];
+      if (typeof v === 'string') node[k] = this._sanitizeValue(v);
+      else if (v !== null && typeof v === 'object') this._sanitizeDeep(v, depth + 1, vistos);
+    }
+  },
+
   // Encrypt JSON object to URL-safe base64 string
   async encrypt(data, keyString) {
     const text = JSON.stringify(data);
@@ -79,7 +111,10 @@ const CloudDB = {
       key,
       data
     );
-    return JSON.parse(new TextDecoder().decode(decrypted));
+    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    // Passa a peneira antes de qualquer tela ver o dado.
+    this._sanitizeDeep(payload);
+    return payload;
   },
 
   // Generate a random 16 character alphanumeric secret key (CSPRNG)
