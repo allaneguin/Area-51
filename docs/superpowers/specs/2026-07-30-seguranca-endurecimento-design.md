@@ -114,7 +114,9 @@ Isso resolve a classe inteira dos seis pontos de assinatura/selfie sem depender 
 
 **7.3 Consentimento antes da coleta.** Hoje `js/tenant-v2.js:681-690` dispara a captura de IP (via terceiros: `api.ipify.org`, `ipapi.co`) e de GPS no clique de "Salvar e Enviar", sem etapa própria de aviso. Acrescentar aviso explícito antes da captura, dizendo o que é coletado e para quê (prova de autoria do aceite). Base legal e finalidade ficam demonstráveis — que é o que a LGPD cobra.
 
-**7.4 Precisão do GPS.** Gravado com 6 casas decimais (~11 cm). Para provar autoria de aceite, 4 casas (~11 m) cumprem a mesma função com muito menos exposição. **Decisão pendente do usuário.**
+**7.4 Precisão do GPS — mantida em 6 casas decimais (~11 cm).** Decisão do usuário: o valor probatório da coordenada exata pesa mais que a redução de exposição, num sistema cuja finalidade é justamente produzir prova de autoria do aceite.
+
+Consequência: **7.3 deixa de ser desejável e passa a ser obrigatório.** Coordenada nesse nível de precisão revela endereço e rotina do titular; a LGPD tolera a coleta quando finalidade e base legal estão declaradas, não quando acontecem em silêncio no clique de um botão. O aviso deve nomear o que é coletado (IP, coordenada, navegador, data e hora) e para quê (comprovar quem aceitou, de onde e quando), antes da captura — não depois.
 
 **7.5 Riscos conhecidos e aceitos nesta rodada:**
 - `contracts.cloud_key` é armazenada em claro; a regra de leitura do admin concede a coluna. Como o admin é o próprio usuário, o risco é interno. Correção adequada exige repensar onde a chave vive — fica para a reescrita do modelo (opção C).
