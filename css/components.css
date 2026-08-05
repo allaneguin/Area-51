@@ -282,7 +282,9 @@ button.nav-item {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  /* itens agora são quadrados de largura fixa (o rótulo saiu do fluxo): um
+     respiro maior separa os alvos sem espremer nada */
+  gap: 6px;
 }
 
 .topbar-actions {
@@ -299,37 +301,80 @@ button.nav-item {
   width: auto;
 }
 
-.topbar-icon-btn {
-  padding: 9px;
-}
-
-/* Em repouso cada aba mostra só o ícone. Ao passar o mouse (ou focar por teclado),
-   o rótulo sai de dentro do ícone: cresce a partir de largura 0 e o respiro nasce
-   junto — por isso o gap do .nav-item vira 0 e o espaçamento vem da margin-left
-   animada do rótulo, senão sobraria um vão fixo de 10px no estado recolhido. */
+/* Em repouso cada aba mostra só o ícone; o rótulo aparece como etiqueta
+   flutuante abaixo dele.
+   O rótulo já cresceu DENTRO do item (max-width 0 -> 160px). O item inchava e
+   empurrava todos os ícones à direita: você mirava em um, ele fugia do cursor,
+   e ao perseguir o anterior encolhia e tudo voltava. Alvo móvel, difícil de
+   acertar — e o vai-e-vem constante era o que dava a sensação de barra nervosa.
+   Fora do fluxo, os ícones nunca se mexem. */
 .topbar .nav-item {
   gap: 0;
+  position: relative;
+  justify-content: center;
+  min-width: 40px;
+  padding: 10px;
 }
 
 .topbar .nav-item .nav-label {
-  max-width: 0;
-  opacity: 0;
-  margin-left: 0;
-  overflow: hidden;
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
   white-space: nowrap;
-  transition: max-width 0.25s ease, margin-left 0.25s ease, opacity 0.2s ease;
+  /* a etiqueta nunca intercepta o clique destinado ao ícone */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-4px);
+  background: #22262E;
+  color: #F2F4F7;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(233, 231, 226, 0.10);
+  /* sombra fixa: a topbar é escura nos dois temas, então --shadow-md do tema
+     claro (alpha 0.05) sumiria aqui */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  /* Saída imediata (sem atraso): tirou o mouse, some. */
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0s linear 0.16s;
 }
 
+/* Entrada com atraso: passar o mouse rapidamente pela barra não deve disparar
+   seis etiquetas em sequência. Só aparece se você parar sobre o ícone. */
 .topbar .nav-item:hover .nav-label,
 .topbar .nav-item:focus-visible .nav-label {
-  max-width: 160px;
   opacity: 1;
-  margin-left: 10px;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 0.16s ease 0.35s, transform 0.16s ease 0.35s, visibility 0s linear 0.35s;
+}
+
+/* Ícones da direita: etiqueta ancorada pela borda direita. Centralizada, a do
+   último item vazaria da janela e criaria rolagem horizontal. */
+.topbar-actions .nav-item .nav-label {
+  left: auto;
+  right: 0;
+  transform: translateX(0) translateY(-4px);
+}
+
+.topbar-actions .nav-item:hover .nav-label,
+.topbar-actions .nav-item:focus-visible .nav-label {
+  transform: translateX(0) translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .topbar .nav-item .nav-label {
-    transition: none;
+  /* mantém o atraso (é o que evita o efeito estroboscópico), tira o movimento */
+  .topbar .nav-item .nav-label,
+  .topbar .nav-item:hover .nav-label,
+  .topbar .nav-item:focus-visible .nav-label {
+    transform: translateX(-50%);
+  }
+  .topbar-actions .nav-item .nav-label,
+  .topbar-actions .nav-item:hover .nav-label,
+  .topbar-actions .nav-item:focus-visible .nav-label {
+    transform: translateX(0);
   }
 }
 
