@@ -217,7 +217,7 @@ Backlog priorizado. Cada item aponta a regra que viola. Pagar de cima para baixo
 
 **P0 (commit `82bc273`, assets 1.26.1):** os 6 `supabase_*.sql` da raiz congelados com aviso no topo e README corrigido (mandava rodar `supabase_rls.sql`, que regredia a segurança); headers de segurança no `vercel.json`; `Storage._cloudWrite` acaba com a perda silenciosa de imóveis/clientes/financeiro/perfil; `Storage.clearAll()` fecha o vazamento de cache entre contas; `termos.html` realinhado a 30 dias.
 
-**P1 (commits `9e26b21` e seguinte, assets 1.27.0):** `Utils.updateContractPreview` elimina a duplicação de ~80 linhas entre editor e inquilino; `generateMonthlyCharges` passa a usar a regra única de "ativo" (`Utils.getContractStatus`); `Utils.parseMoneyBRL` substitui 4 parsers e `Utils.applyCEPToInput` substitui 3 fluxos de CEP; rotas blindadas e `#import` promovida a rota normal; `supabase/migrations/001_baseline.sql` + `supabase/verificacao.sql` estabelecem o regime de migrations (R4 passa a valer).
+**P1 (commits `9e26b21` e `5a12fc2`, assets 1.27.1):** `Utils.updateContractPreview` elimina a duplicação de ~80 linhas entre editor e inquilino; `generateMonthlyCharges` passa a usar a regra única de "ativo" (`Utils.getContractStatus`); `Utils.parseMoneyBRL` substitui 4 parsers e `Utils.applyCEPToInput` substitui 3 fluxos de CEP; rotas blindadas e `#import` promovida a rota normal; `supabase/migrations/001_baseline.sql` + `supabase/verificacao.sql` estabelecem o regime de migrations (R4 passa a valer).
 
 > **Pendente de validação em produção:** o baseline é fiel ao que os SQL congelados descrevem, mas não foi executado contra o banco real. Rode `supabase/verificacao.sql` no painel para confirmar; qualquer divergência vira migration `002`.
 
