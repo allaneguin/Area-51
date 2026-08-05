@@ -14,7 +14,17 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-05
 
-Regime de migrations (P1 #10 — fecha o backlog P1; assets: 1.27.0 → **1.27.1**):
+Rodada P2 + migration 002 (assets: 1.27.1 → **1.28.0**; landing 2.0.2 → 2.0.3):
+
+- **Admin não lê mais `cloud_key`** (`supabase/migrations/002`): a política de leitura do admin liberava a tabela `contracts` inteira, incluindo a chave AES dos links. Isso não é só mais um dado pessoal — é credencial: com `cloud_id` + `cloud_key` qualquer um chama `get_tenant_link` (executável por anônimo) de fora do sistema e decifra o conteúdo, sem sessão. Agora o painel lê por `admin_list_contracts()`, que devolve só as colunas de supervisão. **Rode a migration ANTES de publicar o JS** — nessa ordem o painel falha para o lado seguro. Não dava para resolver com permissão por coluna: o próprio locador precisa ler o `cloud_key` dele para regerar links, e ambos são o mesmo papel no banco.
+- **Termos de uso corrigidos num ponto factualmente falso**: a cláusula 5 afirmava que a chave de decifragem "não é armazenada por nós", quando ela é gravada junto ao contrato do locador (é o que permite reabrir e regerar o link). O texto agora descreve o alcance real da criptografia — protege contra a exposição isolada da tabela de links, e **não** é ponta a ponta. Mesma correção no README.
+- **CSS fora do JavaScript** (`css/auth.css`): as 141 linhas de estilo que viviam numa string dentro do `auth.js` viraram arquivo. Efeito colateral revelador — como esse CSS era invisível para qualquer análise de folhas de estilo, a auditoria tinha concluído que a fonte Instrument Serif era carregada à toa; ela é usada justamente ali, na tela de login.
+- **`fonts.css` por `<link>` em vez de `@import`**: entra no cache-busting (antes trocar uma fonte nunca chegava a quem já tinha visitado) e para de serializar o download, que atrasava o primeiro texto na tela. De quebra, some o import duplicado no app.
+- **`npm test`** roda os 5 checks de uma vez, com CI no GitHub Actions a cada push e PR. O `package.json` não traz dependência nenhuma — o projeto continua sem build.
+- **Código morto removido**: `Utils.contractRow` (abstração criada e nunca usada) e `Utils.escapeHtml` (apelido sem chamador). O fluxo legado base64 **ficou**: não é código morto, é a mensagem que explica ao usuário por que um link antigo não abre mais.
+- **README reescrito**: descrevia um sistema menor do que o que existe — sem os módulos de Imóveis/Clientes/Financeiro, sem o painel de admin e afirmando que "não há assinatura eletrônica", quando há assinatura eletrônica simples com trilha de auditoria (o que não há é assinatura qualificada ICP-Brasil).
+
+Regime de migrations (P1 #10 — fecha o backlog P1; assets: 1.27.0 → 1.27.1):
 
 - **`supabase/migrations/001_baseline.sql`**: retrato do banco de produção, consolidando o que os 6 SQL congelados deixaram espalhado e divergente. Registra `tenant_links.id` como **TEXT** — o DDL histórico dizia `uuid` e foi exatamente essa divergência que derrubou o envio do inquilino em produção. Serve para provisionar projeto novo; em produção já está aplicado, não precisa rodar. O e-mail do admin ficou de fora de propósito (é dado, não estrutura: versionado, daria admin a quem tivesse aquele endereço num projeto novo) — o comando está comentado no fim do arquivo.
 - **Raiz = histórico congelado, `supabase/` = executável.** `supabase_verificacao.sql` virou `supabase/verificacao.sql`; convenção de migrations documentada em `supabase/README.md` (numeradas, idempotentes, nunca editadas depois de aplicadas, verificação depois de cada uma).

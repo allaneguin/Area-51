@@ -101,8 +101,12 @@
     <h2>5. Funcionamento do Link Seguro</h2>
     <ul>
       <li>O conteúdo da minuta enviada ao Inquilino é <b>criptografado no navegador</b> (AES-GCM) antes
-        de ser transmitido; nossos servidores armazenam apenas o texto cifrado. A chave de decifragem
-        viaja somente na URL do link e não é armazenada por nós.</li>
+        de ser transmitido; a tabela de links armazena apenas o texto cifrado.</li>
+      <li>A chave de decifragem viaja na URL do link e <b>também é guardada junto ao contrato do
+        Locador</b>, para que ele possa reabrir, atualizar e regerar o link. Portanto, a criptografia
+        protege o conteúdo contra a exposição isolada da tabela de links — ela <b>não</b> impede o
+        acesso de quem tenha acesso legítimo ou indevido à base de dados como um todo, nem constitui
+        criptografia de ponta a ponta.</li>
       <li>Por consequência, <b>quem possuir o link completo tem acesso ao conteúdo</b>. Trate o link como
         informação confidencial.</li>
       <li>Links expiram automaticamente em <b>30 (trinta) dias</b> a contar da criação, podendo ser
@@ -232,8 +236,8 @@
 
     <h2>16. Segurança e retenção</h2>
     <ul>
-      <li>Minutas enviadas por Link Seguro são cifradas no navegador (AES-GCM); o servidor guarda apenas
-        o conteúdo cifrado e os links expiram em 30 dias.</li>
+      <li>Minutas enviadas por Link Seguro são cifradas no navegador (AES-GCM) e os links expiram em
+        30 dias. Sobre o alcance e os limites dessa criptografia, ver a cláusula 5.</li>
       <li>Os demais dados são protegidos por autenticação, políticas de isolamento por usuário
         (Row-Level Security) e criptografia em trânsito (TLS) e em repouso pelo provedor.</li>
       <li><b>Retenção:</b> dados da conta e contratos são mantidos enquanto a conta estiver ativa.

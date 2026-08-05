@@ -1,0 +1,9 @@
+{
+  "name": "meus-imoveis",
+  "version": "1.28.0",
+  "private": true,
+  "description": "Geração e gestão de contratos de locação. Sem build e sem dependências: este arquivo existe só para dar um `npm test` aos checks de js/*.test.js.",
+  "scripts": {
+    "test": "node js/dashboard.test.js && node js/prazo.test.js && node js/properties.test.js && node js/seguranca.test.js && node js/superadmin.test.js"
+  }
+}

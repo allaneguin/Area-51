@@ -2,7 +2,7 @@
    LANDING PAGE — Meus Imóveis
    Página inicial pública. Independente do app (app.html).
    ═══════════════════════════════════════════════════════ */
-@import url('fonts.css');
+/* fonts.css vem por <link> no index.html — ver nota em index.css. */
 
 .lp {
   --ink: #101216;

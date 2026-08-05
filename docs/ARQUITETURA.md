@@ -106,7 +106,7 @@ Parâmetro ausente ou inválido redireciona (editor) ou mostra erro (inquilino);
 
 **A chave anon é pública; toda a segurança é RLS.** O cliente é fail-closed (sem SDK, não abre o painel).
 
-- **Papéis: dois, não três.** Locador comum (RLS por `auth.uid()`) e admin (claim `role='admin'` em `app_metadata` — `user_metadata` não autoriza, e isso é coberto por teste). "Superadmin" é só o nome do módulo. Admin tem `SELECT` global apenas em `contracts` e `profiles` (não enxerga o ERP) e é somente leitura.
+- **Papéis: dois, não três.** Locador comum (RLS por `auth.uid()`) e admin (claim `role='admin'` em `app_metadata` — `user_metadata` não autoriza, e isso é coberto por teste). "Superadmin" é só o nome do módulo. O admin é somente leitura: lê `profiles` por política e os contratos pela função `admin_list_contracts()`, que **não devolve `cloud_key`** (migration 002). Não enxerga o ERP.
 - **`tenant_links`: RLS ligada com ZERO políticas** + revoke geral. Todo acesso passa pelas 3 RPCs `SECURITY DEFINER`: `create_tenant_link` (só autenticado, teto 512 KB, 100 links/dia), `set_tenant_link` (anon, só não-finalizado, encurta expiração ao assinar), `get_tenant_link` (anon, expurga expirados, lê finalizado de propósito para reabertura/importação).
 - **Link do inquilino:** chave de 16 caracteres CSPRNG (~95 bits, zero-padded para AES-256), IV de 12 bytes por operação, transporte no fragmento da URL (`#tenant?id=&key=`) — não vai em request nem Referer. `id`+`key` funcionam como bearer token: o banco cobra o id, o AES cobra a chave. A chave fica **em claro** em `contracts.cloud_key` (risco aceito e registrado na spec de 30/07).
 - **Todo dado vindo do inquilino é hostil.** Duas camadas anti-XSS, ambas testadas: sanitização na fronteira (`CloudDB._sanitizeDeep` dentro do `decrypt` — `data:` que não seja imagem aprovada vira string vazia) + `Utils.imgSeguro`/`Utils.esc` nos pontos de exibição.
@@ -120,14 +120,14 @@ O que é executável vive em `supabase/`: `migrations/001_baseline.sql` (retrato
 
 ## 9. CSS, tokens e assets
 
-- 10 arquivos, ~5.700 linhas, "um por área" com vazamentos: `dashboard.css` funciona como segunda `components.css` (`.stats-grid` é usada por 5 módulos); impressão espalhada em 5 blocos; `.preview-document` tem dois donos.
+- 11 arquivos, "um por área" com vazamentos: `dashboard.css` funciona como segunda `components.css` (`.stats-grid` é usada por 5 módulos); impressão espalhada em 5 blocos; `.preview-document` tem dois donos.
 - **Tokens duplicados em três lugares sem ligação:** `index.css` (`:root`, app), `landing.css` (escopo `.lp`) e o `<style>` inline de `termos.html`. Trocar a marca exige editar os três.
 - Dark mode: tokens em `[data-theme="dark"]` + anti-FOUC inline; as folhas de área funcionam só por herança de token (disciplina boa). Landing e termos não têm dark mode (deliberado e acidental, respectivamente).
-- **Cache-busting manual:** 25 ocorrências de `?v=` no `app.html` (hoje `1.27.1`) + track independente na landing (`2.0.2`). `fonts.css` e os `.woff2` ficam **fora** do esquema (entram por `@import` sem `?v=`). Falha silenciosa e assimétrica: esquecer um bump deixa usuário antigo com asset velho.
+- **Cache-busting manual:** 27 ocorrências de `?v=` no `app.html` (hoje `1.28.0`) + track independente na landing (`2.0.3`). Falha silenciosa e assimétrica: esquecer um bump deixa usuário antigo com asset velho. Os `.woff2` seguem sem versão, mas mudam de fato ~nunca e agora são invalidados junto com `fonts.css`.
 
 ## 10. Testes
 
-5 arquivos standalone (`node js/<arquivo>.test.js`, sem framework — leem o fonte e avaliam com `new Function`). Todos passam hoje. Cobrem funções puras (prazo, datas, dinheiro, status), a superfície de segurança (anti-XSS nas duas camadas, `isAdmin`) e, desde 05/08, `clearAll` e a regra de cobrança mensal. **Zero cobertura nos 3 maiores arquivos** (editor, tenant, auth — ~2.100 linhas somadas). Sem `npm test`, sem CI.
+5 arquivos standalone rodados por **`npm test`** (sem framework e sem dependência — leem o fonte e avaliam com `new Function`), com CI no GitHub Actions a cada push e PR. Todos passam hoje. Cobrem funções puras (prazo, datas, dinheiro, status), a superfície de segurança (anti-XSS nas duas camadas, `isAdmin`) e, desde 05/08, `clearAll` e a regra de cobrança mensal. **Zero cobertura nos 3 maiores arquivos** (editor, tenant, auth — ~2.100 linhas somadas). Sem `npm test`, sem CI.
 
 ---
 
@@ -221,25 +221,23 @@ Backlog priorizado. Cada item aponta a regra que viola. Pagar de cima para baixo
 
 **Validado em produção (2026-08-05):** `supabase/verificacao.sql` rodado no SQL Editor — as 12 garantias conferidas, baseline confirmado fiel ao banco real.
 
-## P2 — arrumação
+**P2 e migration 002 (commit da rodada de 05/08, assets 1.28.0):** CSS do `auth.js` extraído para `css/auth.css` (#12); código morto removido (#13); README reescrito e fiel (#15); `npm test` + CI no GitHub Actions (#16); `fonts.css` passa a ser `<link>` versionado em vez de `@import` (#17). Migration `002` tira `cloud_key` do alcance do admin.
 
-| # | Dívida | Regra |
-|---|---|---|
-| 11 | Dividir `utils.js` (6 responsabilidades) em núcleo puro vs UI compartilhada — dá para fazer sem build, são só arquivos a mais na lista do `app.html`. | R2 |
-| 12 | Tirar as 141 linhas de CSS em string e a animação de canvas de dentro de `auth.js` (CSS vai para arquivo). | R6.4 |
-| 13 | Código morto: `Utils.contractRow`, `Utils.escapeHtml`, fluxo legado base64. Deletar. | — |
-| 14 | `dashboard.css` é uma segunda `components.css` disfarçada (`.stats-grid` usada por 5 módulos): mover o que é compartilhado. | R6.2 |
-| 15 | README ainda desatualizado no nº de modelos (diz 2, são 3), na árvore de estrutura (falta o ERP: properties/clients/financial/superadmin) e em "offline-first". As partes de SQL e retenção já foram corrigidas. | R9.3 |
-| 16 | `test.ps1`/`package.json` mínimo com `npm test` rodando os 5 arquivos; depois CI (GitHub Actions de 10 linhas). | R8.2 |
-| 17 | Fontes: `fonts.css` fora do cache-busting; Instrument Serif (~43 KB) baixada no app inteiro para um único `<em>`. Incluir no esquema de versão e carregar a serif só onde usa. | R7 |
-| 18 | Headers de cache na Vercel substituindo o `?v=` manual (fim das 25 edições por release). | R7.3 |
+## P2 — o que sobrou
 
-## P3 — decisões de produto (não são tarefas técnicas; exigem decisão do time)
+| # | Dívida | Regra | Por que ficou |
+|---|---|---|---|
+| 11 | Dividir `utils.js` (~780 linhas, 6 responsabilidades) em núcleo puro vs UI compartilhada. | R2 | **Adiado por risco.** Todo call site usa `Utils.x`; separar em dois objetos seria um diff de centenas de linhas sobre código sem cobertura de teste. O ganho é organizacional, o risco é funcional. Fazer junto com a primeira necessidade real de mexer ali. |
+| 14 | `dashboard.css` é uma segunda `components.css` disfarçada (`.stats-grid` usada por 5 módulos): mover o que é compartilhado. | R6.2 | Mover regras entre folhas muda a ordem da cascata; sem teste visual, o risco não compensa fora de uma mudança de layout já planejada. |
+| 18 | Headers de cache na Vercel substituindo o `?v=` manual. | R7.3 | Mexer em semântica de cache de um site em produção sem poder observar o CDN é a troca errada. Fazer quando houver um deploy acompanhado. |
 
-- **Landing promete o que não existe**: "assine cada contrato" (não há assinatura eletrônica qualificada, há pad manuscrito), "Planos"/"grátis" (não há billing), "PDF com um clique" (é `window.print`). Ou o texto desce ao produto, ou entra roadmap para o produto subir ao texto.
-- **Admin não enxerga o ERP** (sem políticas de admin em properties/clients/financial_records) — é intencional ou lacuna?
-- **`cloud_key` em claro no banco** (risco aceito na spec de 30/07) — reavaliar quando houver assinatura com valor jurídico.
-- **termos.html é minuta** com `[PREENCHER]` (razão social, CNPJ, DPO) — pendência jurídica, não técnica.
+## P3 — decisões de produto (exigem decisão do time)
+
+- **`termos.html` é minuta** com `[PREENCHER]`: razão social, CNPJ, nome do DPO e e-mail de contato. É a maior pendência aberta — política de privacidade de sistema que já processa CPF, RG, selfie, IP e GPS de terceiros. Só vocês têm esses dados.
+- **Assinatura**: o produto entrega assinatura eletrônica **simples** (manuscrita + aceite + trilha de IP/GPS/hash/selfie), válida entre as partes que a aceitam (MP 2.200-2, art. 10 §2), mas **não qualificada (ICP-Brasil)**. Decisão: fica assim, ou entra integração com provedor (ZapSign, Clicksign, D4Sign)? Construir ICP-Brasil internamente não é o caminho.
+- **Landing**: "Planos" é uma âncora para um CTA sem nenhum plano, e "grátis" hoje é verdade (não há cobrança). Não é falso, é vago — alinhar quando houver decisão de monetização.
+- **Admin não enxerga o ERP** (sem políticas de admin em properties/clients/financial_records) — intencional ou lacuna?
+- **`cloud_key` em claro no banco**: mitigado pela migration 002 (admin não lê mais), mas continua legível por quem tenha acesso à base. Cifrar em repouso exigiria uma chave fora do banco — projeto próprio, não uma linha de SQL.
 
 ---
 

@@ -217,10 +217,6 @@ const Utils = {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   },
-  escapeHtml(v) {
-    return Utils.esc(v);
-  },
-
   // ── Imagem vinda de dado não confiável ──────────────────────────────────
   // Regra canônica: só as três formas que o próprio fluxo gera (canvas
   // .toDataURL e câmera). SVG fica de fora de propósito — carrega script.
@@ -480,29 +476,6 @@ const Utils = {
     } else {
       return { label: 'Ativo', class: 'badge-status-active' };
     }
-  },
-
-  // ── Linha de contrato — mesma estrutura no dashboard e na gestão de contratos ──
-  contractRow(c, { icon, title, meta, aside, onDelete }) {
-    const status = Utils.getContractStatus(c);
-    return `
-      <div class="contract-row" onclick="window.location.hash='#editor?id=${c.id}'">
-        <div class="contract-row-icon">${icon}</div>
-        <div class="contract-row-info">
-          <div class="contract-row-name">
-            ${title}
-            <span class="badge-status ${status.class}">${status.label}</span>
-          </div>
-          <div class="contract-row-meta">${meta}</div>
-        </div>
-        <div class="contract-row-date">
-          ${aside}
-          <button class="btn-icon contract-row-delete" title="Excluir contrato"
-            onclick="event.stopPropagation(); ${onDelete}">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-          </button>
-        </div>
-      </div>`;
   },
 
   // ── Dinheiro BRL mascarado → número ──

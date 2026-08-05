@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════
    GERADOR DE CONTRATOS — Premium Experience
    ═══════════════════════════════════════════════════════ */
-@import url('fonts.css');
+/* fonts.css é carregado por <link> no HTML (fora daqui): @import serializava o
+   download e escapava do cache-busting por querystring. */
 
 :root {
   /* Colors */

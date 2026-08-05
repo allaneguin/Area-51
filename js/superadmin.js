@@ -74,11 +74,11 @@ const SuperAdmin = {
     `;
 
     try {
-      // Sem filtro de dono: as políticas *_select_admin liberam a leitura global
-      // só para o admin. cloud_key fica de fora (é a chave dos links dos inquilinos).
+      // Contratos vêm por RPC, não da tabela: a função devolve só as colunas de
+      // supervisão e NUNCA cloud_key, que é a credencial dos links do inquilino
+      // (ver supabase/migrations/002). Perfis seguem por política de admin.
       const [{ data: contracts, error: e1 }, { data: profiles, error: e2 }] = await Promise.all([
-        supabaseClient.from('contracts')
-          .select('user_id, name, fields, is_finalized, created_at, updated_at'),
+        supabaseClient.rpc('admin_list_contracts'),
         supabaseClient.from('profiles').select('id, profile_data')
       ]);
       if (e1) throw e1;
@@ -89,7 +89,7 @@ const SuperAdmin = {
       let users = [];
       const { data: usersData, error: e3 } = await supabaseClient.rpc('admin_list_users');
       if (e3) {
-        console.warn('admin_list_users indisponível (rode supabase_admin.sql):', e3.message);
+        console.warn('admin_list_users indisponível (aplique supabase/migrations/):', e3.message);
       } else {
         users = usersData || [];
       }
@@ -102,8 +102,8 @@ const SuperAdmin = {
         <div class="empty-state glass">
           <p>Não foi possível carregar as contas: ${Utils.esc(err.message)}</p>
           <p style="font-size: 0.9rem; color: var(--text-muted); font-weight: 400;">
-            Confirme que o script supabase_admin.sql foi executado e que você
-            deslogou e logou de novo depois de receber o papel de admin.
+            Confirme que as migrations de <strong>supabase/migrations/</strong> foram
+            aplicadas e que você deslogou e logou de novo depois de receber o papel de admin.
           </p>
         </div>
       `;
@@ -209,7 +209,7 @@ const SuperAdmin = {
 
     const aviso = this.semDadosDeConta ? `
       <div style="margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--warning); background: var(--warning-bg); color: var(--warning); border-radius: var(--radius-md); font-size: 13px;">
-        E-mail e datas de acesso indisponíveis: rode a versão mais recente de <strong>supabase_admin.sql</strong> no Supabase para criar a função <strong>admin_list_users</strong>.
+        E-mail e datas de acesso indisponíveis: aplique as migrations de <strong>supabase/migrations/</strong> para criar a função <strong>admin_list_users</strong>.
       </div>` : '';
 
     container.innerHTML = `
