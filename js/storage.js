@@ -13,6 +13,33 @@ const Storage = {
   financialRecordsCache: [],
   profileCache: {},
 
+  // Troca/saída de conta: descarta TODOS os caches do usuário anterior.
+  // Zerar só parte deles deixava imóveis/clientes/financeiro de A visíveis
+  // para B se a recarga da nuvem falhasse.
+  clearAll() {
+    this.contractsCache = [];
+    this.propertiesCache = [];
+    this.clientsCache = [];
+    this.financialRecordsCache = [];
+    this.profileCache = {};
+  },
+
+  // Falha de escrita nunca é silenciosa (ARQUITETURA.md R3.1): o cache local
+  // já mudou, então o usuário precisa saber que a nuvem divergiu.
+  _cloudWrite(promise, msgErro) {
+    promise
+      .then(({ error }) => {
+        if (error) {
+          console.error(msgErro, error);
+          if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast(msgErro + ' ' + error.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(msgErro, err);
+        if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast(msgErro + ' Sem conexão — recarregue e tente de novo.', 'error');
+      });
+  },
+
   // ── Carga inicial (roda a cada login) ──
   async loadCloudData() {
     try {
@@ -237,12 +264,10 @@ const Storage = {
 
     this.profileCache = profile;
 
-    supabaseClient
-      .from('profiles')
-      .upsert({ id: App.user.id, profile_data: profile })
-      .then(({ error }) => {
-        if (error) console.error("Erro ao salvar perfil no Supabase:", error);
-      });
+    this._cloudWrite(
+      supabaseClient.from('profiles').upsert({ id: App.user.id, profile_data: profile }),
+      'O perfil NÃO foi salvo na nuvem:'
+    );
   },
 
   // ── Imóveis ──
@@ -267,9 +292,7 @@ const Storage = {
     else this.propertiesCache.push(item);
 
     if (supabaseClient && App.user) {
-      supabaseClient.from('properties').upsert(item).then(({ error }) => {
-        if (error) console.error("Erro ao salvar imóvel:", error);
-      });
+      this._cloudWrite(supabaseClient.from('properties').upsert(item), 'O imóvel NÃO foi salvo na nuvem:');
     }
     return item;
   },
@@ -277,9 +300,7 @@ const Storage = {
   deleteProperty(id) {
     this.propertiesCache = this.propertiesCache.filter(p => p.id !== id);
     if (supabaseClient && App.user) {
-      supabaseClient.from('properties').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error("Erro ao deletar imóvel:", error);
-      });
+      this._cloudWrite(supabaseClient.from('properties').delete().eq('id', id), 'O imóvel NÃO foi excluído da nuvem:');
     }
   },
 
@@ -297,9 +318,7 @@ const Storage = {
     else this.clientsCache.push(item);
 
     if (supabaseClient && App.user) {
-      supabaseClient.from('clients').upsert(item).then(({ error }) => {
-        if (error) console.error("Erro ao salvar cliente:", error);
-      });
+      this._cloudWrite(supabaseClient.from('clients').upsert(item), 'O cliente NÃO foi salvo na nuvem:');
     }
     return item;
   },
@@ -307,9 +326,7 @@ const Storage = {
   deleteClient(id) {
     this.clientsCache = this.clientsCache.filter(c => c.id !== id);
     if (supabaseClient && App.user) {
-      supabaseClient.from('clients').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error("Erro ao deletar cliente:", error);
-      });
+      this._cloudWrite(supabaseClient.from('clients').delete().eq('id', id), 'O cliente NÃO foi excluído da nuvem:');
     }
   },
 
@@ -357,9 +374,7 @@ const Storage = {
     else this.financialRecordsCache.push(item);
 
     if (supabaseClient && App.user) {
-      supabaseClient.from('financial_records').upsert(item).then(({ error }) => {
-        if (error) console.error("Erro ao salvar lançamento financeiro:", error);
-      });
+      this._cloudWrite(supabaseClient.from('financial_records').upsert(item), 'O lançamento NÃO foi salvo na nuvem:');
     }
     return item;
   },
@@ -367,9 +382,7 @@ const Storage = {
   deleteFinancialRecord(id) {
     this.financialRecordsCache = this.financialRecordsCache.filter(r => r.id !== id);
     if (supabaseClient && App.user) {
-      supabaseClient.from('financial_records').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error("Erro ao deletar lançamento financeiro:", error);
-      });
+      this._cloudWrite(supabaseClient.from('financial_records').delete().eq('id', id), 'O lançamento NÃO foi excluído da nuvem:');
     }
   },
 

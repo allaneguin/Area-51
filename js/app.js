@@ -44,8 +44,7 @@ const App = {
         // Login de outro usuário ou logout: descarta caches em memória do usuário anterior
         // (senão contratos/perfil de A poderiam renderizar para B no mesmo navegador).
         if (newUid !== this._lastUid) {
-          Storage.contractsCache = [];
-          Storage.profileCache = {};
+          Storage.clearAll();
         }
         this._lastUid = newUid;
 

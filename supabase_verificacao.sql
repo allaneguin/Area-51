@@ -1,3 +1,6 @@
+-- ✅ ESTE É O ÚNICO supabase_*.sql QUE PODE SER EXECUTADO (2026-08-05).
+-- É somente leitura: confere se o banco está no estado vigente e aponta o
+-- que faltou. Os demais estão congelados — ver docs/ARQUITETURA.md (R4).
 -- =========================================================================
 -- VERIFICAÇÃO — rode DEPOIS de supabase_seguranca.sql.
 --

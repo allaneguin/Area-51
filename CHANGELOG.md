@@ -14,6 +14,14 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-05
 
+Rodada P0 da arquitetura (assets do app: 1.26.0 → **1.26.1**):
+
+- **SQL congelados e README corrigido**: aviso de NÃO EXECUTAR no topo dos 7 `supabase_*.sql` (só `supabase_verificacao.sql`, somente leitura, continua executável) — reexecutar `schema`/`rls`/`finalize` regredia a segurança de `tenant_links`, e o README ainda mandava rodar `supabase_rls.sql`. De quebra, corrigidos no README o "DDL não versionado" (está versionado desde 21/07) e os "90 dias" de link.
+- **Headers de segurança na Vercel** (`vercel.json`): `X-Frame-Options: DENY` (o `frame-ancestors` via `<meta>` é ignorado pelos navegadores — o app estava enquadrável em iframe), `nosniff`, `Referrer-Policy` e HSTS. `Permissions-Policy` ficou de fora de propósito: o fluxo do inquilino usa câmera e GPS.
+- **Fim da perda silenciosa de dados**: falha ao salvar/excluir imóvel, cliente, lançamento ou perfil agora avisa com toast — antes só ia para o console e o dado sumia no reload. Rota única de erro (`Storage._cloudWrite`), incluindo o `.catch` de rede que essas escritas nem tinham.
+- **Vazamento de cache na troca de conta**: `Storage.clearAll()` zera os 5 caches (antes zerava só contratos e perfil — imóveis/clientes/financeiro de A podiam renderizar para B se a recarga falhasse). Com teste em `properties.test.js`.
+- **`termos.html` dizia 90 dias de expiração do link; o banco pratica 30** desde o endurecimento de 30/07. Documento jurídico realinhado ao sistema.
+
 - **Arquitetura de referência**: criado `docs/ARQUITETURA.md` — mapa fiel do sistema como é (módulos, estado, dados, segurança, CSS, deploy), regras normativas daqui pra frente (camadas, banco por migrations, invioláveis de segurança, tokens, versionamento, testes), backlog de dívidas priorizado (P0 a P3) e checklist de processo para toda mudança. Motivo: o sistema em produção vinha crescendo por mudanças ad-hoc; agora há uma linha única — mudança que contraria o documento, ou muda o documento primeiro, ou não entra. Achados críticos registrados lá: rodar `supabase_rls.sql` hoje REABRE furos de segurança (o README ainda manda rodar), Vercel sem headers HTTP (clickjacking possível), escrita silenciosamente perdível em 4 das 5 entidades, e `termos.html` prometendo retenção de 90 dias quando o banco pratica 30.
 
 ## 2026-07-30

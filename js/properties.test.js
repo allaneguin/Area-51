@@ -50,4 +50,14 @@ assert.strictEqual(r2.contratoAtivo, null);
 const r3 = PropertiesView.statusReal({ id: 'p3', status: 'Em Manutenção' });
 assert.strictEqual(r3.status, 'Em Manutenção', 'status manual preservado quando não há contrato ativo');
 
-console.log('ok — properties: vínculo imóvel/contrato + status derivado');
+// clearAll: troca de conta descarta os CINCO caches (o vazamento era zerar só 2)
+Storage.clientsCache = [{ id: 'x' }];
+Storage.profileCache = { nome: 'A' };
+Storage.clearAll();
+assert.deepStrictEqual(
+  [Storage.contractsCache, Storage.propertiesCache, Storage.clientsCache, Storage.financialRecordsCache, Storage.profileCache],
+  [[], [], [], [], {}],
+  'clearAll precisa zerar todos os caches'
+);
+
+console.log('ok — properties: vínculo imóvel/contrato + status derivado + clearAll');

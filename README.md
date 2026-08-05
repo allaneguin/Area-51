@@ -23,7 +23,7 @@ Locador                          Inquilino
    └─ imprime / salva em PDF
 ```
 
-O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navegador, com chave de 16 caracteres gerada por CSPRNG e transportada na URL. O backend armazena apenas o texto cifrado — id e chave da URL funcionam como *bearer token*. Links expiram em 90 dias e são regenerados automaticamente quando vencidos.
+O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navegador, com chave de 16 caracteres gerada por CSPRNG e transportada na URL. O backend armazena apenas o texto cifrado — id e chave da URL funcionam como *bearer token*. Links expiram em 30 dias e são regenerados automaticamente quando vencidos.
 
 ---
 
@@ -77,7 +77,7 @@ HTML, CSS e JavaScript puros — **sem framework, sem build step, sem `package.j
 `tenant_links` nunca é acessada diretamente — só pelas RPCs `create_tenant_link`, `set_tenant_link` e `get_tenant_link`.
 
 > [!WARNING]
-> A chave do Supabase em `js/supabase-config.js` é a *publishable/anon*, pública por natureza. **Toda a segurança dos dados depende das políticas de RLS estarem aplicadas.** Rode `supabase_rls.sql` antes de usar com dados reais e confirme no painel do Supabase que as políticas estão ativas.
+> A chave do Supabase em `js/supabase-config.js` é a *publishable/anon*, pública por natureza. **Toda a segurança dos dados depende das políticas de RLS estarem aplicadas.** Os `supabase_*.sql` estão **congelados como registro histórico — não os execute**: reexecutar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` **reabre furos de segurança** corrigidos em 30/07. Para conferir que as políticas vigentes estão ativas, rode apenas `supabase_verificacao.sql` (somente leitura). Ver `docs/ARQUITETURA.md`.
 
 ---
 
@@ -93,9 +93,9 @@ python -m http.server
 
 Depois acesse `index.html` (landing) ou `app.html` (aplicação).
 
-O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). O projeto precisa ter as tabelas `contracts`, `profiles` e `tenant_links` e as 3 RPCs já criadas. Depois rode `supabase_rls.sql` no SQL Editor e ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
+O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). O projeto precisa ter as 6 tabelas (`contracts`, `profiles`, `tenant_links`, `properties`, `clients`, `financial_records`) e as RPCs já criadas. Confira o estado do banco com `supabase_verificacao.sql` no SQL Editor (somente leitura) e ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
 
-> O DDL das tabelas e das RPCs **não está versionado** — `supabase_rls.sql` só aplica as políticas e assume que as estruturas já existem. Vale versionar isso antes que a configuração se perca.
+> O DDL histórico está versionado nos `supabase_*.sql`, mas eles estão **congelados — não executar** (ver aviso no topo de cada um). O baseline executável para provisionar um projeto novo (`supabase/migrations/001`) ainda não existe — dívida P1 registrada em `docs/ARQUITETURA.md`.
 
 Testes:
 

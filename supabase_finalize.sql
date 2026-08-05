@@ -1,3 +1,9 @@
+-- ⛔ CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR. ⛔
+-- Reexecutar este arquivo REGRIDE a segurança: recria set_tenant_link SEM o
+-- teto de 512 KB e SEM a retenção de 30 dias pós-assinatura introduzidos por
+-- supabase_seguranca.sql (30/07). Regras vigentes: seguranca.
+-- Mudança de banco daqui pra frente: novo arquivo em supabase/migrations/.
+-- Ver docs/ARQUITETURA.md (§8 e regra R4).
 -- ═══════════════════════════════════════════════════════════════════════
 -- Trava do link do inquilino após o envio — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════

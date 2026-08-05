@@ -1,3 +1,9 @@
+-- ⛔ CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR. ⛔
+-- Reexecutar este arquivo REGRIDE a segurança: recria as políticas antigas
+-- de tenant_links (leitura sem filtro por id, update com check true, 90 dias)
+-- que supabase_seguranca.sql (30/07) eliminou. Regras vigentes: seguranca.
+-- Mudança de banco daqui pra frente: novo arquivo em supabase/migrations/.
+-- Ver docs/ARQUITETURA.md (§8 e regra R4).
 -- ═══════════════════════════════════════════════════════════════════════
 -- Políticas de Segurança (RLS) — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════
