@@ -219,7 +219,7 @@ Backlog priorizado. Cada item aponta a regra que viola. Pagar de cima para baixo
 
 **P1 (commits `9e26b21` e `5a12fc2`, assets 1.27.1):** `Utils.updateContractPreview` elimina a duplicação de ~80 linhas entre editor e inquilino; `generateMonthlyCharges` passa a usar a regra única de "ativo" (`Utils.getContractStatus`); `Utils.parseMoneyBRL` substitui 4 parsers e `Utils.applyCEPToInput` substitui 3 fluxos de CEP; rotas blindadas e `#import` promovida a rota normal; `supabase/migrations/001_baseline.sql` + `supabase/verificacao.sql` estabelecem o regime de migrations (R4 passa a valer).
 
-> **Pendente de validação em produção:** o baseline é fiel ao que os SQL congelados descrevem, mas não foi executado contra o banco real. Rode `supabase/verificacao.sql` no painel para confirmar; qualquer divergência vira migration `002`.
+**Validado em produção (2026-08-05):** `supabase/verificacao.sql` rodado no SQL Editor — as 12 garantias conferidas, baseline confirmado fiel ao banco real.
 
 ## P2 — arrumação
 
