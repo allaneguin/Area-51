@@ -12,6 +12,10 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ---
 
+## 2026-08-05
+
+- **Arquitetura de referência**: criado `docs/ARQUITETURA.md` — mapa fiel do sistema como é (módulos, estado, dados, segurança, CSS, deploy), regras normativas daqui pra frente (camadas, banco por migrations, invioláveis de segurança, tokens, versionamento, testes), backlog de dívidas priorizado (P0 a P3) e checklist de processo para toda mudança. Motivo: o sistema em produção vinha crescendo por mudanças ad-hoc; agora há uma linha única — mudança que contraria o documento, ou muda o documento primeiro, ou não entra. Achados críticos registrados lá: rodar `supabase_rls.sql` hoje REABRE furos de segurança (o README ainda manda rodar), Vercel sem headers HTTP (clickjacking possível), escrita silenciosamente perdível em 4 das 5 entidades, e `termos.html` prometendo retenção de 90 dias quando o banco pratica 30.
+
 ## 2026-07-30
 
 - **Este changelog**: criado para o time ter uma referência única de tudo que já foi feito no sistema, atualizado a cada rodada de mudanças daqui em diante — de qualquer pessoa do time.
