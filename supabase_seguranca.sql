@@ -1,7 +1,7 @@
 -- ⛔ CONGELADO (2026-08-05) — este arquivo é a VERSÃO VIGENTE das regras de
 -- tenant_links, já aplicada em produção em 30/07. Não reexecutar por rotina.
 -- Mudança de banco daqui pra frente: novo arquivo em supabase/migrations/.
--- Para conferir o banco, rode supabase_verificacao.sql (somente leitura).
+-- Para conferir o banco, rode supabase/verificacao.sql (somente leitura).
 -- Ver docs/ARQUITETURA.md (§8 e regra R4).
 -- =========================================================================
 -- CERCA DE SEGURANÇA — rode este arquivo inteiro no SQL Editor do Supabase.

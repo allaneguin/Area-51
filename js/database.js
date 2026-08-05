@@ -129,8 +129,9 @@ const CloudDB = {
   // ID aleatório (não-enumerável) para o link — sempre via CSPRNG (getRandomValues/randomUUID)
   _randomId() {
     if (window.crypto.randomUUID) return window.crypto.randomUUID();
-    // Fallback (contexto não-seguro / Safari antigo): precisa ser um UUID válido —
-    // create_tenant_link recebe `p_id uuid` e rejeita hex sem hífens.
+    // Fallback (contexto não-seguro / Safari antigo): mantém o formato UUID.
+    // A coluna tenant_links.id é TEXT, mas contracts.cloud_id é uuid — é o
+    // cloud_id que exige o formato válido (ver supabase/migrations/001).
     const b = window.crypto.getRandomValues(new Uint8Array(16));
     b[6] = (b[6] & 0x0f) | 0x40; // versão 4
     b[8] = (b[8] & 0x3f) | 0x80; // variante RFC 4122

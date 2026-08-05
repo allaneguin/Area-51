@@ -79,17 +79,17 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 
 ## 4. Roteamento
 
-Hash routing em `app.js`: `#dashboard` (default), `#properties`, `#clients`, `#financial`, `#templates`, `#contracts`, `#editor?id=|template=`, `#admin`, `#superadmin`, `#tenant?id=&key=` e `#import?id=&key=` (fora da tabela de rotas, tratado inline). Guardas em ordem: recuperação de senha → login (`#tenant` é a única rota pública) → modo tenant (esconde o shell).
+Hash routing em `app.js`: `#dashboard` (default), `#properties`, `#clients`, `#financial`, `#templates`, `#contracts`, `#editor?id=|template=`, `#admin`, `#superadmin`, `#tenant?id=&key=` e `#import?id=&key=` (rota normal, despachada para `App.handleImport`). Guardas em ordem: recuperação de senha → login (`#tenant` é a única rota pública) → modo tenant (esconde o shell).
 
-Fragilidades conhecidas: `#editor` sem parâmetro estoura `TypeError` (tela branca); `#tenant` com parâmetro inválido renderiza nada; hash desconhecido cai no dashboard sem aviso.
+Parâmetro ausente ou inválido redireciona (editor) ou mostra erro (inquilino); hash desconhecido cai no dashboard sem aviso — aceito, não é erro do usuário.
 
 ## 5. Estado e sincronização
 
 **Não é offline-first** (apesar do histórico). O modelo real é: **Supabase é a fonte da verdade; cache em memória hidratado uma vez por sessão** (`Storage.loadCloudData` a cada troca real de usuário); **escrita otimista fire-and-forget** — o cache muda primeiro, a promise do Supabase roda sem `await`, sem rollback.
 
-- Erros de escrita: **contratos** avisam com toast; **imóveis, clientes, financeiro e perfil** só logam no console (perda silenciosa).
+- Erros de escrita passam todos por `Storage._cloudWrite`: falha vira toast, nunca só `console.error`.
 - `localStorage`: apenas `theme`, `perfil_pendente` (cadastro sem sessão) e `tenant_draft_<id>` (rascunho do inquilino, sem assinatura/selfie de propósito).
-- Na troca de conta, `app.js` zera só `contractsCache` e `profileCache` — os outros três caches sobrevivem se a recarga falhar (vazamento entre contas).
+- Na troca de conta, `App` chama `Storage.clearAll()` — os 5 caches vão junto.
 
 ## 6. Modelo de dados
 
@@ -97,10 +97,10 @@ Fragilidades conhecidas: `#editor` sem parâmetro estoura `TypeError` (tela bran
 |---|---|---|
 | `contracts` | Metadados tipados + **`fields jsonb`, o blob central**: dados das partes, valores, prazos, `property_id`, assinaturas, selfie, trilha de aceite (IP/GPS/hash/UA), reajustes | `id text` gerado no cliente |
 | `profiles` | `profile_data jsonb` (perfil inteiro como blob) | `id uuid` = `auth.users.id` |
-| `tenant_links` | `encrypted_payload` (AES-GCM, ≤ 512 KB), `finalized`, `expires_at` (30 dias), `created_by` | `id text` **no banco** (o DDL versionado diz `uuid` — está errado) |
+| `tenant_links` | `encrypted_payload` (AES-GCM, ≤ 512 KB), `finalized`, `expires_at` (30 dias), `created_by` | `id text` guardando uuid gerado por CSPRNG no cliente |
 | `properties`, `clients`, `financial_records` | ERP com **colunas tipadas** (não JSON) | `id text` gerado no cliente |
 
-**Vínculos apenas lógicos (sem FK):** contrato→imóvel via `fields->>'property_id'`; `financial_records.contract_id` é texto solto; cliente↔contrato casa por CPF/CNPJ; `contracts.cloud_id` é `uuid` apontando para `tenant_links.id` que é `text` (join impossível). Únicas FKs reais: `user_id`/`created_by` → `auth.users` com cascade.
+**Vínculos apenas lógicos (sem FK):** contrato→imóvel via `fields->>'property_id'`; `financial_records.contract_id` é texto solto; cliente↔contrato casa por CPF/CNPJ; `contracts.cloud_id` é `uuid` e `tenant_links.id` é `text` — convivem porque o cliente sempre gera uuid válido, mas o join em SQL exige `::text`. Únicas FKs reais: `user_id`/`created_by` → `auth.users` com cascade.
 
 ## 7. Segurança
 
@@ -110,22 +110,24 @@ Fragilidades conhecidas: `#editor` sem parâmetro estoura `TypeError` (tela bran
 - **`tenant_links`: RLS ligada com ZERO políticas** + revoke geral. Todo acesso passa pelas 3 RPCs `SECURITY DEFINER`: `create_tenant_link` (só autenticado, teto 512 KB, 100 links/dia), `set_tenant_link` (anon, só não-finalizado, encurta expiração ao assinar), `get_tenant_link` (anon, expurga expirados, lê finalizado de propósito para reabertura/importação).
 - **Link do inquilino:** chave de 16 caracteres CSPRNG (~95 bits, zero-padded para AES-256), IV de 12 bytes por operação, transporte no fragmento da URL (`#tenant?id=&key=`) — não vai em request nem Referer. `id`+`key` funcionam como bearer token: o banco cobra o id, o AES cobra a chave. A chave fica **em claro** em `contracts.cloud_key` (risco aceito e registrado na spec de 30/07).
 - **Todo dado vindo do inquilino é hostil.** Duas camadas anti-XSS, ambas testadas: sanitização na fronteira (`CloudDB._sanitizeDeep` dentro do `decrypt` — `data:` que não seja imagem aprovada vira string vazia) + `Utils.imgSeguro`/`Utils.esc` nos pontos de exibição.
-- **CSP** em `<meta>` no `app.html`: `unsafe-inline` é consequência estrutural dos handlers inline; o valor real está em `connect-src`/`form-action`. `frame-ancestors` via `<meta>` é **ignorado pelo navegador** e a Vercel não envia headers — hoje não há proteção contra clickjacking (dívida P0).
+- **CSP** em `<meta>` no `app.html`: `unsafe-inline` é consequência estrutural dos handlers inline; o valor real está em `connect-src`/`form-action`. `frame-ancestors` via `<meta>` é **ignorado pelo navegador** — quem protege contra clickjacking é o `X-Frame-Options: DENY` enviado pela Vercel (`vercel.json`), junto com `nosniff`, `Referrer-Policy` e HSTS.
 
-## 8. SQL — estado perigoso
+## 8. SQL — histórico congelado, migrations daqui pra frente
 
-Sete arquivos `supabase_*.sql` versionados, **com definições conflitantes do mesmo objeto**. A versão vigente de cada coisa é a de `supabase_seguranca.sql` (30/07). Consequência crítica: **rodar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` hoje REGRIDE a segurança** (reabre enumeração/escrita anônima ou derruba o teto de 512 KB e a retenção de 30 dias) — **e o README ainda manda rodar `supabase_rls.sql`**. `supabase_verificacao.sql` (12 checagens) pega parte das regressões, não todas. Não há migrations ordenadas nem registro do que foi aplicado onde.
+Os seis `supabase_*.sql` da raiz têm **definições conflitantes do mesmo objeto** — rodar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` REGREDIRIA a segurança (reabre enumeração/escrita anônima, ou derruba o teto de 512 KB e a retenção de 30 dias). Por isso estão **congelados**, cada um com aviso no topo, e servem só como registro histórico.
+
+O que é executável vive em `supabase/`: `migrations/001_baseline.sql` (retrato do banco em 05/08, com `tenant_links.id text` — o DDL histórico dizia `uuid` e isso já derrubou produção) e `verificacao.sql` (12 checagens, somente leitura). O banco passa a ser a soma das migrations, na ordem; convenção em `supabase/README.md`.
 
 ## 9. CSS, tokens e assets
 
 - 10 arquivos, ~5.700 linhas, "um por área" com vazamentos: `dashboard.css` funciona como segunda `components.css` (`.stats-grid` é usada por 5 módulos); impressão espalhada em 5 blocos; `.preview-document` tem dois donos.
 - **Tokens duplicados em três lugares sem ligação:** `index.css` (`:root`, app), `landing.css` (escopo `.lp`) e o `<style>` inline de `termos.html`. Trocar a marca exige editar os três.
 - Dark mode: tokens em `[data-theme="dark"]` + anti-FOUC inline; as folhas de área funcionam só por herança de token (disciplina boa). Landing e termos não têm dark mode (deliberado e acidental, respectivamente).
-- **Cache-busting manual:** 25 ocorrências de `?v=1.26.0` no `app.html` + track independente `2.0.2` na landing. `fonts.css` e os `.woff2` ficam **fora** do esquema (entram por `@import` sem `?v=`). Falha silenciosa e assimétrica: esquecer um bump deixa usuário antigo com asset velho.
+- **Cache-busting manual:** 25 ocorrências de `?v=` no `app.html` (hoje `1.27.1`) + track independente na landing (`2.0.2`). `fonts.css` e os `.woff2` ficam **fora** do esquema (entram por `@import` sem `?v=`). Falha silenciosa e assimétrica: esquecer um bump deixa usuário antigo com asset velho.
 
 ## 10. Testes
 
-5 arquivos standalone (`node js/<arquivo>.test.js`, sem framework — leem o fonte e avaliam com `new Function`). Todos passam hoje. Cobrem bem funções puras (prazo, datas, dinheiro, status) e a superfície de segurança (anti-XSS nas duas camadas, `isAdmin`). **Zero cobertura nos 3 maiores arquivos** (editor, tenant, auth — 2.147 linhas somadas). Sem `npm test`, sem CI.
+5 arquivos standalone (`node js/<arquivo>.test.js`, sem framework — leem o fonte e avaliam com `new Function`). Todos passam hoje. Cobrem funções puras (prazo, datas, dinheiro, status), a superfície de segurança (anti-XSS nas duas camadas, `isAdmin`) e, desde 05/08, `clearAll` e a regra de cobrança mensal. **Zero cobertura nos 3 maiores arquivos** (editor, tenant, auth — ~2.100 linhas somadas). Sem `npm test`, sem CI.
 
 ---
 
@@ -164,10 +166,10 @@ Supabase é a fonte da verdade; o cache é derivado e descartável. Três obriga
 
 ## R4 — Banco de dados
 
-1. **Os 7 `supabase_*.sql` atuais estão CONGELADOS** — são registro histórico, nunca mais rodam. Um comentário de aviso no topo de cada um.
+1. **Os `supabase_*.sql` da raiz estão CONGELADOS** — registro histórico, nunca mais rodam. Aviso no topo de cada um. Raiz = histórico; `supabase/` = executável.
 2. Toda mudança de banco daqui pra frente = **novo arquivo `supabase/migrations/NNN_descricao.sql`**, numerado, idempotente, que nunca é editado depois de aplicado. O que o banco é hoje = a soma das migrations.
-3. A migration `001` será o **baseline**: o estado real atual do banco (com `tenant_links.id text`, corrigindo o DDL histórico).
-4. `supabase_verificacao.sql` (movido para `supabase/verificacao.sql`) roda depois de cada migration aplicada.
+3. `migrations/001_baseline.sql` é o retrato do banco em 05/08 (com `tenant_links.id text`, corrigindo o DDL histórico). Serve para provisionar projeto novo; produção já o tem aplicado.
+4. `supabase/verificacao.sql` (somente leitura) roda depois de cada migration aplicada.
 5. Coluna nova que precise de consulta, índice ou integridade → **coluna tipada**; JSON (`fields`) é só para o conteúdo do formulário do contrato. Vínculo novo entre tabelas → FK real.
 6. `id text` gerado no cliente é o padrão estabelecido — manter, não misturar com uuid novo sem migração planejada.
 
@@ -203,7 +205,7 @@ Supabase é a fonte da verdade; o cache é derivado e descartável. Três obriga
 
 1. **CHANGELOG.md a cada rodada de mudanças** (regra já vigente).
 2. Este documento é atualizado quando a linha mudar — na mesma rodada.
-3. README e termos.html não podem contradizer o sistema real (hoje contradizem — P0/P2).
+3. README e termos.html não podem contradizer o sistema real (resta o P2 #15).
 
 ---
 
@@ -211,25 +213,13 @@ Supabase é a fonte da verdade; o cache é derivado e descartável. Três obriga
 
 Backlog priorizado. Cada item aponta a regra que viola. Pagar de cima para baixo; itens independentes podem ir em rodadas separadas — **sempre uma dívida por vez, com teste e changelog**, nunca "aproveitando" para mexer em mais coisas (é exatamente o hábito que este documento existe para encerrar).
 
-## P0 — risco real agora
+## Pagas — 2026-08-05
 
-| # | Dívida | Regra | Custo estimado |
-|---|---|---|---|
-| 1 | **README manda rodar `supabase_rls.sql`**, que hoje REABRE os furos de segurança fechados em 30/07. Congelar os 7 SQL (aviso no topo de cada um) e corrigir o README. | R4, R9 | Pequeno (só docs) |
-| 2 | **Sem headers HTTP na Vercel**: `frame-ancestors` via `<meta>` é ignorado → clickjacking possível; faltam `X-Frame-Options`, `nosniff`, HSTS, `Referrer-Policy`. Bloco `headers` no `vercel.json`. | R5 | Pequeno |
-| 3 | **Falha de escrita silenciosa** em imóveis, clientes, financeiro e perfil (só `console.error`). Unificar o tratamento: toda escrita falha → toast. | R3.1 | Pequeno |
-| 4 | **Vazamento de cache na troca de conta** (só 2 dos 5 caches são zerados; se a recarga falhar, dados da conta anterior aparecem). Método único `Storage.clearAll()`. | R3.2 | Pequeno |
-| 5 | **`termos.html` promete retenção de 90 dias; o banco faz 30.** Documento jurídico desalinhado do sistema (LGPD). | R9.3 | Trivial |
+**P0 (commit `82bc273`, assets 1.26.1):** os 6 `supabase_*.sql` da raiz congelados com aviso no topo e README corrigido (mandava rodar `supabase_rls.sql`, que regredia a segurança); headers de segurança no `vercel.json`; `Storage._cloudWrite` acaba com a perda silenciosa de imóveis/clientes/financeiro/perfil; `Storage.clearAll()` fecha o vazamento de cache entre contas; `termos.html` realinhado a 30 dias.
 
-## P1 — consolidação (faz a linha valer no código)
+**P1 (commits `9e26b21` e seguinte, assets 1.27.0):** `Utils.updateContractPreview` elimina a duplicação de ~80 linhas entre editor e inquilino; `generateMonthlyCharges` passa a usar a regra única de "ativo" (`Utils.getContractStatus`); `Utils.parseMoneyBRL` substitui 4 parsers e `Utils.applyCEPToInput` substitui 3 fluxos de CEP; rotas blindadas e `#import` promovida a rota normal; `supabase/migrations/001_baseline.sql` + `supabase/verificacao.sql` estabelecem o regime de migrations (R4 passa a valer).
 
-| # | Dívida | Regra | Custo |
-|---|---|---|---|
-| 6 | **`updatePreview` duplicado (~80 linhas idênticas)** entre `editor.js` e `tenant-v2.js` — a maior duplicação do repo; mudança no texto de garantia hoje exige editar dois arquivos. Extrair função única no núcleo. | R2.5 | Médio |
-| 7 | **Duas regras conflitantes de "contrato ativo"**: `Utils.getContractStatus` (datas) vs `Storage.generateMonthlyCharges` (`isFinalized \|\| nome_locatario`) — contrato vencido gera cobrança. Uma regra só, a de `Utils`. | R2.5 | Pequeno |
-| 8 | **4 parsers de dinheiro BRL** e **3 buscas de CEP** copiadas. Um helper de cada no núcleo. | R2.5 | Pequeno |
-| 9 | **Rotas frágeis**: `#editor` sem parâmetro → TypeError tela branca; `#tenant` inválido → tela vazia; `#import` fora da tabela de rotas. Guardas de parâmetro + `#import` na tabela. | R2.4 | Pequeno |
-| 10 | **Migrations**: criar `supabase/migrations/001_baseline.sql` com o estado real do banco (incl. `tenant_links.id text`) e mover a verificação. A partir daí vale R4. | R4 | Médio |
+> **Pendente de validação em produção:** o baseline é fiel ao que os SQL congelados descrevem, mas não foi executado contra o banco real. Rode `supabase/verificacao.sql` no painel para confirmar; qualquer divergência vira migration `002`.
 
 ## P2 — arrumação
 
@@ -239,7 +229,7 @@ Backlog priorizado. Cada item aponta a regra que viola. Pagar de cima para baixo
 | 12 | Tirar as 141 linhas de CSS em string e a animação de canvas de dentro de `auth.js` (CSS vai para arquivo). | R6.4 |
 | 13 | Código morto: `Utils.contractRow`, `Utils.escapeHtml`, fluxo legado base64. Deletar. | — |
 | 14 | `dashboard.css` é uma segunda `components.css` disfarçada (`.stats-grid` usada por 5 módulos): mover o que é compartilhado. | R6.2 |
-| 15 | README desatualizado em 4+ pontos (nº de modelos, DDL "não versionado", estrutura sem os módulos de ERP, offline-first). Reescrever a partir deste documento. | R9.3 |
+| 15 | README ainda desatualizado no nº de modelos (diz 2, são 3), na árvore de estrutura (falta o ERP: properties/clients/financial/superadmin) e em "offline-first". As partes de SQL e retenção já foram corrigidas. | R9.3 |
 | 16 | `test.ps1`/`package.json` mínimo com `npm test` rodando os 5 arquivos; depois CI (GitHub Actions de 10 linhas). | R8.2 |
 | 17 | Fontes: `fonts.css` fora do cache-busting; Instrument Serif (~43 KB) baixada no app inteiro para um único `<em>`. Incluir no esquema de versão e carregar a serif só onde usa. | R7 |
 | 18 | Headers de cache na Vercel substituindo o `?v=` manual (fim das 25 edições por release). | R7.3 |

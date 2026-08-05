@@ -14,7 +14,14 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-05
 
-Rodada P1 da arquitetura — consolidação (assets do app: 1.26.1 → **1.27.0**):
+Regime de migrations (P1 #10 — fecha o backlog P1; assets: 1.27.0 → **1.27.1**):
+
+- **`supabase/migrations/001_baseline.sql`**: retrato do banco de produção, consolidando o que os 6 SQL congelados deixaram espalhado e divergente. Registra `tenant_links.id` como **TEXT** — o DDL histórico dizia `uuid` e foi exatamente essa divergência que derrubou o envio do inquilino em produção. Serve para provisionar projeto novo; em produção já está aplicado, não precisa rodar. O e-mail do admin ficou de fora de propósito (é dado, não estrutura: versionado, daria admin a quem tivesse aquele endereço num projeto novo) — o comando está comentado no fim do arquivo.
+- **Raiz = histórico congelado, `supabase/` = executável.** `supabase_verificacao.sql` virou `supabase/verificacao.sql`; convenção de migrations documentada em `supabase/README.md` (numeradas, idempotentes, nunca editadas depois de aplicadas, verificação depois de cada uma).
+- Comentário obsoleto em `database.js` que ainda dizia `create_tenant_link recebe p_id uuid` — a função recebe `text` desde 30/07. É o tipo de comentário que gera o próximo bug.
+- `docs/ARQUITETURA.md` atualizado: §8 deixa de descrever "estado perigoso", as dívidas P0/P1 saem do backlog para a seção "Pagas", e fica registrado que o baseline **ainda precisa ser validado contra produção** com `supabase/verificacao.sql`.
+
+Rodada P1 da arquitetura — consolidação (assets do app: 1.26.1 → 1.27.0):
 
 - **Preview do contrato unificado** (`Utils.updateContractPreview`): editor do locador e tela do inquilino carregavam ~80 linhas idênticas copiadas — mudar o texto de garantia exigia editar dois arquivos. Agora o documento é preenchido por uma função só; cada tela mantém apenas seu sinal de campo vazio e, no editor, o certificado.
 - **Regra única de "contrato ativo"**: `generateMonthlyCharges` tinha definição própria (`isFinalized || nome_locatario`) e gerava cobrança até de contrato vencido; agora usa a mesma regra de datas dos badges (`Utils.getContractStatus`). Com teste em `properties.test.js`.

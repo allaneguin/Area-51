@@ -77,7 +77,7 @@ HTML, CSS e JavaScript puros — **sem framework, sem build step, sem `package.j
 `tenant_links` nunca é acessada diretamente — só pelas RPCs `create_tenant_link`, `set_tenant_link` e `get_tenant_link`.
 
 > [!WARNING]
-> A chave do Supabase em `js/supabase-config.js` é a *publishable/anon*, pública por natureza. **Toda a segurança dos dados depende das políticas de RLS estarem aplicadas.** Os `supabase_*.sql` estão **congelados como registro histórico — não os execute**: reexecutar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` **reabre furos de segurança** corrigidos em 30/07. Para conferir que as políticas vigentes estão ativas, rode apenas `supabase_verificacao.sql` (somente leitura). Ver `docs/ARQUITETURA.md`.
+> A chave do Supabase em `js/supabase-config.js` é a *publishable/anon*, pública por natureza. **Toda a segurança dos dados depende das políticas de RLS estarem aplicadas.** Os `supabase_*.sql` da raiz estão **congelados como registro histórico — não os execute**: reexecutar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` **reabre furos de segurança** corrigidos em 30/07. O que é executável vive em `supabase/` — para conferir que as políticas vigentes estão ativas, rode `supabase/verificacao.sql` (somente leitura). Ver `docs/ARQUITETURA.md`.
 
 ---
 
@@ -93,9 +93,9 @@ python -m http.server
 
 Depois acesse `index.html` (landing) ou `app.html` (aplicação).
 
-O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). O projeto precisa ter as 6 tabelas (`contracts`, `profiles`, `tenant_links`, `properties`, `clients`, `financial_records`) e as RPCs já criadas. Confira o estado do banco com `supabase_verificacao.sql` no SQL Editor (somente leitura) e ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
+O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). Para **provisionar um projeto novo**, rode `supabase/migrations/001_baseline.sql` no SQL Editor e depois `supabase/verificacao.sql` para conferir. Ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
 
-> O DDL histórico está versionado nos `supabase_*.sql`, mas eles estão **congelados — não executar** (ver aviso no topo de cada um). O baseline executável para provisionar um projeto novo (`supabase/migrations/001`) ainda não existe — dívida P1 registrada em `docs/ARQUITETURA.md`.
+> Em produção o baseline **já está aplicado** — não precisa rodar nada. Toda mudança de banco daqui pra frente é uma migration nova em `supabase/migrations/`; ver `supabase/README.md`.
 
 Testes:
 

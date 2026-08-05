@@ -1,6 +1,8 @@
--- ✅ ESTE É O ÚNICO supabase_*.sql QUE PODE SER EXECUTADO (2026-08-05).
--- É somente leitura: confere se o banco está no estado vigente e aponta o
--- que faltou. Os demais estão congelados — ver docs/ARQUITETURA.md (R4).
+-- ✅ SOMENTE LEITURA — seguro de rodar a qualquer momento, inclusive em
+-- produção. Confere se o banco está no estado vigente e aponta o que faltou.
+-- Rode depois de cada migration de supabase/migrations/, e sempre que houver
+-- dúvida sobre o estado de produção. Os supabase_*.sql da raiz estão
+-- congelados e NÃO devem ser executados — ver docs/ARQUITETURA.md (R4).
 -- =========================================================================
 -- VERIFICAÇÃO — rode DEPOIS de supabase_seguranca.sql.
 --
