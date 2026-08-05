@@ -505,6 +505,16 @@ const Utils = {
       </div>`;
   },
 
+  // ── Dinheiro BRL mascarado → número ──
+  // "R$ 2.450,00" -> 2450.00. Parser ÚNICO do sistema (era copiado em 4 lugares).
+  // Só para STRING mascarada (centavos embutidos nos 2 últimos dígitos);
+  // número já em reais NÃO passa aqui — /100 estragaria o valor.
+  parseMoneyBRL(v) {
+    if (!v) return 0;
+    const d = String(v).replace(/\D/g, '');
+    return d ? parseInt(d, 10) / 100 : 0;
+  },
+
   // ── Escrever valor BRL por extenso ──
   writeBRLInWords(amountStr) {
     if (!amountStr) return '';
@@ -686,6 +696,109 @@ const Utils = {
       console.warn("Erro ao buscar CEP no ViaCEP:", e);
       return null;
     }
+  },
+
+  // ── CEP → input de endereço ──
+  // Fluxo único (era copiado em editor, imóveis e inquilino): valida os 8
+  // dígitos, consulta o ViaCEP e só preenche se o alvo estiver vazio — o que
+  // o usuário já digitou tem prioridade. Devolve o endereço aplicado ou null.
+  async applyCEPToInput(cep, targetEl, msg) {
+    const clean = String(cep || '').replace(/\D/g, '');
+    if (clean.length !== 8 || !targetEl || targetEl.value.trim()) return null;
+    const data = await Utils.fetchCEP(clean);
+    if (!data || !data.enderecoCompleto) return null;
+    targetEl.value = data.enderecoCompleto;
+    Utils.toast(msg || 'Endereço preenchido pelo CEP — complete com o número.', 'info');
+    return data.enderecoCompleto;
+  },
+
+  // ── Preview do documento de contrato ──
+  // Preenche os .highlight, regras de PJ, texto de garantia e assinaturas a
+  // partir dos fields. COMPARTILHADO entre o editor do locador e a tela do
+  // inquilino — mudança no texto do contrato acontece só aqui.
+  // marcarVazio: 'borda' (editor, tracejado) ou 'classe' (inquilino, .filled).
+  updateContractPreview(prev, fields, template, marcarVazio) {
+    if (!prev) return;
+
+    prev.querySelectorAll('.highlight').forEach(el => {
+      const field = el.getAttribute('data-field');
+      let val = fields[field];
+
+      // "personalizado" é estado do formulário, não texto de contrato:
+      // o documento recebe a frase gerada a partir dos meses digitados.
+      if (field === 'prazo_extenso' && val === 'personalizado') {
+        val = Utils.prazoPorExtenso(fields['prazo_meses'], fields['prazo_unidade']);
+      }
+
+      // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
+      if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const parts = val.split('-');
+        val = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      // Aplicar máscara de formatação na preview caso o dado esteja sem máscara
+      if (val) {
+        const fieldDef = template.fields.find(f => f.name === field);
+        if (fieldDef && fieldDef.mask) {
+          const fnName = 'mask' + fieldDef.mask.charAt(0).toUpperCase() + fieldDef.mask.slice(1);
+          if (Utils[fnName]) {
+            val = Utils[fnName](val);
+          }
+        }
+      }
+
+      el.textContent = val ? val : '___';
+      if (marcarVazio === 'classe') {
+        el.classList.toggle('filled', !!val); // preenchido = azul; vazio = ambar
+      } else {
+        el.style.borderBottom = val ? 'none' : '2px dashed var(--primary)';
+      }
+    });
+
+    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto,
+    // e o rótulo do documento vira "CNPJ" (ou "CPF" p/ pessoa física) em vez de "CPF/CNPJ".
+    const pjLocador = Utils.isPJLocador(fields);
+    prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
+    prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
+
+    // Garantia Locatícia no texto e assinaturas
+    const tipoGarantia = fields.tipo_garantia || 'sem_garantia';
+    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+
+    const txtGarantia = prev.querySelector('.sec-garantia-texto');
+    if (txtGarantia) {
+      if (tipoGarantia === 'caucao') {
+        const v = Utils.esc(fields.valor_caucao || 'R$ ___');
+        const ve = Utils.esc(fields.valor_caucao_extenso || '___');
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
+      } else if (tipoGarantia === 'fiador') {
+        const nf = Utils.esc(fields.nome_fiador || '___');
+        const df = Utils.esc(fields.doc_fiador || '___');
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
+      } else {
+        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
+      }
+    }
+
+    // Imagens de assinatura (locatário e locador), quando existirem nos fields
+    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
+      if (fields.assinatura_locatario) {
+        el.innerHTML = Utils.imgSeguro(fields.assinatura_locatario,
+          'Assinatura Locatário', 'max-height: 55px; display: block; margin: 4px auto 0;');
+      } else {
+        el.innerHTML = '';
+      }
+    });
+
+    prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
+      if (fields.assinatura_locador) {
+        el.innerHTML = Utils.imgSeguro(fields.assinatura_locador,
+          'Assinatura Locador', 'max-height: 55px; display: block; margin: 4px auto 0;');
+      } else {
+        el.innerHTML = '';
+      }
+    });
   },
 
   // ── Renderizar Folha de Certificado de Assinatura Eletrônica ──

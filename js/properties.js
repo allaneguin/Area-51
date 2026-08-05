@@ -202,14 +202,7 @@ const PropertiesView = {
 
   // CEP completo -> preenche o endereço via ViaCEP, sem sobrescrever o que já foi digitado
   async buscarCEP(cep) {
-    const clean = String(cep || '').replace(/\D/g, '');
-    if (clean.length !== 8) return;
-    const data = await Utils.fetchCEP(clean);
-    if (!data || !data.enderecoCompleto) return;
-    const el = document.getElementById('prop-address');
-    if (!el || el.value.trim()) return;
-    el.value = data.enderecoCompleto;
-    Utils.toast('Endereço preenchido pelo CEP — complete com o número.', 'info');
+    await Utils.applyCEPToInput(cep, document.getElementById('prop-address'));
   },
 
   openModal(id = null) {

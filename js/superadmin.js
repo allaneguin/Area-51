@@ -35,7 +35,7 @@ const SuperAdmin = {
         const status = Utils.getContractStatus({ fields: c.fields });
         if (status.label === 'Ativo') {
           ativos++;
-          receita += Dashboard.parseValor(c.fields && c.fields.valor_aluguel);
+          receita += Utils.parseMoneyBRL(c.fields && c.fields.valor_aluguel);
         }
         if (!ultimaAtividade || new Date(c.updated_at) > new Date(ultimaAtividade)) {
           ultimaAtividade = c.updated_at;

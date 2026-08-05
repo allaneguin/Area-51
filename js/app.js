@@ -15,7 +15,8 @@ const App = {
     '#editor': 'editor',
     '#admin': 'admin',
     '#superadmin': 'superadmin',
-    '#tenant': 'tenant'
+    '#tenant': 'tenant',
+    '#import': 'import'
   },
   
   init() {
@@ -104,12 +105,35 @@ const App = {
       return;
     }
     
-    // Rota Especial de Importação do Inquilino
-    if (path === '#import') {
+    // Esconder a navegação e a sidebar se for a tela do Tenant (Cliente)
+    if (route === 'tenant') {
+      document.body.classList.add('tenant-mode');
+    } else {
+      document.body.classList.remove('tenant-mode');
+    }
+
+    this.updateNav(route);
+
+    if (route === 'dashboard') Dashboard.render(this.container);
+    else if (route === 'properties') PropertiesView.render(this.container);
+    else if (route === 'clients') ClientsView.render(this.container);
+    else if (route === 'financial') FinancialView.render(this.container);
+    else if (route === 'templates') Templates.render(this.container);
+    else if (route === 'contracts') ContractsView.render(this.container);
+    else if (route === 'editor') Editor.render(this.container, param);
+    else if (route === 'admin') Admin.render(this.container);
+    else if (route === 'superadmin') SuperAdmin.render(this.container);
+    else if (route === 'tenant') Tenant.render(this.container, param);
+    else if (route === 'import') this.handleImport(param);
+  },
+
+  // Importação do contrato preenchido pelo inquilino (#import?id=&key=):
+  // baixa e decifra da nuvem, atualiza o contrato local (ou cria) e abre o editor.
+  handleImport(param) {
       const urlParams = new URLSearchParams(param);
       const serverId = urlParams.get('id');
       const key = urlParams.get('key');
-      
+
       if (serverId && key) {
         this.container.innerHTML = `
           <div style="text-align: center; padding: 5rem 0;">
@@ -152,36 +176,14 @@ const App = {
           Utils.toast('Erro ao importar contrato seguro da nuvem: ' + err.message, 'error');
           window.location.hash = '#dashboard';
         });
-        return; // Interrompe a execução normal de roteamento
+        return;
       }
-      
+
       // Formato legado base64 desativado: dados pessoais viajavam legíveis na URL.
       Utils.toast('Este link de importação usa um formato antigo e foi desativado. Peça ao inquilino para preencher por um novo link.', 'error');
       window.location.hash = '#dashboard';
-      return; // Interrompe a execução normal de roteamento
-    }
-    
-    // Esconder a navegação e a sidebar se for a tela do Tenant (Cliente)
-    if (route === 'tenant') {
-      document.body.classList.add('tenant-mode');
-    } else {
-      document.body.classList.remove('tenant-mode');
-    }
-
-    this.updateNav(route);
-
-    if (route === 'dashboard') Dashboard.render(this.container);
-    else if (route === 'properties') PropertiesView.render(this.container);
-    else if (route === 'clients') ClientsView.render(this.container);
-    else if (route === 'financial') FinancialView.render(this.container);
-    else if (route === 'templates') Templates.render(this.container);
-    else if (route === 'contracts') ContractsView.render(this.container);
-    else if (route === 'editor') Editor.render(this.container, param);
-    else if (route === 'admin') Admin.render(this.container);
-    else if (route === 'superadmin') SuperAdmin.render(this.container);
-    else if (route === 'tenant') Tenant.render(this.container, param);
   },
-  
+
   updateNav(route) {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.remove('active');

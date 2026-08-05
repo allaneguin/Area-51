@@ -78,7 +78,11 @@ const Tenant = {
     if (param.startsWith('data=')) {
       // Fluxo legado base64 desativado: os dados pessoais viajavam legíveis na URL.
       this.renderErro(container, 'Link antigo desativado', 'Este formato de link foi descontinuado por segurança. Peça um novo link ao locador.');
+      return;
     }
+
+    // Parâmetro em formato desconhecido: sem isto a tela ficava em branco, sem erro.
+    this.renderErro(container, 'Link inválido', 'Copie o link inteiro que o locador enviou, ou peça um novo.');
   },
 
   // Estado read-only exibido ao reabrir um link cujo contrato já foi finalizado.
@@ -480,17 +484,11 @@ const Tenant = {
         const fieldName = el.getAttribute('data-field');
         this.contract.fields[fieldName] = el.value;
 
-        if (fieldName && fieldName.includes('cep') && el.value.replace(/\D/g, '').length === 8) {
-          const data = await Utils.fetchCEP(el.value);
-          if (data && data.enderecoCompleto) {
-            const targetField = fieldName.includes('locatario') ? 'end_locatario' : 'end_imovel';
-            const targetEl = container.querySelector(`[data-field="${targetField}"]`);
-            if (targetEl && !targetEl.value.trim()) {
-              targetEl.value = data.enderecoCompleto;
-              this.contract.fields[targetField] = data.enderecoCompleto;
-              Utils.toast('Endereço preenchido pelo CEP!', 'info');
-            }
-          }
+        if (fieldName && fieldName.includes('cep')) {
+          const targetField = fieldName.includes('locatario') ? 'end_locatario' : 'end_imovel';
+          const endereco = await Utils.applyCEPToInput(el.value,
+            container.querySelector(`[data-field="${targetField}"]`), 'Endereço preenchido pelo CEP!');
+          if (endereco) this.contract.fields[targetField] = endereco;
         }
 
         this.saveDraft();
@@ -506,86 +504,11 @@ const Tenant = {
   },
 
   updatePreview() {
-    const prev = document.getElementById('preview-content');
-    if (!prev) return;
-    
-    prev.querySelectorAll('.highlight').forEach(el => {
-      const field = el.getAttribute('data-field');
-      let val = this.contract.fields[field];
-
-      // "personalizado" é estado do formulário, não texto de contrato:
-      // o documento recebe a frase gerada a partir dos meses digitados.
-      if (field === 'prazo_extenso' && val === 'personalizado') {
-        val = Utils.prazoPorExtenso(this.contract.fields['prazo_meses'], this.contract.fields['prazo_unidade']);
-      }
-
-      // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
-      if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
-         const parts = val.split('-');
-         val = `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      
-      // Aplicar máscara de formatação na preview caso o dado esteja sem máscara
-      if (val) {
-        const fieldDef = this.template.fields.find(f => f.name === field);
-        if (fieldDef && fieldDef.mask) {
-          const fnName = 'mask' + fieldDef.mask.charAt(0).toUpperCase() + fieldDef.mask.slice(1);
-          if (Utils[fnName]) {
-            val = Utils[fnName](val);
-          }
-        }
-      }
-      
-      el.textContent = val ? val : '___';
-      el.classList.toggle('filled', !!val); // preenchido = azul; vazio = ambar
-    });
-
-    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto,
-    // e o rótulo do documento vira "CNPJ" (ou "CPF" p/ pessoa física) em vez de "CPF/CNPJ".
-    const pjLocador = Utils.isPJLocador(this.contract.fields);
-    prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
-    prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
-
-    // Garantia Locatícia no texto e assinaturas
-    const tipoGarantia = this.contract.fields.tipo_garantia || 'sem_garantia';
-    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
-    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
-
-    const txtGarantia = prev.querySelector('.sec-garantia-texto');
-    if (txtGarantia) {
-      if (tipoGarantia === 'caucao') {
-        const v = Utils.esc(this.contract.fields.valor_caucao || 'R$ ___');
-        const ve = Utils.esc(this.contract.fields.valor_caucao_extenso || '___');
-        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
-      } else if (tipoGarantia === 'fiador') {
-        const nf = Utils.esc(this.contract.fields.nome_fiador || '___');
-        const df = Utils.esc(this.contract.fields.doc_fiador || '___');
-        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
-      } else {
-        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
-      }
-    }
-
-    // Renderizar Imagem de Assinatura se existir
-    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
-      if (this.contract.fields && this.contract.fields.assinatura_locatario) {
-        el.innerHTML = Utils.imgSeguro(this.contract.fields.assinatura_locatario,
-          'Assinatura Locatário', 'max-height: 55px; display: block; margin: 4px auto 0;');
-      } else {
-        el.innerHTML = '';
-      }
-    });
-
-    // Assinatura do locador: só leitura aqui (ele assina no próprio painel,
-    // não na tela pública do inquilino) — chega pronta se ele já assinou antes de gerar o link.
-    prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
-      if (this.contract.fields && this.contract.fields.assinatura_locador) {
-        el.innerHTML = Utils.imgSeguro(this.contract.fields.assinatura_locador,
-          'Assinatura Locador', 'max-height: 55px; display: block; margin: 4px auto 0;');
-      } else {
-        el.innerHTML = '';
-      }
-    });
+    // Núcleo compartilhado com o editor do locador (Utils.updateContractPreview).
+    // A assinatura do locador chega pronta nos fields se ele assinou antes de
+    // gerar o link — aqui ela é só exibida, nunca editada.
+    Utils.updateContractPreview(document.getElementById('preview-content'),
+      this.contract.fields, this.template, 'classe');
   },
 
   finish() {

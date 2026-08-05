@@ -5,10 +5,12 @@ const fs = require('fs');
 const path = require('path');
 
 // dashboard.js e um script de browser (global), nao um modulo: avalia e pega o global.
-const src = fs.readFileSync(path.join(__dirname, 'dashboard.js'), 'utf8');
-const Dashboard = new Function(`${src}; return Dashboard;`)();
+// Utils vem antes: parseValor delega para Utils.parseMoneyBRL (parser unico).
+const load = (f, name) => new Function(`${fs.readFileSync(path.join(__dirname, f), 'utf8')}; return ${name};`)();
+global.Utils = load('utils.js', 'Utils');
+const Dashboard = load('dashboard.js', 'Dashboard');
 
-// parseValor: "R$ 2.450,00" -> 2450
+// parseValor: "R$ 2.450,00" -> 2450 (via Utils.parseMoneyBRL)
 assert.strictEqual(Dashboard.parseValor('R$ 2.450,00'), 2450);
 assert.strictEqual(Dashboard.parseValor('R$ 1.980,50'), 1980.5);
 assert.strictEqual(Dashboard.parseValor(''), 0);
@@ -29,8 +31,6 @@ const contratos = [
 assert.strictEqual(Dashboard.countAVencer(contratos), 1);
 
 // Receita mensal: SO contratos ativos entram na soma (vencido e futuro ficam fora)
-const Utils = new Function(`${fs.readFileSync(path.join(__dirname, 'utils.js'), 'utf8')}; return Utils;`)();
-global.Utils = Utils;
 global.Contracts = {};
 global.Storage = {
   getStats: () => ({ total: 3, thisMonth: 0 }),

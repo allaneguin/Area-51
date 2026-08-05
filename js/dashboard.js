@@ -3,11 +3,9 @@
 // ═══════════════════════════════════════════════════════
 
 const Dashboard = {
-  // "R$ 2.450,00" -> 2450.00
+  // "R$ 2.450,00" -> 2450.00 — delega para o parser único do sistema
   parseValor(v) {
-    if (!v) return 0;
-    const d = String(v).replace(/\D/g, '');
-    return d ? parseInt(d, 10) / 100 : 0;
+    return Utils.parseMoneyBRL(v);
   },
 
   // Contratos cujo termino cai nos proximos 30 dias

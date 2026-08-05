@@ -386,9 +386,11 @@ const Storage = {
     }
   },
 
-  // Gerar cobranças do mês corrente para todos os contratos ativos
+  // Gerar cobranças do mês corrente para todos os contratos ativos.
+  // "Ativo" é a MESMA regra dos badges (Utils.getContractStatus, por datas) —
+  // a definição própria daqui gerava cobrança até de contrato vencido.
   generateMonthlyCharges(feePercentDefault = 10) {
-    const activeContracts = this.getAll().filter(c => c.isFinalized || (c.fields && c.fields.nome_locatario));
+    const activeContracts = this.getAll().filter(c => Utils.getContractStatus(c).label === 'Ativo');
     let countNew = 0;
     const today = new Date();
     const yearMonth = today.toISOString().slice(0, 7); // "YYYY-MM"
@@ -396,8 +398,7 @@ const Storage = {
     activeContracts.forEach(c => {
       const tenantName = c.fields.nome_locatario || 'Inquilino';
       const landlordName = c.fields.nome_locador || 'Locador';
-      const rawRent = c.fields.valor_aluguel ? String(c.fields.valor_aluguel).replace(/\D/g, '') : '0';
-      const rentValue = parseFloat(rawRent) / 100 || 0;
+      const rentValue = Utils.parseMoneyBRL(c.fields.valor_aluguel);
 
       if (rentValue <= 0) return;
 
@@ -435,8 +436,7 @@ const Storage = {
     const contract = this.getById(contractId);
     if (!contract || !contract.fields.valor_aluguel) return null;
 
-    const rawRent = String(contract.fields.valor_aluguel).replace(/\D/g, '');
-    const currentRent = parseFloat(rawRent) / 100 || 0;
+    const currentRent = Utils.parseMoneyBRL(contract.fields.valor_aluguel);
 
     if (currentRent <= 0) return null;
 

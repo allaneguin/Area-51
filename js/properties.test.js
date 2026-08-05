@@ -50,6 +50,20 @@ assert.strictEqual(r2.contratoAtivo, null);
 const r3 = PropertiesView.statusReal({ id: 'p3', status: 'Em Manutenção' });
 assert.strictEqual(r3.status, 'Em Manutenção', 'status manual preservado quando não há contrato ativo');
 
+// generateMonthlyCharges: "ativo" é a regra de datas de Utils.getContractStatus —
+// contrato vencido ou a iniciar NÃO gera cobrança (a regra antiga própria gerava).
+Storage.financialRecordsCache = [];
+Storage.contractsCache = [
+  { id: 'c1', name: 'Ativo', fields: { nome_locatario: 'Maria', valor_aluguel: 'R$ 1.500,00', data_inicio: emDias(-30), data_termino: emDias(300) } },
+  { id: 'c2', name: 'Vencido', isFinalized: true, fields: { nome_locatario: 'José', valor_aluguel: 'R$ 900,00', data_inicio: emDias(-400), data_termino: emDias(-10) } },
+  { id: 'c3', name: 'A iniciar', fields: { nome_locatario: 'Ana', valor_aluguel: 'R$ 2.000,00', data_inicio: emDias(30), data_termino: emDias(400) } },
+];
+assert.strictEqual(Storage.generateMonthlyCharges(), 1, 'só o contrato ativo gera cobrança');
+assert.strictEqual(Storage.financialRecordsCache.length, 1);
+assert.strictEqual(Storage.financialRecordsCache[0].contract_id, 'c1');
+assert.strictEqual(Storage.financialRecordsCache[0].rent_value, 1500);
+assert.strictEqual(Storage.generateMonthlyCharges(), 0, 'idempotente dentro do mesmo mês');
+
 // clearAll: troca de conta descarta os CINCO caches (o vazamento era zerar só 2)
 Storage.clientsCache = [{ id: 'x' }];
 Storage.profileCache = { nome: 'A' };

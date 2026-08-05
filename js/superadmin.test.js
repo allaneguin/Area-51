@@ -6,10 +6,10 @@ const path = require('path');
 
 const load = (f, name) => new Function(`${fs.readFileSync(path.join(__dirname, f), 'utf8')}; return ${name};`)();
 const Utils = load('utils.js', 'Utils');
-const Dashboard = load('dashboard.js', 'Dashboard');
 global.Utils = Utils;
-global.Dashboard = Dashboard;
 global.App = { user: null };
+// Sem global.Dashboard de propósito: superadmin usa Utils.parseMoneyBRL direto —
+// se alguém reintroduzir a dependência da view, este teste quebra.
 const SuperAdmin = load('superadmin.js', 'SuperAdmin');
 
 const emDias = (n) => {

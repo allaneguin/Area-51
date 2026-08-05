@@ -14,6 +14,14 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-05
 
+Rodada P1 da arquitetura — consolidação (assets do app: 1.26.1 → **1.27.0**):
+
+- **Preview do contrato unificado** (`Utils.updateContractPreview`): editor do locador e tela do inquilino carregavam ~80 linhas idênticas copiadas — mudar o texto de garantia exigia editar dois arquivos. Agora o documento é preenchido por uma função só; cada tela mantém apenas seu sinal de campo vazio e, no editor, o certificado.
+- **Regra única de "contrato ativo"**: `generateMonthlyCharges` tinha definição própria (`isFinalized || nome_locatario`) e gerava cobrança até de contrato vencido; agora usa a mesma regra de datas dos badges (`Utils.getContractStatus`). Com teste em `properties.test.js`.
+- **Parser de dinheiro único** (`Utils.parseMoneyBRL`): eram 4 cópias (dashboard, storage ×2, financial). De quebra, `SuperAdmin` deixa de depender de `Dashboard.parseValor` — e o teste agora falha se alguém reintroduzir a dependência.
+- **Busca de CEP única** (`Utils.applyCEPToInput`): eram 3 cópias do mesmo fluxo (editor, imóveis, inquilino).
+- **Rotas blindadas**: `#editor` sem parâmetro dava TypeError (tela branca); `#tenant` com parâmetro desconhecido não renderizava nada; `#import` vivia fora da tabela de rotas — virou rota normal com método próprio (`App.handleImport`).
+
 Rodada P0 da arquitetura (assets do app: 1.26.0 → **1.26.1**):
 
 - **SQL congelados e README corrigido**: aviso de NÃO EXECUTAR no topo dos 7 `supabase_*.sql` (só `supabase_verificacao.sql`, somente leitura, continua executável) — reexecutar `schema`/`rls`/`finalize` regredia a segurança de `tenant_links`, e o README ainda mandava rodar `supabase_rls.sql`. De quebra, corrigidos no README o "DDL não versionado" (está versionado desde 21/07) e os "90 dias" de link.

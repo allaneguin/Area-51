@@ -223,8 +223,7 @@ const FinancialView = {
       return;
     }
 
-    const rawRent = String(contract.fields.valor_aluguel).replace(/\D/g, '');
-    const currentRent = parseFloat(rawRent) / 100 || 0;
+    const currentRent = Utils.parseMoneyBRL(contract.fields.valor_aluguel);
     const newRent = currentRent * (1 + (rate / 100));
 
     resultBox.innerHTML = `
