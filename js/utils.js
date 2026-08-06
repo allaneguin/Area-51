@@ -358,7 +358,7 @@ const Utils = {
             onclick="this.select()">
           <button type="button" class="btn btn-primary" style="padding:10px 16px; font-size:0.85rem; white-space:nowrap;"
             onclick="Utils.copyInput('share-modal-input')">
-            📋 Copiar
+            Copiar
           </button>
         </div>
 

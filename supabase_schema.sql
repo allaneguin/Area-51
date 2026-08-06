@@ -1,4 +1,4 @@
--- ⛔ CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR. ⛔
+-- CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR.
 -- Reexecutar este arquivo REGRIDE a segurança: recria políticas e RPCs
 -- antigas de tenant_links (enumeração/escrita anônima, 90 dias, grant a anon)
 -- que supabase_seguranca.sql (30/07) eliminou. Regras vigentes: seguranca.

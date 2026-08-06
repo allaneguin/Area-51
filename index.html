@@ -274,27 +274,27 @@
         kicker: 'PASSO 1 · MODELOS',
         title: 'Modelos prontos para usar',
         lines: [
-          { icon: '🏠', text: 'Locação Residencial', tag: 'POPULAR', tagClass: 'lp-tag-info' },
-          { icon: '🏢', text: 'Locação Comercial', tag: '', tagClass: 'lp-tag-info' },
-          { icon: '📄', text: 'Minuta Simplificada', tag: '', tagClass: 'lp-tag-info' }
+          { text: 'Locação Residencial', tag: 'POPULAR', tagClass: 'lp-tag-info' },
+          { text: 'Locação Comercial', tag: '', tagClass: 'lp-tag-info' },
+          { text: 'Minuta Simplificada', tag: '', tagClass: 'lp-tag-info' }
         ]
       },
       {
         kicker: 'PASSO 2 · EDITOR',
         title: 'Campos com máscara automática',
         lines: [
-          { icon: '👤', text: 'CPF · 123.456.789-00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
-          { icon: '💰', text: 'Aluguel · R$ 2.450,00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
-          { icon: '🔗', text: 'Link enviado ao inquilino', tag: 'PENDENTE', tagClass: 'lp-tag-info' }
+          { text: 'CPF · 123.456.789-00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
+          { text: 'Aluguel · R$ 2.450,00', tag: 'VÁLIDO', tagClass: 'lp-tag-ok' },
+          { text: 'Link enviado ao inquilino', tag: 'PENDENTE', tagClass: 'lp-tag-info' }
         ]
       },
       {
         kicker: 'PASSO 3 · EXPORTAÇÃO',
         title: 'PDF pronto para assinar',
         lines: [
-          { icon: '📑', text: 'Contrato_Apto302_Aurora.pdf', tag: 'GERADO', tagClass: 'lp-tag-ok' },
-          { icon: '✍️', text: 'Assinatura do locador', tag: 'ASSINADO', tagClass: 'lp-tag-ok' },
-          { icon: '⏳', text: 'Assinatura do inquilino', tag: 'AGUARDANDO', tagClass: 'lp-tag-info' }
+          { text: 'Contrato_Apto302_Aurora.pdf', tag: 'GERADO', tagClass: 'lp-tag-ok' },
+          { text: 'Assinatura do locador', tag: 'ASSINADO', tagClass: 'lp-tag-ok' },
+          { text: 'Assinatura do inquilino', tag: 'AGUARDANDO', tagClass: 'lp-tag-info' }
         ]
       }
     ];
@@ -306,7 +306,6 @@
       var p = LP_PREVIEWS[i];
       var lines = p.lines.map(function (ln) {
         return '<div class="lp-preview-line">' +
-          '<span>' + ln.icon + '</span>' +
           '<span class="lp-preview-text">' + ln.text + '</span>' +
           '<span class="lp-preview-tag ' + ln.tagClass + '">' + ln.tag + '</span>' +
           '</div>';

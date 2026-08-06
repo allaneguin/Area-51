@@ -1,4 +1,4 @@
--- ⛔ CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR. ⛔
+-- CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR.
 -- Este arquivo não regride segurança, mas está congelado como os demais:
 -- mudança de banco daqui pra frente é só via supabase/migrations/ (novo
 -- arquivo numerado). Ver docs/ARQUITETURA.md (regra R4).

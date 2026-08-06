@@ -1,4 +1,4 @@
--- ⛔ CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR. ⛔
+-- CONGELADO (2026-08-05) — REGISTRO HISTÓRICO. NÃO EXECUTAR.
 -- Reexecutar este arquivo REGRIDE a segurança: recria as políticas antigas
 -- de tenant_links (leitura sem filtro por id, update com check true, 90 dias)
 -- que supabase_seguranca.sql (30/07) eliminou. Regras vigentes: seguranca.

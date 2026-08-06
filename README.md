@@ -1,13 +1,13 @@
-# Meus Imóveis 🏠🔒
+# Meus Imóveis
 
 Aplicação web para **geração e gestão de contratos de locação imobiliária**. O locador monta o contrato a partir de um modelo, envia um link seguro para o inquilino preencher os próprios dados, e recebe o contrato completo de volta pronto para impressão.
 
 > [!IMPORTANT]
-> **Projeto privado, em construção.** Veja [Propriedade intelectual](#-propriedade-intelectual) antes de qualquer uso.
+> **Projeto privado, em construção.** Veja [Propriedade intelectual](#propriedade-intelectual) antes de qualquer uso.
 
 ---
 
-## 🔄 Como funciona
+## Como funciona
 
 ```
 Locador                          Inquilino
@@ -27,7 +27,7 @@ O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navega
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
 **Painel do locador**
 - Cadastro e login com perfil **PF ou PJ**, com campos distintos para cada
@@ -67,7 +67,7 @@ O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navega
 
 ---
 
-## 🛠️ Stack
+## Stack
 
 HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 
@@ -79,7 +79,7 @@ HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 
 ---
 
-## 🗄️ Modelo de dados
+## Modelo de dados
 
 | Tabela | Conteúdo | Acesso |
 |---|---|---|
@@ -95,7 +95,7 @@ HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 
 ---
 
-## 🔧 Rodando localmente
+## Rodando localmente
 
 Não há instalação nem build. Mas **não abra por `file://`** — a CSP e o `crypto.subtle` exigem contexto seguro. Suba um servidor estático:
 
@@ -119,7 +119,7 @@ npm test          # roda os 5 checks
 
 ---
 
-## 📁 Estrutura
+## Estrutura
 
 ```
 index.html              landing page
@@ -150,7 +150,7 @@ docs/ARQUITETURA.md     a linha do sistema: regras, dívidas e processo
 
 ---
 
-## 🚧 Limitações conhecidas
+## Limitações conhecidas
 
 - **3 modelos** de contrato embutidos, sem UI para criar modelos próprios.
 - A assinatura é **eletrônica simples**: manuscrita em canvas, com aceite e trilha de evidências (data/hora, IP, GPS, hash SHA-256, selfie opcional). **Não é assinatura qualificada (ICP-Brasil)** e não usa certificado digital.
@@ -160,9 +160,9 @@ docs/ARQUITETURA.md     a linha do sistema: regras, dívidas e processo
 
 ---
 
-## 🔒 Propriedade intelectual
+## Propriedade intelectual
 
-⚠️ **AVISO LEGAL** ⚠️
+**AVISO LEGAL**
 
 O código-fonte, a arquitetura, o design de interface, as lógicas de negócio e toda a estrutura deste software são de propriedade intelectual exclusiva e protegida de seus criadores.
 

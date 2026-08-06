@@ -1,4 +1,4 @@
--- ✅ SOMENTE LEITURA — seguro de rodar a qualquer momento, inclusive em
+-- SOMENTE LEITURA — seguro de rodar a qualquer momento, inclusive em
 -- produção. Confere se o banco está no estado vigente e aponta o que faltou.
 -- Rode depois de cada migration de supabase/migrations/, e sempre que houver
 -- dúvida sobre o estado de produção. Os supabase_*.sql da raiz estão

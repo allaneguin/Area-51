@@ -10,12 +10,12 @@ let supabaseClient = null;
 
 (function () {
   if (typeof supabase === 'undefined') {
-    console.error("❌ SDK do Supabase não encontrado. Verifique a importação no app.html.");
+    console.error("SDK do Supabase não encontrado. Verifique a importação no app.html.");
     return;
   }
   try {
     supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
   } catch (e) {
-    console.error("❌ Erro ao inicializar Supabase:", e);
+    console.error("Erro ao inicializar Supabase:", e);
   }
 })();

@@ -98,7 +98,7 @@ const Storage = {
 
       this.profileCache = (profileRecord && profileRecord.profile_data) || {};
 
-      console.log(`📦 Dados do Supabase carregados: ${this.contractsCache.length} contratos, ${this.propertiesCache.length} imóveis, ${this.clientsCache.length} clientes.`);
+      console.log(`Dados do Supabase carregados: ${this.contractsCache.length} contratos, ${this.propertiesCache.length} imóveis, ${this.clientsCache.length} clientes.`);
     } catch (e) {
       console.error("Erro ao carregar dados do Supabase:", e);
     }
