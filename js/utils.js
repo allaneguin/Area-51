@@ -469,9 +469,14 @@ const Utils = {
       fields.valor_aluguel && ['Aluguel', fields.valor_aluguel],
       fields.indice_reajuste && ['Reajuste', fields.indice_reajuste],
       fields.end_imovel && ['Imóvel', fields.end_imovel],
-      // Evidência do aceite do inquilino (gravada no envio, junto com o hash do texto lido)
-      fields.aceite_ts && ['Aceite do inquilino', new Date(fields.aceite_ts).toLocaleString('pt-BR') +
-        (fields.aceite_hash ? ' · doc ' + fields.aceite_hash.slice(0, 12) + '…' : '')]
+      // Aceite do inquilino. Prefere o carimbo do servidor (migration 003); o
+      // aceite_ts é escrito pelo próprio signatário e só vale como referência
+      // de tela, então quando é ele que aparece, o rótulo diz isso.
+      (fields.aceite_ts_servidor || fields.aceite_ts) && [
+        fields.aceite_ts_servidor ? 'Aceite do inquilino' : 'Aceite do inquilino (não verificado)',
+        new Date(fields.aceite_ts_servidor || fields.aceite_ts)
+          .toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) +
+          (fields.aceite_hash ? ' · doc ' + fields.aceite_hash.slice(0, 12) + '…' : '')]
     ].filter(Boolean);
 
     if (!itens.length) return '';
