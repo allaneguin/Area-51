@@ -27,7 +27,7 @@ const Admin = {
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">${isPJ ? 'Razão Social' : 'Nome Completo'}</label>
-              <input type="text" class="form-input" id="admin_nome_locador" value="${profile.nome_locador || ''}">
+              <input type="text" class="form-input" id="admin_nome_locador" value="${Utils.esc(profile.nome_locador)}">
             </div>
             <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
               <label class="form-label">Nacionalidade</label>
@@ -50,11 +50,11 @@ const Admin = {
             </div>
             <div class="form-group pf-only" ${isPJ ? 'style="display:none;"' : ''}>
               <label class="form-label">RG</label>
-              <input type="text" class="form-input" id="admin_rg_locador" value="${profile.rg_locador || ''}">
+              <input type="text" class="form-input" id="admin_rg_locador" value="${Utils.esc(profile.rg_locador)}">
             </div>
             <div class="form-group">
               <label class="form-label">${isPJ ? 'CNPJ' : 'CPF'}</label>
-              <input type="text" class="form-input" id="admin_doc_locador" data-mask="cpfcnpj" value="${profile.doc_locador || ''}">
+              <input type="text" class="form-input" id="admin_doc_locador" data-mask="cpfcnpj" value="${Utils.esc(profile.doc_locador)}">
             </div>
           </div>
 
@@ -63,15 +63,15 @@ const Admin = {
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Banco</label>
-              <input type="text" class="form-input" id="admin_banco" value="${profile.banco || ''}">
+              <input type="text" class="form-input" id="admin_banco" value="${Utils.esc(profile.banco)}">
             </div>
             <div class="form-group">
               <label class="form-label">Agência</label>
-              <input type="text" class="form-input" id="admin_agencia" value="${profile.agencia || ''}">
+              <input type="text" class="form-input" id="admin_agencia" value="${Utils.esc(profile.agencia)}">
             </div>
             <div class="form-group">
               <label class="form-label">Conta (com dígito)</label>
-              <input type="text" class="form-input" id="admin_conta_banco" value="${profile.conta_banco || ''}">
+              <input type="text" class="form-input" id="admin_conta_banco" value="${Utils.esc(profile.conta_banco)}">
             </div>
             <div class="form-group">
               <label class="form-label">Tipo de Conta</label>
@@ -146,14 +146,21 @@ const Admin = {
   // Exclusão da própria conta (LGPD, art. 18): apaga contratos, perfil e o usuário via RPC.
   deleteAccount() {
     if (!App.user) return;
-    const digitado = prompt('Isso apaga sua conta, seu perfil e TODOS os seus contratos, sem volta.\n\nPara confirmar, digite: EXCLUIR');
-    if (digitado === null) return;
-    if (digitado.trim().toUpperCase() !== 'EXCLUIR') {
-      Utils.toast('Confirmação incorreta. Nada foi apagado.', 'error');
+    // Senha, não uma palavra digitada: a RPC apaga tudo de forma irreversível e
+    // é chamável em uma linha de console. Digitar "EXCLUIR" prova intenção de
+    // quem está na tela, não que a sessão é mesmo do dono — e uma sessão roubada
+    // (ou um XSS) tem as duas coisas.
+    const senha = prompt('Isso apaga sua conta, seu perfil e TODOS os seus contratos, sem volta.\n\nDigite sua SENHA para confirmar:');
+    if (senha === null) return;
+    if (!senha) {
+      Utils.toast('Senha não informada. Nada foi apagado.', 'error');
       return;
     }
 
-    supabaseClient.rpc('delete_own_account').then(({ error }) => {
+    supabaseClient.auth.signInWithPassword({ email: App.user.email, password: senha }).then(({ error }) => {
+      if (error) throw new Error('Senha incorreta. Nada foi apagado.');
+      return supabaseClient.rpc('delete_own_account');
+    }).then(({ error }) => {
       if (error) throw error;
       localStorage.removeItem(Storage.PENDING_PROFILE_KEY);
       // signOut pode falhar (o usuário já não existe) — segue para o reload de qualquer forma.

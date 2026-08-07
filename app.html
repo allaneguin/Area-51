@@ -5,8 +5,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content-Security-Policy: backstop contra exfiltração em caso de XSS.
-       connect/img/form travados no próprio site + Supabase; script externo só do jsdelivr. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.ipify.org https://*.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+       connect/img/form travados no próprio site + Supabase; script externo só do jsdelivr.
+       Sem frame-ancestors: o navegador ignora essa diretiva quando ela vem por
+       <meta> (so vale como cabecalho). Quem barra iframe e o X-Frame-Options
+       do vercel.json.
+       connect-src sem curinga de propósito: com https://*.supabase.co, um XSS
+       exfiltrava para um projeto Supabase gratuito do atacante e a diretiva não
+       valia nada. O host tem de ser o mesmo de js/supabase-config.js — trocar de
+       projeto exige mudar nos dois lugares. Domínios: ipify/ipapi (IP da trilha
+       de aceite, com ipapi de reserva) e viacep (busca de CEP). Ver R5.5. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://hbmqmzsssccrsyqdyixd.supabase.co wss://hbmqmzsssccrsyqdyixd.supabase.co https://api.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>MEUS IMÓVEIS APP</title>
   <script>
     // Aplica o tema ANTES da pintura para nao piscar branco ao carregar.
@@ -32,39 +40,39 @@
 
   <!-- Estilos — fontes primeiro (link, não @import: @import serializa o
        download e ficava fora do cache-busting) -->
-  <link rel="stylesheet" href="css/fonts.css?v=1.28.0">
-  <link rel="stylesheet" href="css/index.css?v=1.28.0">
-  <link rel="stylesheet" href="css/components.css?v=1.28.0">
-  <link rel="stylesheet" href="css/dashboard.css?v=1.28.0">
-  <link rel="stylesheet" href="css/templates.css?v=1.28.0">
-  <link rel="stylesheet" href="css/editor.css?v=1.28.0">
-  <link rel="stylesheet" href="css/admin.css?v=1.28.0">
-  <link rel="stylesheet" href="css/auth.css?v=1.28.0">
-  <link rel="stylesheet" href="css/tenant.css?v=1.28.0">
-  <link rel="stylesheet" href="css/bottom-nav.css?v=1.28.0">
+  <link rel="stylesheet" href="css/fonts.css?v=1.30.0">
+  <link rel="stylesheet" href="css/index.css?v=1.30.0">
+  <link rel="stylesheet" href="css/components.css?v=1.30.0">
+  <link rel="stylesheet" href="css/dashboard.css?v=1.30.0">
+  <link rel="stylesheet" href="css/templates.css?v=1.30.0">
+  <link rel="stylesheet" href="css/editor.css?v=1.30.0">
+  <link rel="stylesheet" href="css/admin.css?v=1.30.0">
+  <link rel="stylesheet" href="css/auth.css?v=1.30.0">
+  <link rel="stylesheet" href="css/tenant.css?v=1.30.0">
+  <link rel="stylesheet" href="css/bottom-nav.css?v=1.30.0">
 
   <!-- Scripts Externos -->
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7"></script>
 
   <!-- Lógica da Aplicação -->
-  <script src="js/supabase-config.js?v=1.28.0" defer></script>
-  <script src="js/auth.js?v=1.28.0" defer></script>
-  <script src="js/utils.js?v=1.28.0" defer></script>
-  <script src="js/storage.js?v=1.28.0" defer></script>
-  <script src="js/database.js?v=1.28.0" defer></script>
-  <script src="data/contracts.js?v=1.28.0" defer></script>
-  <script src="js/properties.js?v=1.28.0" defer></script>
-  <script src="js/clients.js?v=1.28.0" defer></script>
-  <script src="js/financial.js?v=1.28.0" defer></script>
-  <script src="js/dashboard.js?v=1.28.0" defer></script>
-  <script src="js/templates.js?v=1.28.0" defer></script>
-  <script src="js/admin.js?v=1.28.0" defer></script>
-  <script src="js/superadmin.js?v=1.28.0" defer></script>
-  <script src="js/tenant-v2.js?v=1.28.0" defer></script>
-  <script src="js/editor.js?v=1.28.0" defer></script>
-  <script src="js/contracts.js?v=1.28.0" defer></script>
-  <script src="js/app.js?v=1.28.0" defer></script>
+  <script src="js/supabase-config.js?v=1.30.0" defer></script>
+  <script src="js/auth.js?v=1.30.0" defer></script>
+  <script src="js/utils.js?v=1.30.0" defer></script>
+  <script src="js/storage.js?v=1.30.0" defer></script>
+  <script src="js/database.js?v=1.30.0" defer></script>
+  <script src="data/contracts.js?v=1.30.0" defer></script>
+  <script src="js/properties.js?v=1.30.0" defer></script>
+  <script src="js/clients.js?v=1.30.0" defer></script>
+  <script src="js/financial.js?v=1.30.0" defer></script>
+  <script src="js/dashboard.js?v=1.30.0" defer></script>
+  <script src="js/templates.js?v=1.30.0" defer></script>
+  <script src="js/admin.js?v=1.30.0" defer></script>
+  <script src="js/superadmin.js?v=1.30.0" defer></script>
+  <script src="js/tenant-v2.js?v=1.30.0" defer></script>
+  <script src="js/editor.js?v=1.30.0" defer></script>
+  <script src="js/contracts.js?v=1.30.0" defer></script>
+  <script src="js/app.js?v=1.30.0" defer></script>
 </head>
 
 <body>

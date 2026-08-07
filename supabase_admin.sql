@@ -22,7 +22,11 @@
 --    O usuário precisa deslogar e logar de novo para o JWT novo valer.
 update auth.users
    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
- where email = 'adm@gmail.com';
+-- E-mail real fora do repositorio de proposito: identifica a unica conta que le
+-- contratos e perfis de todas as ilhas. Preencher no SQL Editor, nunca commitar.
+-- Mesma decisao de supabase/migrations/001_baseline.sql: conceder papel e dado,
+-- nao estrutura.
+ where email = 'ENDERECO@EXEMPLO.COM';
 
 -- Para revogar:
 -- update auth.users set raw_app_meta_data = raw_app_meta_data - 'role' where email = '...';

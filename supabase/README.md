@@ -18,7 +18,7 @@ repositório estão **congelados** — são registro histórico e alguns deles
 | Arquivo | O que é | Rodar quando |
 |---|---|---|
 | `migrations/001_baseline.sql` | Retrato do banco de produção em 2026-08-05 | Só ao provisionar um projeto novo |
-| `verificacao.sql` | 12 checagens de segurança, **somente leitura** | Depois de cada migration, e sempre que houver dúvida sobre produção |
+| `verificacao.sql` | 19 checagens de segurança, **somente leitura** | Depois de cada migration, e sempre que houver dúvida sobre produção |
 
 ## Como aplicar uma migration
 

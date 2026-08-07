@@ -21,6 +21,15 @@
   padding: 8px 0;
 }
 
+/* Sao 6 abas: na largura do conteudo elas nao cabem num celular estreito, a
+   lista transborda e o space-around centraliza o excesso — cortava metade do
+   Painel a esquerda e o Perfil a direita. Divididas em 6 fatias iguais, cabem
+   sempre. */
+.bottom-nav-item {
+  flex: 1;
+  min-width: 0;
+}
+
 .bottom-nav-link {
   display: flex;
   flex-direction: column;
@@ -28,10 +37,20 @@
   gap: 4px;
   text-decoration: none;
   color: var(--text-light, #94A3B8);
-  font-size: 0.75rem;
+  /* o rotulo acompanha a fatia: inteiro em tela estreita, sem passar de 12px */
+  font-size: clamp(0.6rem, 2.6vw, 0.75rem);
   transition: all 0.2s ease;
-  padding: 4px 12px;
+  /* sem folga lateral: a fatia inteira e do rotulo (cabe "Financeiro" a 320px) */
+  padding: 4px 0;
   border-radius: var(--radius-md, 12px);
+}
+
+/* rede de seguranca: rotulo maior que a fatia vira reticencias, nunca vaza */
+.bottom-nav-link span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bottom-nav-link svg {

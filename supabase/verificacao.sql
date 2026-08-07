@@ -124,7 +124,68 @@ begin
     raise exception 'FALHA 12: create_tenant_link %', v_txt;
   end if;
 
+  -- ── Migration 002 ──────────────────────────────────────────────────────
+  -- Estes tres nasceram de uma falha deste proprio arquivo: em 07/08 ele
+  -- imprimia "OK - 12 garantias" num banco onde a 002 nunca tinha sido
+  -- aplicada. Nenhum dos 12 testes olhava para ela, entao o furo (admin lendo
+  -- cloud_key, que e credencial anon-utilizavel) passou meses despercebido.
+  -- Verificacao que so confere o que ja se sabe nao serve para nada.
+
+  -- 13. A politica antiga do admin nao pode existir: ela libera contracts
+  --     INTEIRA, sem restricao de coluna, incluindo cloud_key.
+  if exists (select 1 from pg_policies
+              where schemaname = 'public' and tablename = 'contracts'
+                and policyname = 'contracts_select_admin') then
+    raise exception 'FALHA 13: contracts_select_admin existe -> 002 nao aplicada, admin le cloud_key';
+  end if;
+
+  -- 14. E a funcao que a substituiu tem que estar no lugar.
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = 'admin_list_contracts') then
+    raise exception 'FALHA 14: admin_list_contracts ausente -> o painel de admin quebra';
+  end if;
+
+  -- 15. E nao pode devolver credencial de link.
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public' and p.proname = 'admin_list_contracts'
+                and pg_get_function_result(p.oid) ilike '%cloud_%') then
+    raise exception 'FALHA 15: admin_list_contracts devolve cloud_id/cloud_key';
+  end if;
+
+  -- ── Migration 003 ──────────────────────────────────────────────────────
+
+  -- 16. O caminho do inquilino PRECISA continuar aberto a anon. Uma regressao
+  --     aqui quebra o envio em silencio, e os testes acima continuariam
+  --     passando — sao o mesmo tipo de ponto cego do 13.
+  if not has_function_privilege('anon', 'public.get_tenant_link(text)', 'execute')
+     or not has_function_privilege('anon', 'public.set_tenant_link(text,text,boolean,text)', 'execute') then
+    raise exception 'FALHA 16: get/set_tenant_link nao executavel por anon -> inquilino nao envia';
+  end if;
+
+  -- 17. Prova de posse da chave: sem a coluna, o id sozinho sobrescreve o
+  --     link de qualquer um que o tenha encaminhado.
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'tenant_links'
+                    and column_name = 'key_proof') then
+    raise exception 'FALHA 17: tenant_links.key_proof ausente -> 003 nao aplicada';
+  end if;
+
+  -- 18. Carimbo do servidor: sem ele, a trilha do aceite e escrita por quem
+  --     assina, e o certificado do PDF vira autodeclaracao.
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'tenant_links'
+                    and column_name = 'finalized_at') then
+    raise exception 'FALHA 18: tenant_links.finalized_at ausente -> 003 nao aplicada';
+  end if;
+
+  -- 19. O expurgo saiu da leitura (003) e passou a depender do agendamento.
+  --     Sem o job, "retencao de 30 dias" vira so uma data numa coluna.
+  if not exists (select 1 from pg_extension where extname = 'pg_cron')
+     or not exists (select 1 from cron.job where jobname = 'purge_expired_tenant_links') then
+    raise exception 'FALHA 19: expurgo agendado ausente -> link expirado nunca e apagado';
+  end if;
+
   raise notice '============================================';
-  raise notice 'OK - as 12 garantias de seguranca conferidas.';
+  raise notice 'OK - as 19 garantias de seguranca conferidas.';
   raise notice '============================================';
 end $$;

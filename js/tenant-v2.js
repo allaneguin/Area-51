@@ -455,7 +455,7 @@ const Tenant = {
       } else if (f.type === 'select') {
         inputHtml = `<select class="form-input" data-field="${f.name}">`;
         f.options.forEach(opt => {
-          inputHtml += `<option value="${opt.value}" ${val === opt.value ? 'selected' : ''}>${opt.label}</option>`;
+          inputHtml += `<option value="${Utils.esc(opt.value)}" ${val === opt.value ? 'selected' : ''}>${Utils.esc(opt.label)}</option>`;
         });
         inputHtml += `</select>`;
       } else {
@@ -645,10 +645,19 @@ const Tenant = {
       ).then(() => {
         this.clearDraft();
         const importUrl = Utils.shareBaseUrl() + '#import?id=' + this.contract.cloudId + '&key=' + this.contract.cloudKey;
-        const waText = encodeURIComponent("Olá! Preenchi os meus dados no contrato com segurança. Segue o link para você visualizar/importar no seu painel:\n\n" + importUrl);
+        // O link NÃO entra na query do wa.me: encodeURIComponent transforma o '#'
+        // em '%23' e o fragmento — que o resto do sistema mantém fora de
+        // requisição de propósito — viraria query string num GET para servidor de
+        // terceiro, levando junto a chave que decifra o contrato. Vai por área de
+        // transferência / navigator.share, que não saem do aparelho.
+        const waText = encodeURIComponent("Olá! Preenchi os meus dados no contrato com segurança. Vou colar na próxima mensagem o link para você visualizar/importar no seu painel.");
         const waUrl = "https://wa.me/?text=" + waText;
-        
+
         saveFinishedUI(waUrl);
+        Utils.showShareModal(importUrl, {
+          titulo: 'Dados enviados com sucesso!',
+          descricao: 'Envie este link ao locador para ele importar o contrato preenchido:'
+        });
       }).catch(err => {
         Utils.toast("Erro ao salvar dados no servidor seguro: " + err.message, 'error');
         if (saveBtn) {

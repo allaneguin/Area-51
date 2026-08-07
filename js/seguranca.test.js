@@ -97,4 +97,18 @@ assert.ok(Utils.imgSeguro(pngOk, '', '') !== '');
 assert.strictEqual(CloudDB._sanitizeValue('data:image/gif;base64,R0lGOD'), '');
 assert.strictEqual(Utils.imgSeguro('data:image/gif;base64,R0lGOD', '', ''), '');
 
-console.log('ok — seguranca: sanitizacao de fronteira + imgSeguro nos sinks');
+// ═══ Terceira camada: nenhum value="${...}" cru nas telas ═══
+// Interpolar dado de usuario dentro de atributo sem escape deixa a aspa fechar
+// o value e abrir um handler (onfocus=). Renderizar as views aqui exigiria DOM,
+// entao a checagem e no fonte: todo value="${...}" tem de passar por Utils.esc.
+// Vale para os arquivos que montam formulario a partir de dado gravado.
+['admin.js', 'editor.js', 'tenant-v2.js'].forEach(arquivo => {
+  const texto = fs.readFileSync(path.join(__dirname, arquivo), 'utf8');
+  const crus = (texto.match(/value="\$\{(?!\s*Utils\.esc)[^}]*\}"/g) || [])
+    // Utils.imgSeguro ja valida o proprio conteudo com regex; numero e literal nao vem de usuario.
+    .filter(m => !/Utils\.(imgSeguro|esc)\b/.test(m));
+  assert.deepStrictEqual(crus, [],
+    `${arquivo}: value="\${...}" sem Utils.esc — a aspa do dado fecha o atributo`);
+});
+
+console.log('ok — seguranca: sanitizacao de fronteira + imgSeguro nos sinks + atributos escapados');

@@ -234,6 +234,46 @@ const Utils = {
     return `<img src="${dataUrl}" alt="${Utils.esc(alt || '')}" style="${Utils.esc(style || '')}">`;
   },
 
+  // ── Lista branca do que o inquilino escreve ─────────────────────────────
+  // Campos que ele preenche legitimamente mas que NÃO estão declarados como
+  // seção 'Locatário' no modelo: assinatura, selfie e a trilha do aceite.
+  // assinatura_locador ficou de fora de propósito — é do outro lado.
+  CAMPOS_EXTRA_DO_INQUILINO: [
+    'assinatura_locatario', 'selfie_locatario',
+    'aceite_ts', 'aceite_hash', 'ip_acesso',
+    'geo_lat', 'geo_lng', 'geo_acc', 'user_agent'
+  ],
+
+  // O payload do link é montado no navegador do inquilino: é dado hostil (R5.4).
+  // A regra "só a seção Locatário" existia apenas no filtro de renderização da
+  // tela dele — quem abrisse o console reescrevia conta bancária, valor e prazo
+  // do locador, e a sincronização gravava isso no painel dele sem um clique.
+  // Aqui a regra vale na INGESTÃO, que é onde ela decide alguma coisa.
+  mesclarCamposDoInquilino(locais, doInquilino, templateId, evidencia) {
+    const tpl = (typeof Contracts !== 'undefined' && Contracts[templateId]) || null;
+    const permitidos = new Set([
+      ...(tpl ? tpl.fields
+        .filter(f => (f.section || '').toLowerCase() === 'locatário')
+        .map(f => f.name) : []),
+      ...Utils.CAMPOS_EXTRA_DO_INQUILINO
+    ]);
+
+    const saida = Object.assign({}, locais || {});
+    Object.keys(doInquilino || {}).forEach(k => {
+      if (permitidos.has(k)) saida[k] = doInquilino[k];
+    });
+
+    // Carimbo do servidor (migration 003). Entra DEPOIS da lista branca e
+    // sempre vence: são os únicos campos da trilha que quem assina não redige.
+    // Os nomes ficam fora de CAMPOS_EXTRA_DO_INQUILINO de propósito — assim um
+    // "aceite_ts_servidor" forjado no payload é descartado acima.
+    if (evidencia && evidencia.em) {
+      saida.aceite_ts_servidor = evidencia.em;
+      saida.ip_servidor = evidencia.ip || '';
+    }
+    return saida;
+  },
+
   // ── Toast (feedback não-bloqueante, substitui alert) ──
   toast(msg, type = 'success') {
     let box = document.getElementById('toast-box');
@@ -325,7 +365,11 @@ const Utils = {
   },
 
   // ── Modal de Compartilhamento do Link (Substitui prompt nativo no celular) ──
-  showShareModal(url) {
+  // opts.titulo/opts.descricao: o inquilino usa o mesmo modal para devolver o
+  // link ao locador, onde o sentido da frase é o inverso.
+  showShareModal(url, opts) {
+    const titulo = (opts && opts.titulo) || 'Link do Inquilino Gerado!';
+    const descricao = (opts && opts.descricao) || 'Envie este link para o inquilino preencher os dados e assinar:';
     let copied = false;
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(url).then(() => {
@@ -347,9 +391,9 @@ const Utils = {
         <div style="width:48px; height:48px; border-radius:12px; background:var(--primary-light, #EFF6FF); color:var(--primary, #1E40AF); display:grid; place-items:center; margin:0 auto 16px;">
           <svg style="width:24px; height:24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
         </div>
-        <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-main, #0F172A); margin:0 0 6px;">Link do Inquilino Gerado!</h3>
+        <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-main, #0F172A); margin:0 0 6px;">${Utils.esc(titulo)}</h3>
         <p style="font-size:0.875rem; color:var(--text-muted, #64748B); margin:0 0 16px; line-height:1.4;">
-          ${copied ? 'O link foi copiado! Você também pode compartilhá-lo ou copiá-lo abaixo:' : 'Envie este link para o inquilino preencher os dados e assinar:'}
+          ${copied ? 'O link foi copiado! Você também pode compartilhá-lo ou copiá-lo abaixo:' : Utils.esc(descricao)}
         </p>
 
         <div style="display:flex; gap:8px; margin-bottom:16px;">
@@ -365,7 +409,8 @@ const Utils = {
         <div style="display:flex; flex-direction:column; gap:8px;">
           ${navigator.share ? `
             <button type="button" class="btn btn-whatsapp" style="width:100%; justify-content:center; padding:12px; font-size:0.9rem;"
-              onclick="navigator.share({ title: 'Contrato de Locação', text: 'Olá! Por favor, preencha seus dados para o contrato de locação:', url: '${Utils.esc(url)}' }).catch(() => {})">
+              data-share-url="${Utils.esc(url)}"
+              onclick="navigator.share({ title: 'Contrato de Locação', text: 'Olá! Por favor, preencha seus dados para o contrato de locação:', url: this.getAttribute('data-share-url') }).catch(() => {})">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
               Compartilhar no WhatsApp / Apps
             </button>
@@ -779,8 +824,18 @@ const Utils = {
     fields = fields || {};
     if (!fields.aceite_ts && !fields.assinatura_locatario && !fields.selfie_locatario) return '';
 
-    const dataAceite = fields.aceite_ts ? new Date(fields.aceite_ts).toLocaleString('pt-BR') : 'Não informado';
-    const ip = fields.ip_acesso || 'Não registrado';
+    // Data e IP saem do carimbo do SERVIDOR (migration 003). Os equivalentes em
+    // fields (aceite_ts, ip_acesso) são escritos no navegador de quem assina —
+    // servem para a tela, não como prova, porque o próprio signatário os edita.
+    // Contrato assinado antes da 003 não tem carimbo: aí o certificado diz isso
+    // em vez de apresentar o valor autodeclarado como se fosse evidência.
+    // Fuso fixo: toLocaleString sem timeZone usa o do aparelho que abre o PDF,
+    // então o mesmo aceite imprimia horas diferentes para locador e inquilino —
+    // e o rótulo dizia "(UTC)", que não era verdade em nenhum dos dois.
+    const dataAceite = fields.aceite_ts_servidor
+      ? new Date(fields.aceite_ts_servidor).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      : 'Não registrado pelo servidor';
+    const ip = fields.ip_servidor || 'Não registrado pelo servidor';
     const gpsStr = fields.geo_lat && fields.geo_lng ? `${fields.geo_lat}, ${fields.geo_lng} (Precisão ±${fields.geo_acc || 0}m)` : 'Não fornecido pelo dispositivo';
     const hashDoc = fields.aceite_hash ? fields.aceite_hash.toUpperCase() : 'N/A';
     const userAgent = fields.user_agent || navigator.userAgent;
@@ -812,7 +867,7 @@ const Utils = {
           </tr>
           <tr>
             <td style="border: 1px solid #CBD5E1; padding: 6px 10px; width: 30%;"><strong>Data e Hora do Aceite:</strong></td>
-            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${dataAceite} (UTC)</td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(dataAceite)}${fields.aceite_ts_servidor ? ' (horário de Brasília)' : ''}</td>
           </tr>
           <tr>
             <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Endereço IP:</strong></td>

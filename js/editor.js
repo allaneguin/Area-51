@@ -119,11 +119,17 @@ const Editor = {
     // Sincronização automática em segundo plano com a nuvem (caso o inquilino tenha preenchido)
     if (this.contract && this.contract.cloudId && this.contract.cloudKey && !this.contract.isFinalized) {
       CloudDB.loadContract(this.contract.cloudId, this.contract.cloudKey).then(cloudPayload => {
-        const localFieldsStr = JSON.stringify(this.contract.fields);
-        const cloudFieldsStr = JSON.stringify(cloudPayload.f);
-        
-        if (localFieldsStr !== cloudFieldsStr || cloudPayload.isFinalized) {
-          this.contract.fields = cloudPayload.f;
+        // Só a seção Locatário e a trilha do aceite entram: o resto do payload é
+        // montado no navegador do inquilino e não manda no contrato do locador.
+        const mesclado = Utils.mesclarCamposDoInquilino(
+          this.contract.fields, cloudPayload.f, this.contract.templateId, cloudPayload.evidencia);
+        // Comparar contra o MERGE, não contra cloudPayload.f: o payload traz
+        // campos que o merge descarta, e comparar com ele deixaria "mudou"
+        // sempre verdadeiro — render() reentra e vira laço de requisições.
+        const mudou = JSON.stringify(mesclado) !== JSON.stringify(this.contract.fields);
+
+        if (mudou || cloudPayload.isFinalized) {
+          this.contract.fields = mesclado;
           if (cloudPayload.isFinalized) {
             this.contract.isFinalized = true;
           }
@@ -174,7 +180,7 @@ const Editor = {
                 <label class="form-label">Importar Imóvel</label>
                 <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyPropertySelection(this.value)">
                   <option value="">Selecionar...</option>
-                  ${properties.map(p => `<option value="${p.id}">${Utils.esc(p.name)} (${Utils.formatCurrency(p.rent_value || 0)})</option>`).join('')}
+                  ${properties.map(p => `<option value="${Utils.esc(p.id)}">${Utils.esc(p.name)} (${Utils.formatCurrency(p.rent_value || 0)})</option>`).join('')}
                 </select>
               </div>
             ` : ''}
@@ -183,7 +189,7 @@ const Editor = {
                 <label class="form-label">Importar Inquilino</label>
                 <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyClientSelection(this.value, 'locatario')">
                   <option value="">Selecionar...</option>
-                  ${inquilinos.map(c => `<option value="${c.id}">${Utils.esc(c.name)}</option>`).join('')}
+                  ${inquilinos.map(c => `<option value="${Utils.esc(c.id)}">${Utils.esc(c.name)}</option>`).join('')}
                 </select>
               </div>
             ` : ''}
@@ -192,7 +198,7 @@ const Editor = {
                 <label class="form-label">Importar Locador</label>
                 <select class="form-input" style="font-size: 0.85rem;" onchange="Editor.applyClientSelection(this.value, 'locador')">
                   <option value="">Selecionar...</option>
-                  ${locadores.map(c => `<option value="${c.id}">${Utils.esc(c.name)}</option>`).join('')}
+                  ${locadores.map(c => `<option value="${Utils.esc(c.id)}">${Utils.esc(c.name)}</option>`).join('')}
                 </select>
               </div>
             ` : ''}
@@ -231,7 +237,7 @@ const Editor = {
           inputHtml = `<select class="form-input" data-field="${f.name}" ${disabledAttr} ${readOnlyAttr}>`;
           f.options.forEach(opt => {
             const isSelected = val === opt.value ? 'selected' : '';
-            inputHtml += `<option value="${opt.value}" ${isSelected}>${opt.label}</option>`;
+            inputHtml += `<option value="${Utils.esc(opt.value)}" ${isSelected}>${Utils.esc(opt.label)}</option>`;
           });
           inputHtml += `</select>`;
         } else {
@@ -550,19 +556,27 @@ const Editor = {
             .then(() => finalize(this.contract.cloudId, this.contract.cloudKey));
         })
         .catch(err => {
-          // Link expirou/sumiu: limpa a referência e gera um novo automaticamente
-          if (/expir|não existe|inexistente/i.test(err.message)) {
-            this.contract.cloudId = null;
-            this.contract.cloudKey = null;
-            Storage.update(this.contract.id, { cloudId: null, cloudKey: null });
-            createNewLink().catch(e2 => {
-              Utils.toast('Erro ao gerar novo link: ' + e2.message, 'error');
-              restoreBtn();
-            });
+          // Conexão caiu: o link pode estar vivo e sendo preenchido agora.
+          // Descartá-lo aqui deixaria o inquilino trabalhando num link que o
+          // locador não consegue mais importar.
+          if (err.transporte) {
+            Utils.toast(err.message, 'error');
+            restoreBtn();
             return;
           }
-          Utils.toast('Erro ao atualizar contrato no servidor: ' + err.message, 'error');
-          restoreBtn();
+          // O servidor respondeu e o link não serve mais: expirado, removido, ou
+          // payload adulterado por quem tinha a URL (só o id é preciso para
+          // sobrescrever). Nos três casos o certo é descartar e gerar outro. O
+          // filtro por mensagem que existia aqui não casava com "Chave do link
+          // incorreta", e o contrato ficava preso a um link morto, para sempre.
+          console.warn('Link antigo ilegível, gerando outro:', err.message);
+          this.contract.cloudId = null;
+          this.contract.cloudKey = null;
+          Storage.update(this.contract.id, { cloudId: null, cloudKey: null });
+          createNewLink().catch(e2 => {
+            Utils.toast('Erro ao gerar novo link: ' + e2.message, 'error');
+            restoreBtn();
+          });
         });
     } else {
       createNewLink().catch(err => {

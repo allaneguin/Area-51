@@ -1,0 +1,12 @@
+# O deploy publica todo arquivo do repositorio. Nada aqui e lido em runtime:
+# app.html carrega so css/, js/, data/ e fonts/. Sem esta lista, /supabase/...
+# e /docs/... respondiam 200 para qualquer um, entregando esquema, politicas,
+# corpo das funcoes SECURITY DEFINER e os documentos internos que descrevem as
+# fraquezas ainda aceitas.
+supabase/
+supabase_*.sql
+docs/
+*.test.js
+.github/
+CHANGELOG.md
+README.md

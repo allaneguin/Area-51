@@ -139,6 +139,16 @@ const CloudDB = {
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
   },
 
+  // Prova de posse da chave (migration 003). Mandamos SHA-256(chave) em hex; o
+  // servidor guarda SHA-256 disso. Ele nunca aprende a chave — a propriedade
+  // que sustenta o modelo (a tabela sozinha não decifra nada) continua de pé —
+  // e quem só tem o id não escreve mais no link.
+  async _keyProof(keyString) {
+    const buf = await window.crypto.subtle.digest(
+      'SHA-256', new TextEncoder().encode(String(keyString)));
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+  },
+
   // Save a new contract to the cloud server
   async saveContract(contractData, key) {
     if (typeof supabaseClient === 'undefined') throw new Error("Supabase não inicializado.");
@@ -148,7 +158,11 @@ const CloudDB = {
 
     // Via RPC: o id é argumento obrigatório, então a operação toca uma linha só.
     const { error } = await supabaseClient
-      .rpc('create_tenant_link', { p_id: linkId, p_payload: encryptedPayload });
+      .rpc('create_tenant_link', {
+        p_id: linkId,
+        p_payload: encryptedPayload,
+        p_key_proof: await this._keyProof(key)
+      });
 
     if (error) throw new Error("Falha ao salvar link seguro no Supabase: " + error.message);
     return linkId;
@@ -166,10 +180,14 @@ const CloudDB = {
     // via "enviado com sucesso" e o link continuava gravável por quem tivesse a
     // URL — falha disfarçada de sucesso. supabase_seguranca.sql garante a
     // assinatura única, então erro aqui volta a ser erro visível.
+    // p_key_proof (003): sem ela, quem tivesse só o id sobrescrevia e finalizava
+    // o link de fora. Link criado antes da 003 tem key_proof null no banco e
+    // continua aceitando a escrita sem a prova, até expirar.
+    const proof = await this._keyProof(key);
     const { data, error } = await supabaseClient
       .rpc('set_tenant_link', finalize
-        ? { p_id: serverId, p_payload: encryptedPayload, p_finalize: true }
-        : { p_id: serverId, p_payload: encryptedPayload });
+        ? { p_id: serverId, p_payload: encryptedPayload, p_finalize: true, p_key_proof: proof }
+        : { p_id: serverId, p_payload: encryptedPayload, p_key_proof: proof });
 
     if (error) throw new Error("Falha ao atualizar contrato no servidor: " + error.message);
     // A função devolve false quando nenhuma linha casou (link expirado,
@@ -188,13 +206,44 @@ const CloudDB = {
     const { data, error } = await supabaseClient
       .rpc('get_tenant_link', { p_id: serverId });
 
-    if (error || !data) throw new Error("Este link expirou ou não existe mais. Peça um novo link ao locador.");
+    // Falha de transporte é diferente de link inexistente, e quem chama precisa
+    // distinguir: o editor descarta o link quando ele não serve mais, e não pode
+    // descartar um link vivo (que o inquilino talvez esteja preenchendo agora)
+    // só porque a conexão caiu por um instante.
+    if (error) {
+      const e = new Error("Não foi possível falar com o servidor. Verifique a conexão e tente de novo.");
+      e.transporte = true;
+      throw e;
+    }
+    if (!data) throw new Error("Este link expirou ou não existe mais. Peça um novo link ao locador.");
 
+    let payload;
     try {
-      return await this.decrypt(data, key);
+      payload = await this.decrypt(data, key);
     } catch (e) {
       // decrypt AES-GCM com chave errada rejeita com mensagem vazia — traduz para algo acionável.
       throw new Error("Chave do link incorreta ou link incompleto. Copie o link inteiro que o locador enviou.");
     }
+
+    // Evidência carimbada pelo servidor (003), fora do payload cifrado: é a
+    // única parte da trilha de aceite que quem assina não redige. Vem de uma
+    // função separada de propósito — mudar o retorno de get_tenant_link
+    // quebraria esta mesma linha no instante em que a migration rodasse.
+    // Atribuição incondicional: se o payload trouxer um "evidencia" forjado,
+    // ele é substituído (por null, inclusive, quando a consulta falha).
+    payload.evidencia = null;
+    try {
+      const { data: ev } = await supabaseClient
+        .rpc('get_tenant_link_evidencia', { p_id: serverId });
+      const linha = Array.isArray(ev) ? ev[0] : ev;
+      if (linha && linha.finalizado_em) {
+        payload.evidencia = { em: linha.finalizado_em, ip: linha.finalizado_ip || '' };
+      }
+    } catch (e) {
+      // Complementar: link antigo não tem carimbo, e isso não impede abrir.
+      console.warn('Evidência do servidor indisponível:', e && e.message);
+    }
+
+    return payload;
   }
 };

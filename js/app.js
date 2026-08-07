@@ -151,18 +151,21 @@ const App = {
           
           let localId;
           if (existing) {
-            // Atualiza contrato existente
+            // Atualiza contrato existente — só o que o inquilino pode escrever.
             const updated = Storage.update(existing.id, {
-              fields: payload.f,
+              fields: Utils.mesclarCamposDoInquilino(existing.fields, payload.f, existing.templateId, payload.evidencia),
               isFinalized: true
             });
             localId = updated.id;
           } else {
-            // Cria um novo contrato importado
+            // Cria um novo contrato importado. Sem contrato local não há base do
+            // locador para preservar: entram só os campos do inquilino, e os do
+            // locador ficam vazios (visivelmente) em vez de virem preenchidos
+            // por quem mandou o link.
             const newContract = Storage.create({
               name: 'Contrato Importado - ' + (payload.f.nome_locatario || 'Inquilino'),
               templateId: payload.t,
-              fields: payload.f,
+              fields: Utils.mesclarCamposDoInquilino({}, payload.f, payload.t, payload.evidencia),
               cloudId: serverId,
               cloudKey: key,
               isFinalized: true
