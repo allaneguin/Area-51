@@ -1,10 +1,12 @@
--- CONGELADO (2026-08-05) — este arquivo é a VERSÃO VIGENTE das regras de
--- tenant_links, já aplicada em produção em 30/07. Não reexecutar por rotina.
+-- CONGELADO (2026-08-05) — foi a versao vigente das regras de tenant_links
+-- entre 30/07 e 07/08. SUPERADO pela migration 003, que refez create/set/
+-- get_tenant_link (prova de posse da chave e carimbo de aceite no servidor).
+-- Rodar este arquivo hoje DESFAZ a 003. Nao execute.
 -- Mudança de banco daqui pra frente: novo arquivo em supabase/migrations/.
 -- Para conferir o banco, rode supabase/verificacao.sql (somente leitura).
 -- Ver docs/ARQUITETURA.md (§8 e regra R4).
 -- =========================================================================
--- CERCA DE SEGURANÇA — rode este arquivo inteiro no SQL Editor do Supabase.
+-- [HISTORICO] CERCA DE SEGURANCA — era rodado inteiro no SQL Editor. NAO EXECUTE HOJE.
 --
 -- Consolida e substitui as regras de tenant_links que estavam divididas (e
 -- divergentes) entre supabase_schema.sql, supabase_rls.sql e

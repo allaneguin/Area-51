@@ -7,7 +7,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- Trava do link do inquilino após o envio — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════
--- Cole e execute este script no SQL Editor do painel do Supabase.
+-- [HISTORICO] Na epoca, este script era colado no SQL Editor. NAO EXECUTE HOJE.
 -- Ele é IDEMPOTENTE: pode ser executado mais de uma vez sem erro.
 --
 -- Problema que resolve: a política de UPDATE de tenant_links era

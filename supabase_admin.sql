@@ -5,7 +5,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- Papel de administrador (visão de todas as contas) — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════
--- Cole e execute este script no SQL Editor do painel do Supabase.
+-- [HISTORICO] Na epoca, este script era colado no SQL Editor. NAO EXECUTE HOJE.
 -- Ele é IDEMPOTENTE: pode ser executado mais de uma vez sem erro.
 --
 -- Modelo:
@@ -20,12 +20,12 @@
 
 -- 1) Conceder o papel (rode UMA VEZ por admin, ajustando o e-mail).
 --    O usuário precisa deslogar e logar de novo para o JWT novo valer.
+--    E-mail real fora do repositorio de proposito: identifica a unica conta
+--    que le contratos e perfis de todas as ilhas. Preencher no SQL Editor,
+--    nunca commitar. Mesma decisao de migrations/001: papel e dado, nao
+--    estrutura.
 update auth.users
    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
--- E-mail real fora do repositorio de proposito: identifica a unica conta que le
--- contratos e perfis de todas as ilhas. Preencher no SQL Editor, nunca commitar.
--- Mesma decisao de supabase/migrations/001_baseline.sql: conceder papel e dado,
--- nao estrutura.
  where email = 'ENDERECO@EXEMPLO.COM';
 
 -- Para revogar:

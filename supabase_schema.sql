@@ -7,7 +7,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- DDL Completo e Políticas de Segurança (RLS) — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════
--- Execute este script no SQL Editor do Supabase para inicializar a estrutura.
+-- [HISTORICO] Inicializava a estrutura. Hoje isso e migrations/001. NAO EXECUTE.
 -- Script IDEMPOTENTE: pode ser executado várias vezes sem provocar erros.
 -- ═══════════════════════════════════════════════════════════════════════
 

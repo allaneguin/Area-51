@@ -7,7 +7,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- Políticas de Segurança (RLS) — Meus Imóveis
 -- ═══════════════════════════════════════════════════════════════════════
--- Cole e execute este script no SQL Editor do painel do Supabase.
+-- [HISTORICO] Na epoca, este script era colado no SQL Editor. NAO EXECUTE HOJE.
 -- Ele é IDEMPOTENTE: pode ser executado mais de uma vez sem erro.
 --
 -- Modelo de segurança:

@@ -5,7 +5,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- DDL de Expansão ERP: Imóveis, Clientes e Módulo Financeiro
 -- ═══════════════════════════════════════════════════════════════════════
--- Execute este script no SQL Editor do Supabase para criar a estrutura ERP.
+-- [HISTORICO] Criava a estrutura ERP. Hoje isso vive em migrations/001. NAO EXECUTE.
 -- Script IDEMPOTENTE: pode ser executado várias vezes com segurança.
 -- ═══════════════════════════════════════════════════════════════════════
 

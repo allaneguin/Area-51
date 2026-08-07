@@ -114,7 +114,7 @@ O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de 
 Testes — não exigem instalação, é Node puro:
 
 ```bash
-npm test          # roda os 5 checks
+npm test          # roda os 6 checks
 ```
 
 ---

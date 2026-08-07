@@ -62,7 +62,7 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 
 ## 3. Módulos JS — camadas reais
 
-~6.130 linhas em 16 módulos de produção + `data/contracts.js` (modelos) + 5 arquivos de teste. Cada módulo é um `const Objeto = {...}` no escopo global de script clássico (não `window.X`); os ~85 handlers `onclick` inline resolvem pela cadeia de escopo — é por isso que a CSP mantém `'unsafe-inline'`.
+~6.130 linhas em 16 módulos de produção + `data/contracts.js` (modelos) + 6 arquivos de teste. Cada módulo é um `const Objeto = {...}` no escopo global de script clássico (não `window.X`); os ~85 handlers `onclick` inline resolvem pela cadeia de escopo — é por isso que a CSP mantém `'unsafe-inline'`.
 
 | Camada | Arquivos | Papel |
 |---|---|---|
@@ -252,7 +252,7 @@ Checklist, na ordem. É deliberadamente curto — o objetivo é caber no hábito
 2. **Já existe?** Procure helper/padrão no núcleo antes de escrever (`Utils`, `Storage`, `CloudDB`, `components.css`). A duplicação nasce aqui.
 3. **Em que camada mora?** (R2). Regra de negócio → núcleo puro. Dados → `Storage`/`CloudDB`. Tela → view da rota. Na dúvida, a resposta certa é a que permite testar com `node`.
 4. **Toca banco?** → migration numerada nova (R4), nunca editar SQL congelado. Toca dado do inquilino? → as duas camadas de sanitização (R5).
-5. **Teste** para regra nova/alterada (R8) e rodar os 5 existentes.
+5. **Teste** para regra nova/alterada (R8) e rodar os 6 existentes.
 6. **Bump de versão** do track da página afetada (R7).
 7. **CHANGELOG** com o quê e o porquê, citando a versão (R9).
 8. **Este documento**: se a mudança contraria alguma regra daqui, o doc muda primeiro ou a mudança não entra.
