@@ -40,7 +40,7 @@
   /* o rotulo acompanha a fatia: inteiro em tela estreita, sem passar de 12px */
   font-size: clamp(0.6rem, 2.6vw, 0.75rem);
   transition: all 0.2s ease;
-  /* sem folga lateral: a fatia inteira e do rotulo (cabe "Financeiro" a 320px) */
+  /* sem folga lateral: a fatia inteira e do rotulo (cabe "Contratos" a 320px) */
   padding: 4px 0;
   border-radius: var(--radius-md, 12px);
 }

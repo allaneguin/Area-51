@@ -9,7 +9,6 @@ const App = {
     '#dashboard': 'dashboard',
     '#properties': 'properties',
     '#clients': 'clients',
-    '#financial': 'financial',
     '#templates': 'templates',
     '#contracts': 'contracts',
     '#editor': 'editor',
@@ -117,7 +116,6 @@ const App = {
     if (route === 'dashboard') Dashboard.render(this.container);
     else if (route === 'properties') PropertiesView.render(this.container);
     else if (route === 'clients') ClientsView.render(this.container);
-    else if (route === 'financial') FinancialView.render(this.container);
     else if (route === 'templates') Templates.render(this.container);
     else if (route === 'contracts') ContractsView.render(this.container);
     else if (route === 'editor') Editor.render(this.container, param);

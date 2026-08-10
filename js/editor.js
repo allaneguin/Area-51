@@ -333,6 +333,7 @@ const Editor = {
           <div class="cliente-resumo-head">
             <span class="cliente-resumo-nome">${Utils.esc(this.contract.fields.nome_locatario)}</span>
             <span class="badge-status ${st.class}">${st.label}</span>
+            ${this.contract.fields.valor_aluguel ? `<span class="cliente-resumo-valor">${Utils.esc(this.contract.fields.valor_aluguel)}<small>/mês</small></span>` : ''}
           </div>
           ${Utils.dadosClienteHTML(this.contract.fields)}
         </div>

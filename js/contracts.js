@@ -26,12 +26,11 @@ const ContractsView = {
         // (anônimo) e são injetados via innerHTML na sessão autenticada do locador.
         const nomeCliente = Utils.esc(c.fields && c.fields.nome_locatario ? c.fields.nome_locatario : 'Locatário não preenchido');
         const valor = Utils.esc(c.fields && c.fields.valor_aluguel ? c.fields.valor_aluguel : 'R$ ---');
-        const inicio = c.fields && c.fields.data_inicio ? Utils.formatDate(c.fields.data_inicio) : '---';
         const tituloContrato = Utils.esc(c.name || 'Contrato sem nome');
         const status = Utils.getContractStatus(c);
-        const dataCriacao = c.createdAt ? Utils.formatDate(c.createdAt) : '';
 
         // Dados do cliente que só apareciam dentro do contrato — agora ficam na lista.
+        // "Iniciado em" sai daqui: já é o primeiro item da grade de detalhes.
         const detalhes = Utils.dadosClienteHTML(c.fields, c.createdAt);
 
         return `
@@ -40,20 +39,20 @@ const ContractsView = {
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
             </div>
             <div class="contract-row-info">
-              <div class="contract-row-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <div class="contract-row-name">
                 ${nomeCliente}
                 <span class="badge-status ${status.class}">${status.label}</span>
               </div>
-              <div class="contract-row-meta">
-                <strong>${tituloContrato}</strong>
-                ${dataCriacao ? ` · <span style="font-size: 0.85rem; color: var(--text-muted);">Iniciado em <strong>${dataCriacao}</strong></span>` : ''}
-              </div>
+              <div class="contract-row-meta">${tituloContrato}</div>
               ${detalhes}
             </div>
-            <div class="contract-row-date" style="font-size: 0.95rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 1rem;">
-              ${valor}
-              <button class="btn-icon" style="color: var(--danger, #ef4444); padding: 0.25rem;" onclick="event.stopPropagation(); ContractsView.deleteContract('${c.id}')" title="Excluir Contrato">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            <div class="contract-row-date">
+              <span class="contract-row-preco">
+                <span class="contract-row-preco-rotulo">Aluguel mensal</span>
+                <span class="contract-row-value">${valor}</span>
+              </span>
+              <button class="btn-icon contract-row-delete" onclick="event.stopPropagation(); ContractsView.deleteContract('${c.id}')" title="Excluir contrato" aria-label="Excluir contrato de ${nomeCliente}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
               </button>
             </div>
           </div>

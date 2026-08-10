@@ -450,12 +450,15 @@ const Utils = {
   },
 
   // ── Dados do locatário exibidos na lista e no editor (uma fonte só) ──
+  // O aluguel NÃO entra na grade: é o número que se procura primeiro, então vive
+  // no cabeçalho de quem chama (lista, resumo do editor, painel de admin).
   dadosClienteHTML(fields, createdAt) {
     fields = fields || {};
     const dataCriacao = createdAt ? Utils.formatDate(createdAt) : '';
     const inicio = fields.data_inicio ? Utils.formatDate(fields.data_inicio) : '';
     const termino = fields.data_termino ? Utils.formatDate(fields.data_termino) : '';
-    const periodo = inicio && termino ? `${inicio} a ${termino}` : (inicio || '');
+    // Início sozinho é o primeiro dia da vigência: mostrar os dois repetia a data.
+    const vigencia = inicio && termino ? `${inicio} a ${termino}` : inicio;
 
     const itens = [
       dataCriacao && ['Iniciado em', dataCriacao],
@@ -463,31 +466,46 @@ const Utils = {
       fields.rg_locatario && ['RG', fields.rg_locatario],
       fields.prof_locatario && ['Profissão', fields.prof_locatario],
       fields.est_civil_locatario && ['Estado civil', fields.est_civil_locatario],
-      inicio && ['Início Locação', inicio],
-      periodo && ['Período Vigência', periodo],
+      vigencia && ['Vigência', vigencia],
       fields.dia_vencimento && ['Vencimento', `todo dia ${fields.dia_vencimento}`],
-      fields.valor_aluguel && ['Aluguel', fields.valor_aluguel],
       fields.indice_reajuste && ['Reajuste', fields.indice_reajuste],
-      fields.end_imovel && ['Imóvel', fields.end_imovel],
-      // Aceite do inquilino. Prefere o carimbo do servidor (migration 003); o
-      // aceite_ts é escrito pelo próprio signatário e só vale como referência
-      // de tela, então quando é ele que aparece, o rótulo diz isso.
-      (fields.aceite_ts_servidor || fields.aceite_ts) && [
-        fields.aceite_ts_servidor ? 'Aceite do inquilino' : 'Aceite do inquilino (não verificado)',
-        new Date(fields.aceite_ts_servidor || fields.aceite_ts)
-          .toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) +
-          (fields.aceite_hash ? ' · doc ' + fields.aceite_hash.slice(0, 12) + '…' : '')]
+      // O endereço é o valor mais longo da grade: ocupa duas colunas para não
+      // virar "Rua Doutor Nelson de Sena, …" e esconder o que identifica o imóvel.
+      fields.end_imovel && ['Imóvel', fields.end_imovel, true]
     ].filter(Boolean);
 
-    if (!itens.length) return '';
+    // Aceite: única informação com peso jurídico aqui, então sai da grade e ganha
+    // linha própria. Prefere o carimbo do servidor (migration 003); o aceite_ts é
+    // escrito pelo próprio signatário e só vale como referência de tela — quando é
+    // ele que aparece, o selo diz isso e muda de cor.
+    const verificado = !!fields.aceite_ts_servidor;
+    const carimbo = new Date(fields.aceite_ts_servidor || fields.aceite_ts || '');
+    const aceite = isNaN(carimbo) ? '' : `
+      <div class="aceite-selo${verificado ? '' : ' aceite-selo-alerta'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="${verificado
+              ? 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
+              : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}"></path>
+        </svg>
+        <span class="aceite-texto">
+          <strong>Aceite do inquilino</strong>
+          <span class="aceite-quando">${Utils.esc(carimbo.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}</span>
+          ${verificado ? '' : '<span class="aceite-aviso">horário do aparelho do inquilino — não verificado</span>'}
+        </span>
+        ${fields.aceite_hash ? `<span class="aceite-doc" title="Impressão digital do documento aceito">doc ${Utils.esc(fields.aceite_hash.slice(0, 12))}…</span>` : ''}
+      </div>`;
+
+    if (!itens.length && !aceite) return '';
 
     // Escape obrigatório: estes dados vêm do INQUILINO (anônimo) e vão para innerHTML.
-    return `<div class="cliente-detalhes">` + itens.map(([rotulo, valor]) => `
-      <div class="cliente-detalhe">
+    // O title repete o valor inteiro — o que a coluna corta aparece no hover.
+    return `<div class="cliente-detalhes">` + itens.map(([rotulo, valor, largo]) => `
+      <div class="cliente-detalhe${largo ? ' cliente-detalhe-largo' : ''}">
         <span class="cliente-detalhe-rotulo">${rotulo}</span>
-        <span class="cliente-detalhe-valor">${Utils.esc(String(valor))}</span>
+        <span class="cliente-detalhe-valor" title="${Utils.esc(String(valor))}">${Utils.esc(String(valor))}</span>
       </div>
-    `).join('') + `</div>`;
+    `).join('') + `</div>` + aceite;
   },
 
   // ── IDs ──

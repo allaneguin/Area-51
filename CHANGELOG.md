@@ -12,6 +12,17 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ---
 
+## 2026-08-10
+
+Aba Financeiro removida e cartão de contrato redesenhado (assets: 1.30.0 → **1.31.0**).
+
+- **A aba Financeiro saiu** (`app.html`, `js/app.js`, `js/financial.js` apagado): fora da topbar, da barra inferior e do roteador — `#financial` agora cai no painel, como qualquer hash desconhecido. **O que ficou de pé de propósito:** a tabela `financial_records` e o CRUD em `Storage` (incluindo `generateMonthlyCharges` e o teste dele). Nenhum lançamento foi apagado e ressuscitar a tela é reverter este commit.
+- **Cartão do contrato: fim da informação repetida** (`js/utils.js`, `js/contracts.js`, `js/editor.js`). A mesma data aparecia três vezes por cartão — "Iniciado em" na linha do título e na grade, "Início Locação" ao lado de "Período Vigência", que já começa por ela — e o aluguel aparecia duas. Agora: "Iniciado em" só na grade, um item **Vigência** com o período inteiro, e o aluguel **só no cabeçalho**, com rótulo ("Aluguel mensal") em vez de um número azul solto no canto. Como a regra vale para as três telas que usam `Utils.dadosClienteHTML` (lista, resumo do editor, painel de admin), o resumo do editor ganhou o valor no cabeçalho.
+- **Grade alinhada** (`css/dashboard.css`): os dados do locatário eram um `flex-wrap` — cada coluna com a largura do próprio valor, nada batendo de uma linha para a outra. Viraram `grid` com `auto-fit`, que encaixa quatro colunas no desktop e uma no celular sem media query. O endereço do imóvel ocupa duas colunas (era o valor que mais sofria com o corte); o resto corta com reticências e mostra o texto inteiro no `title`, sem tooltip próprio para manter.
+- **O aceite do inquilino virou selo** (`js/utils.js`): era um item igual aos outros, com "(não verificado)" escondido no rótulo — a única linha do cartão com peso jurídico tinha o mesmo peso visual que "Profissão". Agora é uma faixa própria: verde quando o carimbo é do servidor (migration 003), âmbar quando só existe o horário do aparelho do inquilino, que ele mesmo escreve. Data quebrada não vira mais "Invalid Date" na tela: o selo simplesmente não sai.
+- **Consertos de rota** que apareceram no caminho: `.cliente-resumo` usava `var(--border)` e `var(--bg)`, tokens que não existem — `var()` inválida derruba a declaração inteira, então a caixa de resumo do editor ficava com borda da cor do texto e fundo transparente; `.contract-row` tinha `#F2F4F8` cravado (R6.1), que não escurecia no tema escuro. Os dois passaram a token.
+- Checagens novas em `js/prazo.test.js`: aluguel fora da grade, um único item de data, selo verde vs. selo de alerta e data inválida sem saída.
+
 ## 2026-08-07 (3)
 
 Fase 2 do plano de segurança — migrations 002 e 003 aplicadas em produção (assets: 1.29.0 → **1.30.0**).

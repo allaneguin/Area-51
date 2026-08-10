@@ -31,7 +31,7 @@ Três caminhos foram avaliados para "voltar ao início e ter uma arquitetura":
 
 ## 1. Visão geral
 
-Aplicação web de **geração e gestão de contratos de locação**: o locador monta o contrato, envia um link cifrado ao inquilino, que preenche os próprios dados no celular e devolve; o locador importa e imprime em PDF. Em volta do contrato cresceu um mini-ERP: imóveis, clientes e financeiro.
+Aplicação web de **geração e gestão de contratos de locação**: o locador monta o contrato, envia um link cifrado ao inquilino, que preenche os próprios dados no celular e devolve; o locador importa e imprime em PDF. Em volta do contrato cresceu um mini-ERP: imóveis e clientes (a tela de financeiro saiu em 10/08 — a tabela `financial_records` e o CRUD em `Storage` continuam de pé, sem view).
 
 ```
 ┌────────────────────── Vercel (estático) ──────────────────────┐
@@ -62,7 +62,7 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 
 ## 3. Módulos JS — camadas reais
 
-~6.130 linhas em 16 módulos de produção + `data/contracts.js` (modelos) + 6 arquivos de teste. Cada módulo é um `const Objeto = {...}` no escopo global de script clássico (não `window.X`); os ~85 handlers `onclick` inline resolvem pela cadeia de escopo — é por isso que a CSP mantém `'unsafe-inline'`.
+~5.900 linhas em 15 módulos de produção + `data/contracts.js` (modelos) + 6 arquivos de teste. Cada módulo é um `const Objeto = {...}` no escopo global de script clássico (não `window.X`); os ~85 handlers `onclick` inline resolvem pela cadeia de escopo — é por isso que a CSP mantém `'unsafe-inline'`.
 
 | Camada | Arquivos | Papel |
 |---|---|---|
@@ -70,7 +70,7 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 | Dados | `storage.js` (`Storage`), `database.js` (`CloudDB`) | `Storage`: cache em memória + CRUD de contracts, properties, clients, financial_records, profiles. `CloudDB`: AES-GCM + as 3 RPCs de link + sanitização de fronteira — o arquivo mais coeso do repo. |
 | Domínio/UI misturados | `utils.js` (`Utils`) | Máscaras, CPF/CNPJ, datas, prazo, status do contrato, tema, escape/XSS, toast, assinatura, compartilhamento, IP/GPS, ViaCEP, certificado HTML. Seis módulos em um. |
 | Dados de modelo | `data/contracts.js` (`Contracts`) | 3 modelos (residencial, comercial, minuta simples): metadados + campos + template HTML. Puro. |
-| Views | `dashboard.js`, `contracts.js` (`ContractsView`), `properties.js`, `clients.js`, `financial.js`, `templates.js`, `admin.js`, `superadmin.js`, `editor.js`, `tenant-v2.js`, `auth.js` | Uma por rota. `editor.js` e `tenant-v2.js` são os maiores (~730-750 linhas cada). `auth.js` carrega 141 linhas de CSS em string e uma animação de canvas. |
+| Views | `dashboard.js`, `contracts.js` (`ContractsView`), `properties.js`, `clients.js`, `templates.js`, `admin.js`, `superadmin.js`, `editor.js`, `tenant-v2.js`, `auth.js` | Uma por rota. `editor.js` e `tenant-v2.js` são os maiores (~730-750 linhas cada). `auth.js` carrega 141 linhas de CSS em string e uma animação de canvas. |
 | Shell | `app.js` (`App`) | Router por hash + guarda de login + ciclo de sessão + fluxo `#import` inline. |
 
 **Comunicação:** acesso direto a objetos globais; não há eventos nem pub/sub. Estado compartilhado principal: `Storage.*Cache` (5 caches), `App.user`, `Editor.contract`, `Tenant.contract`.
@@ -79,7 +79,7 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 
 ## 4. Roteamento
 
-Hash routing em `app.js`: `#dashboard` (default), `#properties`, `#clients`, `#financial`, `#templates`, `#contracts`, `#editor?id=|template=`, `#admin`, `#superadmin`, `#tenant?id=&key=` e `#import?id=&key=` (rota normal, despachada para `App.handleImport`). Guardas em ordem: recuperação de senha → login (`#tenant` é a única rota pública) → modo tenant (esconde o shell).
+Hash routing em `app.js`: `#dashboard` (default), `#properties`, `#clients`, `#templates`, `#contracts`, `#editor?id=|template=`, `#admin`, `#superadmin`, `#tenant?id=&key=` e `#import?id=&key=` (rota normal, despachada para `App.handleImport`). Guardas em ordem: recuperação de senha → login (`#tenant` é a única rota pública) → modo tenant (esconde o shell).
 
 Parâmetro ausente ou inválido redireciona (editor) ou mostra erro (inquilino); hash desconhecido cai no dashboard sem aviso — aceito, não é erro do usuário.
 

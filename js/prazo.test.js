@@ -100,6 +100,23 @@ assert.ok(comAceite.includes('abcdef012345')); // hash encurtado
 const semAceite = Utils.dadosClienteHTML({ doc_locatario: '12345678909' });
 assert.ok(!semAceite.includes('Aceite'));
 
+// Carimbo do servidor = selo normal; so o horario do aparelho do inquilino = alerta
+const doServidor = Utils.dadosClienteHTML({ aceite_ts: '2026-07-20T14:32:00.000Z', aceite_ts_servidor: '2026-07-20T14:33:00.000Z' });
+assert.ok(doServidor.includes('aceite-selo') && !doServidor.includes('aceite-selo-alerta'),
+  'carimbo do servidor nao leva aviso');
+assert.ok(comAceite.includes('aceite-selo-alerta'), 'sem carimbo do servidor, o selo avisa');
+
+// Data quebrada (dado do inquilino) nao pode virar "Invalid Date" na tela
+assert.strictEqual(Utils.dadosClienteHTML({ aceite_ts: 'nao-e-data' }), '');
+
+// A grade nao repete o que ja aparece em outro lugar do cartao: o aluguel vive
+// no cabecalho de quem chama, e "inicio" era o primeiro dia da propria vigencia.
+const grade = Utils.dadosClienteHTML({ valor_aluguel: 'R$ 653,46', data_inicio: '2026-07-30', data_termino: '2027-07-29' });
+assert.ok(!grade.includes('R$ 653,46') && !grade.includes('Aluguel'), 'aluguel nao entra na grade');
+assert.ok(grade.includes('30/07/2026 a 29/07/2027'), 'vigencia mostra o periodo inteiro');
+assert.strictEqual((grade.match(/class="cliente-detalhe"/g) || []).length, 1,
+  'um unico item de data na grade: a vigencia');
+
 // formatDate: data ISO sem hora nao pode voltar um dia em fuso negativo (Brasil).
 // Regressao real: "2026-05-28" exibia 27/05/2026 para todo usuario brasileiro.
 assert.strictEqual(Utils.formatDate('2026-05-28'), '28/05/2026');

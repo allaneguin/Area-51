@@ -58,7 +58,6 @@ O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navega
 **Módulos de gestão**
 - **Imóveis** com status automático (Alugado/Disponível derivado do contrato ativo), busca de CEP e receita por imóvel
 - **Clientes** cadastrados automaticamente a partir do contrato, idempotente por CPF/CNPJ
-- **Financeiro**: geração de cobranças mensais dos contratos ativos, comissão/repasse e reajuste por índice
 - **Painel de administrador**: ficha de suporte de todas as contas, somente leitura
 
 **Outros**
@@ -137,7 +136,7 @@ js/
   dashboard.js          métricas
   contracts.js          lista de contratos
   properties.js         imóveis      clients.js    clientes
-  financial.js          financeiro   templates.js  seleção de modelos
+  templates.js          seleção de modelos
   admin.js              perfil do locador e exclusão de conta
   superadmin.js         painel de todas as contas (somente leitura)
   *.test.js             checks em Node puro, sem framework

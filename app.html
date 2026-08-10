@@ -40,39 +40,38 @@
 
   <!-- Estilos — fontes primeiro (link, não @import: @import serializa o
        download e ficava fora do cache-busting) -->
-  <link rel="stylesheet" href="css/fonts.css?v=1.30.0">
-  <link rel="stylesheet" href="css/index.css?v=1.30.0">
-  <link rel="stylesheet" href="css/components.css?v=1.30.0">
-  <link rel="stylesheet" href="css/dashboard.css?v=1.30.0">
-  <link rel="stylesheet" href="css/templates.css?v=1.30.0">
-  <link rel="stylesheet" href="css/editor.css?v=1.30.0">
-  <link rel="stylesheet" href="css/admin.css?v=1.30.0">
-  <link rel="stylesheet" href="css/auth.css?v=1.30.0">
-  <link rel="stylesheet" href="css/tenant.css?v=1.30.0">
-  <link rel="stylesheet" href="css/bottom-nav.css?v=1.30.0">
+  <link rel="stylesheet" href="css/fonts.css?v=1.31.0">
+  <link rel="stylesheet" href="css/index.css?v=1.31.0">
+  <link rel="stylesheet" href="css/components.css?v=1.31.0">
+  <link rel="stylesheet" href="css/dashboard.css?v=1.31.0">
+  <link rel="stylesheet" href="css/templates.css?v=1.31.0">
+  <link rel="stylesheet" href="css/editor.css?v=1.31.0">
+  <link rel="stylesheet" href="css/admin.css?v=1.31.0">
+  <link rel="stylesheet" href="css/auth.css?v=1.31.0">
+  <link rel="stylesheet" href="css/tenant.css?v=1.31.0">
+  <link rel="stylesheet" href="css/bottom-nav.css?v=1.31.0">
 
   <!-- Scripts Externos -->
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7"></script>
 
   <!-- Lógica da Aplicação -->
-  <script src="js/supabase-config.js?v=1.30.0" defer></script>
-  <script src="js/auth.js?v=1.30.0" defer></script>
-  <script src="js/utils.js?v=1.30.0" defer></script>
-  <script src="js/storage.js?v=1.30.0" defer></script>
-  <script src="js/database.js?v=1.30.0" defer></script>
-  <script src="data/contracts.js?v=1.30.0" defer></script>
-  <script src="js/properties.js?v=1.30.0" defer></script>
-  <script src="js/clients.js?v=1.30.0" defer></script>
-  <script src="js/financial.js?v=1.30.0" defer></script>
-  <script src="js/dashboard.js?v=1.30.0" defer></script>
-  <script src="js/templates.js?v=1.30.0" defer></script>
-  <script src="js/admin.js?v=1.30.0" defer></script>
-  <script src="js/superadmin.js?v=1.30.0" defer></script>
-  <script src="js/tenant-v2.js?v=1.30.0" defer></script>
-  <script src="js/editor.js?v=1.30.0" defer></script>
-  <script src="js/contracts.js?v=1.30.0" defer></script>
-  <script src="js/app.js?v=1.30.0" defer></script>
+  <script src="js/supabase-config.js?v=1.31.0" defer></script>
+  <script src="js/auth.js?v=1.31.0" defer></script>
+  <script src="js/utils.js?v=1.31.0" defer></script>
+  <script src="js/storage.js?v=1.31.0" defer></script>
+  <script src="js/database.js?v=1.31.0" defer></script>
+  <script src="data/contracts.js?v=1.31.0" defer></script>
+  <script src="js/properties.js?v=1.31.0" defer></script>
+  <script src="js/clients.js?v=1.31.0" defer></script>
+  <script src="js/dashboard.js?v=1.31.0" defer></script>
+  <script src="js/templates.js?v=1.31.0" defer></script>
+  <script src="js/admin.js?v=1.31.0" defer></script>
+  <script src="js/superadmin.js?v=1.31.0" defer></script>
+  <script src="js/tenant-v2.js?v=1.31.0" defer></script>
+  <script src="js/editor.js?v=1.31.0" defer></script>
+  <script src="js/contracts.js?v=1.31.0" defer></script>
+  <script src="js/app.js?v=1.31.0" defer></script>
 </head>
 
 <body>
@@ -154,14 +153,6 @@
             </path>
           </svg>
           <span class="nav-label">Clientes</span>
-        </a>
-        <a href="#financial" class="nav-item">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-            </path>
-          </svg>
-          <span class="nav-label">Financeiro</span>
         </a>
         <a href="#contracts" class="nav-item">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,16 +245,6 @@
               </path>
             </svg>
             <span>Clientes</span>
-          </a>
-        </li>
-        <li class="bottom-nav-item">
-          <a href="#financial" class="bottom-nav-link nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-              </path>
-            </svg>
-            <span>Financeiro</span>
           </a>
         </li>
         <li class="bottom-nav-item">
