@@ -29,3 +29,4 @@ Thumbs.db
 # Documentos com dados pessoais reais (LGPD) — nunca versionar/publicar
 *.docx
 extracted_contract.txt
+.vercel
