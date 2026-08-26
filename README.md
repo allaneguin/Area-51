@@ -70,11 +70,11 @@ O link do inquilino carrega um **payload cifrado em AES-GCM** no próprio navega
 
 HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 
-- Scripts globais carregados com `<script defer>` em ordem fixa, com cache-busting manual por querystring
-- Única dependência externa: `@supabase/supabase-js` via CDN — o `package.json` existe só para dar um `npm test`, não há nada a instalar
-- Backend: **Supabase** (Auth + Postgres + RPCs) — não há servidor próprio
+- Front: scripts globais com `<script defer>` em ordem fixa, cache-busting manual por querystring — **nenhuma dependência de runtime**
+- Backend próprio em `server/`: **Node + Express + `node:sqlite`** — uma dependência, banco num arquivo (`data.db`), sem serviço externo
+- Senha (`scrypt`), sessão e hash vêm do `node:crypto`; não há biblioteca de autenticação
 - Criptografia: WebCrypto (`crypto.subtle`) nativo do navegador
-- CSP em `<meta>` no `app.html` + cabeçalhos de segurança no `vercel.json`
+- CSP em `<meta>` no `public/app.html` + cabeçalhos de segurança enviados por `server/index.js`
 
 ---
 
@@ -90,7 +90,9 @@ HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 `tenant_links` nunca é acessada diretamente — só pelas RPCs `create_tenant_link`, `set_tenant_link` e `get_tenant_link`.
 
 > [!WARNING]
-> A chave do Supabase em `js/supabase-config.js` é a *publishable/anon*, pública por natureza. **Toda a segurança dos dados depende das políticas de RLS estarem aplicadas.** Os `supabase_*.sql` da raiz estão **congelados como registro histórico — não os execute**: reexecutar `supabase_schema.sql`, `supabase_rls.sql` ou `supabase_finalize.sql` **reabre furos de segurança** corrigidos em 30/07. O que é executável vive em `supabase/` — para conferir que as políticas vigentes estão ativas, rode `supabase/verificacao.sql` (somente leitura). Ver `docs/ARQUITETURA.md`.
+> **O que separa uma conta da outra é código, não o banco.** Até 26/08 era a RLS do Postgres — uma parede que valia mesmo se o servidor errasse. Agora é o middleware de escopo em `server/rotas/recursos.js`: toda rota de recurso exige sessão e todo SQL leva `user_id` da sessão, nunca do cliente. Por isso mudança ali **exige teste de escopo junto** — os 34 casos de `server/servidor.test.js` são essa garantia sendo cobrada. Ver `docs/ARQUITETURA.md` §7 e R5.
+>
+> `data.db` está no `.gitignore` e contém `cloud_key` em claro (a chave AES dos links do inquilino). Quem tem o arquivo decifra os contratos: trate-o como segredo.
 
 ---
 
@@ -98,17 +100,18 @@ HTML, CSS e JavaScript puros — **sem framework e sem build step**.
 
 Não há instalação nem build. Mas **não abra por `file://`** — a CSP e o `crypto.subtle` exigem contexto seguro. Suba um servidor estático:
 
+**Requer Node 24** (ou 22.5+): o backend usa `node:sqlite`, que não existe antes disso.
+
 ```bash
-npx serve
-# ou
-python -m http.server
+npm install     # uma dependência: express
+npm start       # http://localhost:3000
 ```
 
-Depois acesse `index.html` (landing) ou `app.html` (aplicação).
+Depois acesse `http://localhost:3000/` (landing) ou `http://localhost:3000/app.html` (aplicação). `npm run dev` reinicia o servidor a cada alteração.
 
-O Supabase é obrigatório: se o SDK não carregar, o app mostra erro em vez de abrir o painel sem login (*fail-closed*). Para **provisionar um projeto novo**, rode `supabase/migrations/001_baseline.sql` no SQL Editor e depois `supabase/verificacao.sql` para conferir. Ajuste `supabaseUrl` e `supabaseKey` em `js/supabase-config.js`.
+O banco (`data.db`) é criado no primeiro boot, com o schema completo — não há passo de provisionamento e não há sistema de migration. **A primeira conta cadastrada vira administradora**; as seguintes, não.
 
-> Em produção o baseline **já está aplicado** — não precisa rodar nada. Toda mudança de banco daqui pra frente é uma migration nova em `supabase/migrations/`; ver `supabase/README.md`.
+> **Não há deploy configurado.** A Vercel serve estático e funções sem estado; um processo com banco em arquivo não roda lá. Hospedar exige host com disco persistente — decisão pendente, registrada em `docs/ARQUITETURA.md`.
 
 Testes — não exigem instalação, é Node puro:
 
@@ -121,29 +124,38 @@ npm test          # roda os 6 checks
 ## Estrutura
 
 ```
-index.html              landing page
-app.html                aplicação (SPA com router por hash)
-termos.html             termos de uso e política de privacidade (LGPD)
-fonts/                  fontes auto-hospedadas (woff2)
-js/
-  app.js                rotas, bootstrap e importação do contrato preenchido
-  auth.js               login, cadastro PF/PJ, recuperação de senha
-  editor.js             formulário, preview e geração do link cifrado
-  tenant-v2.js          fluxo do inquilino
-  database.js           criptografia e RPCs dos links
-  storage.js            cache e CRUD no Supabase (contratos, imóveis, clientes, financeiro, perfil)
-  utils.js              máscaras, validação, datas, status, preview do contrato, PDF
-  dashboard.js          métricas
-  contracts.js          lista de contratos
-  properties.js         imóveis      clients.js    clientes
-  templates.js          seleção de modelos
-  admin.js              perfil do locador e exclusão de conta
-  superadmin.js         painel de todas as contas (somente leitura)
-  *.test.js             checks em Node puro, sem framework
-data/contracts.js       3 modelos embutidos (residencial, comercial, minuta simples)
-css/                    um arquivo por área
-supabase/               migrations e verificação (o que se executa)
-supabase_*.sql          DDL histórico — CONGELADO, não executar
+public/                 tudo que o navegador recebe
+  index.html            landing page
+  app.html              aplicação (SPA com router por hash)
+  termos.html           termos de uso e política de privacidade (LGPD)
+  fonts/                fontes auto-hospedadas (woff2)
+  css/                  um arquivo por área
+  data/contracts.js     3 modelos embutidos (residencial, comercial, minuta simples)
+  js/
+    api.js              fala com /api — substituiu o cliente da Supabase
+    app.js              rotas, bootstrap e importação do contrato preenchido
+    auth.js             login e cadastro PF/PJ
+    editor.js           formulário, preview e geração do link cifrado
+    tenant-v2.js        fluxo do inquilino
+    database.js         criptografia e rotas dos links
+    storage.js          cache e CRUD (contratos, imóveis, clientes, financeiro, vistorias, perfil)
+    utils.js            máscaras, validação, datas, status, preview do contrato, PDF
+    dashboard.js        métricas          contracts.js  lista de contratos
+    financeiro.js       cobranças         renovacoes.js vencimentos e reajustes
+    vistorias.js        estado do imóvel  templates.js  seleção de modelos
+    properties.js       imóveis           clients.js    clientes
+    admin.js            perfil do locador e exclusão de conta
+    superadmin.js       painel de todas as contas (somente leitura)
+    *.test.js           checks em Node puro, sem framework
+
+server/                 o backend
+  index.js              Express, rotas, estático e cabeçalhos de segurança
+  db.js                 schema no boot + mapa RECURSOS (a lista branca de tabelas)
+  sessao.js             scrypt, cookie de sessão, exigirLogin/exigirAdmin
+  rotas/                auth · perfil · recursos · links · admin
+  servidor.test.js      34 casos por HTTP, em banco descartável
+
+data.db                 o banco (gitignored)
 docs/ARQUITETURA.md     a linha do sistema: regras, dívidas e processo
 ```
 
@@ -153,7 +165,7 @@ docs/ARQUITETURA.md     a linha do sistema: regras, dívidas e processo
 
 - **3 modelos** de contrato embutidos, sem UI para criar modelos próprios.
 - A assinatura é **eletrônica simples**: manuscrita em canvas, com aceite e trilha de evidências (data/hora, IP, GPS, hash SHA-256, selfie opcional). **Não é assinatura qualificada (ICP-Brasil)** e não usa certificado digital.
-- Escritas no Supabase são otimistas: o cache local muda primeiro e a gravação segue sem `await`. A falha agora avisa o usuário, mas não há *rollback* automático.
+- Escritas no servidor são otimistas: o cache local muda primeiro e a gravação segue sem `await`. A falha avisa o usuário — distinguindo recusa do servidor de queda de conexão —, mas não há *rollback* automático.
 - Cobertura de testes concentrada nas funções puras e na superfície de segurança; editor, inquilino e autenticação não têm teste.
 - Sem linter.
 

@@ -30,3 +30,7 @@ Thumbs.db
 *.docx
 extracted_contract.txt
 .vercel
+node_modules/
+data.db
+data.db-wal
+data.db-shm

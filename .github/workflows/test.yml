@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      # Sem `npm ci`: o projeto não tem dependências, só o script de teste.
+          node-version: '24'
+      # Node 24 e obrigatorio: o backend usa `node:sqlite`, que so existe a
+      # partir do 22.5. Em versao anterior o `npm test` nem carrega.
+      - run: npm ci
       - run: npm test

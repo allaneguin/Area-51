@@ -1,0 +1,377 @@
+/* ═══════════════════════════════════════════════════════
+   GERADOR DE CONTRATOS — Premium Experience
+   ═══════════════════════════════════════════════════════ */
+/* fonts.css é carregado por <link> no HTML (fora daqui): @import serializava o
+   download e escapava do cache-busting por querystring. */
+
+:root {
+  /* ═══ Paleta "grafite" — vinda do redesenho de 2026-08-24 ═══
+     As rampas (neutral/accent/accent-2) são a fonte: nove degraus por papel,
+     na mesma escala de luminosidade, para que o passo N de uma case com o
+     passo N da outra. Os nomes antigos (--primary, --text-main, --card-bg…)
+     continuam existindo e passam a APONTAR para a rampa — é o que permite as
+     ~3.700 linhas das outras folhas seguirem valendo sem serem reescritas. */
+
+  --color-neutral-100: #ffffff;
+  --color-neutral-200: #f1f3f6;
+  --color-neutral-300: #e2e6ec;
+  --color-neutral-400: #c3cad4;
+  --color-neutral-500: #9aa3b0;
+  --color-neutral-600: #737d8c;
+  --color-neutral-700: #55606f;
+  --color-neutral-800: #2f3742;
+  --color-neutral-900: #1a2029;
+
+  --color-accent-100: #eef4ff;
+  --color-accent-200: #d8e6ff;
+  --color-accent-300: #b3ccff;
+  --color-accent-400: #7da8fb;
+  --color-accent-500: #4a86f2;
+  --color-accent-600: #2f6fed;
+  --color-accent-700: #1d54c0;
+  --color-accent-800: #163f90;
+  --color-accent-900: #112c63;
+
+  --color-accent-2-100: #e9f7f4;
+  --color-accent-2-200: #cdeae4;
+  --color-accent-2-300: #a3d7cd;
+  --color-accent-2-400: #66bdaf;
+  --color-accent-2-500: #2f9e8c;
+  --color-accent-2-600: #14806f;
+  --color-accent-2-700: #0d6357;
+  --color-accent-2-800: #0a4a41;
+  --color-accent-2-900: #07332d;
+
+  /* Papéis — o resto do CSS fala por estes nomes, nunca pelo hex.
+     O par accent-sobre-fundo é cor de "cromo" (3:1): texto pequeno em cima
+     dele precisa do degrau 700, por isso --primary é o 700 e não o 600. */
+  --primary: var(--color-accent-700);
+  --primary-hover: var(--color-accent-800);
+  --accent: var(--color-accent-600);
+  --primary-light: var(--color-accent-100);
+
+  --surface-bg: #f4f5f7;
+  --card-bg: var(--color-neutral-100);
+
+  /* Barra lateral (escura) */
+  --sidebar-bg: var(--color-neutral-900);
+  --sidebar-text: var(--color-neutral-400);
+  --sidebar-title: var(--color-neutral-100);
+  --sidebar-section: var(--color-neutral-500);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: var(--color-accent-700);
+  --sidebar-card-bg: var(--color-neutral-800);
+
+  --text-main: #14181f;
+  --text-muted: var(--color-neutral-700);
+  --text-light: var(--color-neutral-600);
+
+  --border-light: var(--color-neutral-300);
+  --border-focus: var(--color-neutral-400);
+  --divider: color-mix(in srgb, var(--text-main) 12%, transparent);
+
+  --input-bg: var(--color-neutral-100);
+  --input-border: var(--color-neutral-300);
+  --seg-bg: var(--color-neutral-200);
+  --icon-hover-bg: rgba(20, 24, 31, 0.06);
+  /* hover: no tema claro escurecemos; no escuro clareamos (ver bloco dark) */
+  --row-hover-bg: var(--color-neutral-200);
+  --overlay-hover: rgba(20, 24, 31, 0.04);
+
+  --success: var(--color-accent-2-700);
+  --success-bg: var(--color-accent-2-100);
+  --warning: #8a5a12;
+  --warning-bg: #fdf3e3;
+  --danger: #b3261e;
+  --danger-bg: #fdecea;
+
+  /* Typography */
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+
+  /* Metrics — o redesenho arredonda tudo: cartão grande, controle em pílula. */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.06);
+  --shadow-md: 0 2px 10px rgba(20, 24, 31, 0.07);
+  --shadow-lg: 0 16px 36px rgba(20, 24, 31, 0.10);
+  --shadow-glow: 0 6px 16px rgba(29, 84, 192, 0.22);
+
+  --transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══ Modo escuro ═══
+   Só troca as cores; métricas e tipografia continuam do :root. O redesenho
+   veio sem tema escuro — as rampas abaixo são a versão escura dele, feitas
+   invertendo a escala de luminosidade e mantendo os mesmos matizes (azul de
+   cromo, verde-azulado de apoio), para o app não perder o tema que já tinha.
+   O documento do contrato (.preview-document) tem cor fixa de propósito:
+   ele é "papel" e vira PDF impresso, então NUNCA escurece. */
+[data-theme="dark"] {
+  --color-neutral-100: #eef1f6;
+  --color-neutral-200: #cdd3dc;
+  --color-neutral-300: #9aa3b0;
+  --color-neutral-400: #79828f;
+  --color-neutral-500: #5b6470;
+  --color-neutral-600: #414954;
+  --color-neutral-700: #2e353f;
+  --color-neutral-800: #1f242c;
+  --color-neutral-900: #12161c;
+
+  --color-accent-100: #14243f;
+  --color-accent-200: #1a3260;
+  --color-accent-300: #21458a;
+  --color-accent-400: #2f5fb8;
+  --color-accent-500: #4a86f2;
+  --color-accent-600: #6fa2f7;
+  --color-accent-700: #93bafa;
+  --color-accent-800: #b8d2fc;
+  --color-accent-900: #dbe9fe;
+
+  --color-accent-2-100: #0a2b26;
+  --color-accent-2-200: #0d3d35;
+  --color-accent-2-300: #115349;
+  --color-accent-2-400: #17705f;
+  --color-accent-2-500: #2f9e8c;
+  --color-accent-2-600: #4fbdaa;
+  --color-accent-2-700: #7fd4c5;
+  --color-accent-2-800: #a9e4d9;
+  --color-accent-2-900: #d0f1eb;
+
+  --surface-bg: #0f1319;
+  --card-bg: #1a1f27;
+
+  --sidebar-bg: #0a0d12;
+  --sidebar-text: var(--color-neutral-300);
+  --sidebar-title: var(--color-neutral-100);
+  --sidebar-section: var(--color-neutral-500);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --sidebar-active-bg: var(--color-accent-400);
+  --sidebar-card-bg: #171c23;
+
+  --text-main: #e7ecf3;
+  --text-muted: #a2acba;
+  --text-light: #7b8695;
+
+  --border-light: #272d37;
+  --border-focus: #3b4553;
+  --divider: color-mix(in srgb, var(--text-main) 14%, transparent);
+
+  --input-bg: #151a21;
+  --input-border: #2c333d;
+  --seg-bg: #151a21;
+  --icon-hover-bg: rgba(255, 255, 255, 0.08);
+  --row-hover-bg: rgba(255, 255, 255, 0.045);
+  --overlay-hover: rgba(255, 255, 255, 0.06);
+
+  --success: var(--color-accent-2-700);
+  --success-bg: rgba(79, 189, 170, 0.14);
+  --warning: #e8b45c;
+  --warning-bg: rgba(232, 180, 92, 0.14);
+  --danger: #f0736b;
+  --danger-bg: rgba(240, 115, 107, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 6px 16px rgba(47, 95, 184, 0.35);
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* O atributo `hidden` vem da folha do NAVEGADOR (display:none), e qualquer regra
+   de autor com display o anula — .nav-item e .btn-icon usam display:flex, então
+   elementos marcados com hidden continuavam visíveis. Esta regra devolve o
+   comportamento esperado a todo o app. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface-bg);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+/* Link do inquilino: esconde a interface do locador antes da 1ª pintura
+   (a classe é aplicada no <head>). Some assim que o JS entra em tenant-mode. */
+html.is-tenant-boot .app-sidebar,
+html.is-tenant-boot .content-bar,
+html.is-tenant-boot .mobile-header,
+html.is-tenant-boot .bottom-nav {
+  display: none !important;
+}
+
+html.is-tenant-boot #main-content {
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+/* Enquanto a tela do inquilino não assume (body ainda sem .tenant-mode),
+   nada do painel do locador pode piscar — nem o dashboard renderizado. */
+html.is-tenant-boot body:not(.tenant-mode) #main-content {
+  visibility: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Layout do shell — barra lateral escura + coluna de conteúdo
+   O #app é a linha; a .app-sidebar é a coluna fixa da esquerda e a .app-main
+   é a coluna que rola. A .content-bar gruda no topo DELA (não da janela), que
+   é o que deixa a barra de busca sempre à mão sem precisar de posição fixa.
+   ═══════════════════════════════════════════════════════ */
+#app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  /* min-width:0 é obrigatório: sem ele um filho largo (tabela, pré-visualização
+     do contrato) estoura a coluna em vez de rolar dentro dela. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#main-content {
+  flex: 1;
+  padding: 34px 36px 64px;
+  width: 100%;
+}
+
+#main-content>* {
+  max-width: 1260px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ═══ Cabeçalho de página ═══ */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+/* Sobrelinha do cabeçalho: a data/contexto acima do título. */
+.page-kicker {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  color: var(--text-main);
+}
+
+.page-subtitle {
+  font-size: 14.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+/* Responsive */
+@media(max-width: 1024px) {
+  #main-content {
+    padding: 28px 24px 60px;
+  }
+}
+
+@media(max-width: 768px) {
+  #main-content {
+    margin-left: 0;
+    width: 100%;
+    /* topo livre para a .mobile-header fixa; base para a .bottom-nav */
+    padding: 5rem 1rem 6rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+}
