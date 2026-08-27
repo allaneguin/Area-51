@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════
 
 const { DatabaseSync } = require('node:sqlite');
+const fs = require('node:fs');
 const path = require('node:path');
 
 const ARQUIVO = process.env.DB_FILE || path.join(__dirname, '..', 'data.db');
@@ -143,7 +144,33 @@ create table if not exists tenant_links (
 );
 create index if not exists tenant_links_criador_idx
   on tenant_links (created_by, created_at desc);
+
+create table if not exists midias (
+  id            text primary key,
+  user_id       text not null references users(id) on delete cascade,
+  inspection_id text not null references inspections(id) on delete cascade,
+  ambiente      integer not null,
+  tipo          text not null,
+  mime          text not null,
+  bytes         integer not null,
+  arquivo       text not null,
+  created_at    text not null
+);
+create index if not exists midias_vistoria_idx on midias (inspection_id, ambiente);
 `);
+
+// ── Pasta dos arquivos de midia ─────────────────────────────────────────
+//
+// Os bytes ficam em disco, nao no banco: decisao do dono do projeto. O preco
+// dela e que o backup passa a ser DUAS coisas (data.db + uploads/) e que a
+// cascata do SQLite apaga a linha sem apagar o arquivo — quem recolhe o orfao e
+// a varredura em rotas/midias.js.
+//
+// `midias` de proposito NAO entra no mapa RECURSOS abaixo: o CRUD generico
+// grava o que o corpo mandar nas colunas declaradas, e `arquivo` e o nome de um
+// arquivo no disco. Nome de arquivo e decisao do servidor, nunca do pedido.
+const PASTA_UPLOADS = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
+fs.mkdirSync(PASTA_UPLOADS, { recursive: true });
 
 // ── Mapa dos recursos com CRUD genérico ─────────────────────────────────
 //
@@ -223,4 +250,4 @@ function paraDentro(valor, coluna, meta) {
   return valor;
 }
 
-module.exports = { db, RECURSOS, paraFora, paraDentro, ARQUIVO };
+module.exports = { db, RECURSOS, paraFora, paraDentro, ARQUIVO, PASTA_UPLOADS };

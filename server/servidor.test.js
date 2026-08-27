@@ -15,6 +15,10 @@ const os = require('node:os');
 // Banco descartável, antes de carregar o app (db.js lê isto na carga).
 const DB = path.join(os.tmpdir(), `mi-test-${process.pid}.db`);
 process.env.DB_FILE = DB;
+// A pasta de midia tambem precisa ser descartavel: sem isto o teste cria
+// `uploads/` na raiz do repositorio e deixa arquivo la depois de rodar.
+const UPLOADS = path.join(os.tmpdir(), `mi-test-uploads-${process.pid}`);
+process.env.UPLOADS_DIR = UPLOADS;
 for (const s of ['', '-wal', '-shm']) { try { fs.unlinkSync(DB + s); } catch {} }
 
 const app = require('./index');
@@ -24,6 +28,7 @@ const servidor = app.listen(0);
 test.before(() => { base = `http://127.0.0.1:${servidor.address().port}`; });
 test.after(() => {
   servidor.close();
+  try { fs.rmSync(UPLOADS, { recursive: true, force: true }); } catch {}
   for (const s of ['', '-wal', '-shm']) { try { fs.unlinkSync(DB + s); } catch {} }
 });
 
@@ -358,6 +363,24 @@ test('payload acima de 512 KB e recusado', async () => {
 });
 
 // ── Admin ───────────────────────────────────────────────────────────────
+
+// ── Midia da vistoria ───────────────────────────────────────────────────
+
+test('apagar a vistoria leva as midias junto (cascata)', async () => {
+  const { db, PASTA_UPLOADS } = require('./db');
+  assert.ok(fs.existsSync(PASTA_UPLOADS), 'a pasta de uploads nasce com o servidor');
+
+  await A('PUT', '/api/inspections/v-cascata', { id: 'v-cascata', tipo: 'Entrada', rooms: [] });
+  const dono = (await A('GET', '/api/auth/sessao')).dados.user.id;
+  db.prepare(`insert into midias (id, user_id, inspection_id, ambiente, tipo, mime, bytes, arquivo, created_at)
+              values (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run('m-cascata', dono, 'v-cascata', 0, 'foto', 'image/jpeg', 10, 'm-cascata.jpg', new Date().toISOString());
+
+  assert.strictEqual(db.prepare('select count(*) n from midias').get().n, 1);
+  assert.strictEqual((await A('DELETE', '/api/inspections/v-cascata')).status, 200);
+  assert.strictEqual(db.prepare('select count(*) n from midias').get().n, 0,
+    'a linha de midia nao pode sobreviver a vistoria que ela documenta');
+});
 
 test('nao-admin recebe 403 nas rotas de administracao', async () => {
   for (const rota of ['users', 'contracts', 'profiles']) {
