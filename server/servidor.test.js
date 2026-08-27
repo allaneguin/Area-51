@@ -36,7 +36,7 @@ test.after(() => {
 // ao mesmo tempo no teste, que é o cenário do teste de escopo.
 function cliente() {
   let cookie = '';
-  return async function req(metodo, caminho, corpo) {
+  async function req(metodo, caminho, corpo) {
     const r = await fetch(base + caminho, {
       method: metodo,
       headers: {
@@ -52,6 +52,11 @@ function cliente() {
     try { dados = texto ? JSON.parse(texto) : null; } catch {}
     return { status: r.status, dados, setCookie: set };
   };
+  // O upload de midia manda bytes crus, entao nao passa por `req` — mas precisa
+  // da MESMA sessao. Expor o cookie evita refazer login no meio da suite (a
+  // senha de B e outra, e um teste adiante troca a de quem loga de novo).
+  req.cookie = () => cookie;
+  return req;
 }
 
 const A = cliente();
@@ -380,6 +385,65 @@ test('apagar a vistoria leva as midias junto (cascata)', async () => {
   assert.strictEqual((await A('DELETE', '/api/inspections/v-cascata')).status, 200);
   assert.strictEqual(db.prepare('select count(*) n from midias').get().n, 0,
     'a linha de midia nao pode sobreviver a vistoria que ela documenta');
+});
+
+// Corpo cru, nao multipart: o teste fala com a rota do mesmo jeito que o
+// navegador (fetch com o Blob no body).
+async function enviar(cookie, qs, mime, bytes) {
+  const r = await fetch(base + '/api/midias?' + qs, {
+    method: 'POST',
+    headers: { 'Content-Type': mime, ...(cookie ? { Cookie: cookie } : {}) },
+    body: bytes
+  });
+  let dados = null;
+  try { dados = JSON.parse(await r.text()); } catch {}
+  return { status: r.status, dados };
+}
+
+test('sobe uma foto para o ambiente da vistoria', async () => {
+  await A('PUT', '/api/inspections/v1', { id: 'v1', tipo: 'Entrada', rooms: [{ nome: 'Sala', estado: 'Bom' }] });
+  const r = await enviar(A.cookie(), 'vistoria=v1&ambiente=0&tipo=foto', 'image/jpeg', Buffer.from('fingindo-ser-jpeg'));
+  assert.strictEqual(r.status, 201);
+  assert.strictEqual(r.dados.tipo, 'foto');
+  assert.strictEqual(r.dados.ambiente, 0);
+  assert.strictEqual(r.dados.bytes, 17);
+});
+
+test('midia exige sessao', async () => {
+  const r = await enviar('', 'vistoria=v1&ambiente=0&tipo=foto', 'image/jpeg', Buffer.from('x'));
+  assert.strictEqual(r.status, 401);
+});
+
+test('B nao sobe midia para vistoria de A, mesmo sabendo o id', async () => {
+  const r = await enviar(B.cookie(), 'vistoria=v1&ambiente=0&tipo=foto', 'image/jpeg', Buffer.from('x'));
+  // 404, nao 403: dizer "existe, mas nao e sua" ja conta que aquele id existe.
+  assert.strictEqual(r.status, 404);
+});
+
+test('formato fora da lista branca e recusado', async () => {
+  const r = await enviar(A.cookie(), 'vistoria=v1&ambiente=0&tipo=foto', 'application/pdf', Buffer.from('%PDF-'));
+  assert.ok(r.status === 415 || r.status === 400, 'PDF nao e foto: ' + r.status);
+});
+
+test('video mandado como foto e recusado', async () => {
+  const r = await enviar(A.cookie(), 'vistoria=v1&ambiente=0&tipo=foto', 'video/webm', Buffer.from('x'));
+  assert.strictEqual(r.status, 415, 'o tipo declarado e o mime tem que combinar');
+});
+
+test('acima do teto da foto e recusado', async () => {
+  const grande = Buffer.alloc(8 * 1024 * 1024 + 1, 1);
+  const r = await enviar(A.cookie(), 'vistoria=v1&ambiente=0&tipo=foto', 'image/jpeg', grande);
+  assert.strictEqual(r.status, 413);
+});
+
+test('estourar a quantidade por ambiente e recusado', async () => {
+  await A('PUT', '/api/inspections/v-cheio', { id: 'v-cheio', tipo: 'Entrada', rooms: [{ nome: 'Sala' }] });
+  for (let i = 0; i < 2; i++) {
+    const ok = await enviar(A.cookie(), 'vistoria=v-cheio&ambiente=0&tipo=video', 'video/webm', Buffer.from('v' + i));
+    assert.strictEqual(ok.status, 201, 'os dois primeiros videos entram');
+  }
+  const terceiro = await enviar(A.cookie(), 'vistoria=v-cheio&ambiente=0&tipo=video', 'video/webm', Buffer.from('v3'));
+  assert.strictEqual(terceiro.status, 409, 'o terceiro video no mesmo ambiente nao entra');
 });
 
 test('nao-admin recebe 403 nas rotas de administracao', async () => {

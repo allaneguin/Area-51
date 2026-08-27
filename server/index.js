@@ -39,6 +39,9 @@ app.use('/api/auth', require('./rotas/auth'));
 app.use('/api/perfil', require('./rotas/perfil'));
 app.use('/api/links', require('./rotas/links'));
 app.use('/api/admin', require('./rotas/admin'));
+// Antes do CRUD generico: ele casa qualquer /api/<coisa> e responderia
+// "Recurso desconhecido" para /api/midias.
+app.use('/api/midias', require('./rotas/midias'));
 app.use('/api', require('./rotas/recursos'));
 
 // Rota de API desconhecida responde JSON, não o index.html. Sem isto, um
