@@ -446,6 +446,56 @@ test('estourar a quantidade por ambiente e recusado', async () => {
   assert.strictEqual(terceiro.status, 409, 'o terceiro video no mesmo ambiente nao entra');
 });
 
+test('lista as midias da vistoria, e so as da conta', async () => {
+  const r = await A('GET', '/api/midias?vistoria=v1');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.dados.length, 1, 'a foto que subiu esta la');
+  assert.strictEqual(r.dados[0].tipo, 'foto');
+  assert.strictEqual(r.dados[0].bytes, 17);
+
+  const deB = await B('GET', '/api/midias?vistoria=v1');
+  assert.deepStrictEqual(deB.dados, [], 'B nao enxerga a midia da vistoria de A');
+});
+
+test('o arquivo volta com os bytes e o mime que subiram', async () => {
+  const id = (await A('GET', '/api/midias?vistoria=v1')).dados[0].id;
+  const r = await fetch(base + '/api/midias/' + id + '/arquivo', { headers: { Cookie: A.cookie() } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.headers.get('content-type').split(';')[0], 'image/jpeg');
+  assert.strictEqual(await r.text(), 'fingindo-ser-jpeg');
+
+  const semSessao = await fetch(base + '/api/midias/' + id + '/arquivo');
+  assert.strictEqual(semSessao.status, 401, 'arquivo de midia nao e publico');
+
+  const deB = await fetch(base + '/api/midias/' + id + '/arquivo', { headers: { Cookie: B.cookie() } });
+  assert.strictEqual(deB.status, 404, 'nem para outra conta que saiba o id');
+});
+
+test('apagar a midia leva o arquivo do disco junto', async () => {
+  const { db, PASTA_UPLOADS } = require('./db');
+  const id = (await A('GET', '/api/midias?vistoria=v1')).dados[0].id;
+  const arquivo = db.prepare('select arquivo from midias where id = ?').get(id).arquivo;
+  assert.ok(fs.existsSync(path.join(PASTA_UPLOADS, arquivo)));
+
+  assert.strictEqual((await B('DELETE', '/api/midias/' + id)).status, 404, 'B nao apaga midia de A');
+  assert.strictEqual((await A('DELETE', '/api/midias/' + id)).status, 200);
+
+  assert.strictEqual(fs.existsSync(path.join(PASTA_UPLOADS, arquivo)), false,
+    'linha apagada sem arquivo apagado e lixo que ninguem mais alcanca');
+});
+
+test('a varredura recolhe arquivo orfao', async () => {
+  const { PASTA_UPLOADS } = require('./db');
+  const orfao = path.join(PASTA_UPLOADS, 'orfao-de-teste.jpg');
+  fs.writeFileSync(orfao, 'sem linha no banco');
+  assert.ok(fs.existsSync(orfao));
+
+  await A('GET', '/api/midias?vistoria=v1');   // a leitura varre
+
+  assert.strictEqual(fs.existsSync(orfao), false,
+    'e assim que o arquivo da vistoria apagada some — a cascata do SQLite nao alcanca o disco');
+});
+
 test('nao-admin recebe 403 nas rotas de administracao', async () => {
   for (const rota of ['users', 'contracts', 'profiles']) {
     assert.strictEqual((await B('GET', `/api/admin/${rota}`)).status, 403);

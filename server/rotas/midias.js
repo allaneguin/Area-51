@@ -116,6 +116,48 @@ router.post('/', corpoCru, (req, res) => {
   });
 });
 
+// ── Listar ──────────────────────────────────────────────────────────────
+// Sem os bytes: a tela precisa saber o que existe, nao carregar tudo.
+router.get('/', (req, res) => {
+  varrer();
+  const linhas = db.prepare(`
+    select id, ambiente, tipo, mime, bytes, created_at
+      from midias
+     where inspection_id = ? and user_id = ?
+     order by ambiente, created_at
+  `).all(String(req.query.vistoria || ''), req.usuario.id);
+  res.json(linhas);
+});
+
+// ── O arquivo ───────────────────────────────────────────────────────────
+// NUNCA uma pasta estatica: foto do imovel de um cliente com nome adivinhavel
+// vaza por URL, sem sessao nenhuma. `sendFile` tambem trata `Range` sozinho, e
+// e com Range que o <video> busca no meio sem baixar os 25 MB.
+router.get('/:id/arquivo', (req, res) => {
+  const m = db.prepare('select arquivo, mime from midias where id = ? and user_id = ?')
+    .get(req.params.id, req.usuario.id);
+  if (!m) return res.status(404).json({ erro: 'Mídia não encontrada.' });
+
+  res.setHeader('Content-Type', m.mime);
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.sendFile(path.join(PASTA_UPLOADS, m.arquivo), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ erro: 'Arquivo indisponível.' });
+  });
+});
+
+// ── Apagar ──────────────────────────────────────────────────────────────
+router.delete('/:id', (req, res) => {
+  const m = db.prepare('select arquivo from midias where id = ? and user_id = ?')
+    .get(req.params.id, req.usuario.id);
+  // 404 tanto para "nao existe" quanto para "e de outro": distinguir os dois
+  // contaria ao chamador que aquele id existe em alguma conta.
+  if (!m) return res.status(404).json({ erro: 'Mídia não encontrada.' });
+
+  db.prepare('delete from midias where id = ? and user_id = ?').run(req.params.id, req.usuario.id);
+  try { fs.unlinkSync(path.join(PASTA_UPLOADS, m.arquivo)); } catch { /* já sumiu */ }
+  res.json({ ok: true });
+});
+
 module.exports = router;
 module.exports.TIPOS = TIPOS;
 module.exports.varrer = varrer;
