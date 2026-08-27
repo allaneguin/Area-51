@@ -34,3 +34,7 @@ node_modules/
 data.db
 data.db-wal
 data.db-shm
+
+# Midia das vistorias: foto e video de imovel de cliente nao e artefato de
+# repositorio. Faz parte do BACKUP, junto com o data.db — ver README.
+uploads/

@@ -14,6 +14,30 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-27
 
+**Vistoria ganhou foto e video por ambiente** (ramo `feat/midia-vistoria`, 7 commits). A vistoria existe para sustentar uma conversa que acontece meses depois — reter ou devolver a caucao — e ate aqui ela guardava so texto. Texto contra texto e a palavra de um contra a do outro.
+
+Desenho em `docs/superpowers/specs/2026-08-27-midia-vistoria-design.md`, plano em `docs/superpowers/plans/2026-08-27-midia-vistoria.md`. Tres decisoes foram do dono do projeto; em duas a recomendacao era outra, e o preco de cada uma virou trabalho no lugar de ressalva:
+
+| Decisao | O que ela custou, e onde isso foi pago |
+|---|---|
+| Foto **e** video curto | Teto de 8 MB (foto) e 25 MB (video), 8 fotos e 2 videos por ambiente, corte automatico de gravacao em 30s. A CSP ganhou `media-src 'self' blob:` — sem a diretiva, `default-src` bloqueia o preview `blob:` e a tela fica preta. |
+| Arquivos em `uploads/`, nao blob no banco | Backup passou a ser **duas coisas** (`data.db` + `uploads/`), registrado no README; e a cascata do SQLite apaga a linha sem apagar o arquivo, entao entrou uma varredura de orfao na leitura — o mesmo desenho do `expurgar()` dos links, que ja tinha dispensado agendador. |
+| Camera dentro da pagina | `getUserMedia` + `MediaRecorder`, **com o seletor de arquivo ao lado**: camera na pagina nao existe em contexto nao-seguro, a permissao pode ser negada e a maquina pode nao ter camera. Sem o fallback, a funcionalidade simplesmente nao existiria nesses casos. |
+
+**Onde a midia mora:** tabela `midias` propria, **fora do mapa `RECURSOS`**. No CRUD generico o corpo do pedido decide o conteudo das colunas declaradas, e uma delas e `arquivo` — o nome de um arquivo real no disco. Cliente que escolhe nome de arquivo le o arquivo de qualquer um. Pela mesma razao a leitura passa por `GET /api/midias/:id/arquivo` com sessao e `sendFile` (que ainda trata `Range` de graca, e e com Range que o `<video>` busca no meio sem baixar 25 MB), **nunca por pasta estatica**: nome adivinhavel vazaria foto de imovel de cliente por URL.
+
+**Upload sem dependencia nova:** corpo cru (`express.raw`), nao multipart. O navegador manda o Blob e o `Content-Type` dele diz o que e. O `package.json` continua com uma dependencia so.
+
+**A armadilha do indice posicional.** `ambiente` e a posicao dentro de `inspections.rooms`: tirar a Sala faz a Cozinha virar 0, e sem tratar isso a foto da sala apagada reaparece na cozinha — a vistoria passaria a documentar o comodo errado. `POST /api/midias/reindexar` apaga a midia do ambiente removido e desloca as seguintes, num DELETE e um UPDATE na mesma requisicao. No cliente seria uma sequencia de pedidos que uma recarga no meio deixa pela metade.
+
+**A tela mudou junto:** o estado do ambiente virou tres botoes no lugar do `select` (um toque em vez de dois, e a cor comunica antes da leitura), o cartao ganhou a faixa de miniaturas com "+ Foto" e "+ Video", as observacoes cairam de 3 para 2 linhas, e o aside passou a responder a pergunta de quem esta vistoriando: "3 de 5 ambientes com midia". Saiu o cartao que dizia que anexar foto exigia bucket da Supabase.
+
+**Verificacao: 50 testes de backend** (eram 37) **e 12 do front** (`npm test`). Os do backend cobrem escopo por conta nas quatro rotas de midia, lista branca de formato, os dois tetos, a quantidade por ambiente, a cascata ao apagar a vistoria, a varredura de orfao e a reindexacao. O do front confere que os limites do cliente sao **os mesmos** do servidor — divergir faria o locador esperar o upload inteiro para ouvir nao.
+
+A parte de camera nao tem seam de teste honesto em Node e segue a regra do ARQUITETURA para tela sem cobertura: **auditoria de runtime**, pendente de execucao no navegador.
+
+---
+
 **Nenhuma edicao de contrato chegava ao banco** — e era isso que criava a "copia" do contrato assinado.
 
 O `PUT /api/:recurso/:id` monta um upsert (`insert ... on conflict(id) do update`). O SQLite avalia o INSERT primeiro, e `created_at` e NOT NULL: como o front so manda os campos alterados numa edicao, a coluna faltava e a rota devolvia **500** em toda gravacao de registro ja existente. O `Storage._cloudWrite` mostrava o toast de erro, o cache em memoria seguia certo, e na recarga a alteracao tinha sumido.

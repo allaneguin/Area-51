@@ -111,6 +111,12 @@ Depois acesse `http://localhost:3000/` (landing) ou `http://localhost:3000/app.h
 
 O banco (`data.db`) é criado no primeiro boot, com o schema completo — não há passo de provisionamento e não há sistema de migration. **A primeira conta cadastrada vira administradora**; as seguintes, não.
 
+### Backup são duas coisas
+
+`data.db` guarda os registros; `uploads/` guarda as fotos e vídeos das vistorias.
+Copiar só um dos dois restaura vistorias com mídia quebrada — a linha aponta para
+um arquivo que não existe mais. Copie os dois juntos.
+
 > **Não há deploy configurado.** A Vercel serve estático e funções sem estado; um processo com banco em arquivo não roda lá. Hospedar exige host com disco persistente — decisão pendente, registrada em `docs/ARQUITETURA.md`.
 
 Testes — não exigem instalação, é Node puro:
