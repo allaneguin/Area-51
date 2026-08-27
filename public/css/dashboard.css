@@ -687,6 +687,99 @@
 /* ═══════════════════════════════════════════════════════
    Vistoria — detalhe em duas colunas (tela nova de 2026-08-24)
    ═══════════════════════════════════════════════════════ */
+/* — Estado do ambiente: tres botoes no lugar do select —
+   Um toque em vez de dois (abrir, escolher), e a cor comunica antes da leitura.
+   Select ainda faz sentido em lista longa; aqui a escolha e de tres. */
+.estado-botoes {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.estado-botao {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.estado-botao:hover:not(:disabled) { border-color: var(--border-focus); }
+.estado-botao:disabled { cursor: default; opacity: 0.7; }
+
+.estado-botao.ativo {
+  font-weight: 600;
+  color: var(--text-main);
+  border-color: var(--border-focus);
+  background: var(--primary-light);
+}
+
+/* — Faixa de midia do ambiente —
+   Rola na horizontal em vez de quebrar em grade: a leitura e "o que tem deste
+   comodo", e a fila mantem isso em uma linha so. */
+.midia-faixa {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.midia-item {
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0;
+  width: 116px;
+  height: 116px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  background: var(--surface-bg);
+}
+
+.midia-item img,
+.midia-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.midia-remover {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.midia-add {
+  flex: 0 0 auto;
+  width: 116px;
+  height: 116px;
+  border: 1px dashed var(--border-focus);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--primary);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.midia-add:hover { background: var(--primary-light); }
+
 .vistoria-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 312px;

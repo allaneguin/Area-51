@@ -27,6 +27,14 @@ const Vistorias = {
   // Vistoria aberta no momento (id) ou null para a lista.
   abertaId: null,
 
+  // Mídia da vistoria aberta. Fica no módulo, e NÃO no cache do Storage: lá
+  // dentro, `loadCloudData` baixaria a mídia de todas as vistorias a cada
+  // login, para uma tela que quase nunca está aberta.
+  midias: [],
+
+  // Captura em andamento: { vistoriaId, ambiente, tipo } ou null.
+  captura: null,
+
   render(container) {
     if (this.abertaId) {
       const v = Storage.getInspection(this.abertaId);
@@ -173,16 +181,34 @@ const Vistorias = {
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>`}
               </div>
-              <div class="form-group" style="margin-bottom:12px;">
-                <label class="form-label">Estado</label>
-                <select class="form-input" ${fechada ? 'disabled' : ''}
-                  onchange="Vistorias.setEstado('${Utils.esc(v.id)}', ${i}, this.value)">
-                  ${this.ESTADOS.map(e => `<option value="${Utils.esc(e)}" ${r.estado === e ? 'selected' : ''}>${Utils.esc(e)}</option>`).join('')}
-                </select>
+              <div class="estado-botoes" role="group" aria-label="Estado de ${Utils.esc(r.nome || 'ambiente')}">
+                ${this.ESTADOS.map(e => `
+                  <button type="button" class="estado-botao ${r.estado === e ? 'ativo' : ''}"
+                    ${fechada ? 'disabled' : ''} aria-pressed="${r.estado === e}"
+                    onclick="Vistorias.setEstado('${Utils.esc(v.id)}', ${i}, '${Utils.esc(e)}')">${Utils.esc(e)}</button>
+                `).join('')}
               </div>
+
+              <div class="midia-faixa">
+                ${this.midiasDo(i).map(m => `
+                  <figure class="midia-item">
+                    ${m.tipo === 'foto'
+                      ? `<img src="${Utils.esc(Midias.url(m.id))}" alt="Foto de ${Utils.esc(r.nome || 'ambiente')}" loading="lazy">`
+                      : `<video src="${Utils.esc(Midias.url(m.id))}" controls preload="metadata"></video>`}
+                    ${fechada ? '' : `<button type="button" class="midia-remover" title="Remover"
+                      aria-label="Remover mídia de ${Utils.esc(r.nome || 'ambiente')}"
+                      onclick="Vistorias.excluirMidia('${Utils.esc(v.id)}', '${Utils.esc(m.id)}')">&times;</button>`}
+                  </figure>
+                `).join('')}
+                ${fechada ? '' : `
+                  <button type="button" class="midia-add" onclick="Vistorias.abrirCaptura('${Utils.esc(v.id)}', ${i}, 'foto')">+ Foto</button>
+                  <button type="button" class="midia-add" onclick="Vistorias.abrirCaptura('${Utils.esc(v.id)}', ${i}, 'video')">+ Vídeo</button>
+                `}
+              </div>
+
               <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">Observações</label>
-                <textarea class="form-textarea" rows="3" ${fechada ? 'disabled' : ''}
+                <textarea class="form-textarea" rows="2" ${fechada ? 'disabled' : ''}
                   placeholder="Ex.: pintura descascando atrás da porta"
                   onchange="Vistorias.setObs('${Utils.esc(v.id)}', ${i}, this.value)">${Utils.esc(r.obs || '')}</textarea>
               </div>
@@ -218,6 +244,10 @@ const Vistorias = {
               </div>
             `}
             <div class="mini-bar-head" style="margin:0;"><span>Ambientes</span><b>${rooms.length}</b></div>
+            <div class="mini-bar-head" style="margin:0;">
+              <span class="text-muted">Com mídia</span>
+              <b>${rooms.filter((_, i) => this.midiasDo(i).length).length} de ${rooms.length}</b>
+            </div>
               ${contagem.map(c => `
                 <div class="mini-bar-head" style="margin:0;">
                   <span class="text-muted">${Utils.esc(c.e)}</span><b>${c.n}</b>
@@ -228,13 +258,30 @@ const Vistorias = {
           </div>
 
           <div class="card">
-            <div class="painel-secao-head" style="margin-bottom:8px;"><h4>Fotos</h4></div>
+            <div class="painel-secao-head" style="margin-bottom:8px;"><h4>Como fica guardado</h4></div>
             <p class="text-muted" style="font-size:13px; margin:0;">
-              Esta versão registra estado e observações por escrito. Anexar fotos exige um
-              lugar para guardar arquivo, com dono e teto de tamanho — ainda não existe.
+              Foto e vídeo ficam no servidor, ligados ao ambiente. Só quem está nesta conta
+              consegue abrir. Ao fechar a vistoria, tudo vira leitura.
             </p>
           </div>
         </aside>
+      </div>
+
+      <div id="captura-modal" class="modal-backdrop">
+        <div class="modal-card">
+          <h3 id="captura-titulo">Anexar ao ambiente</h3>
+          <video id="captura-video" autoplay playsinline muted
+            style="width:100%; max-height:280px; background:#000; border-radius:12px;"></video>
+          <div class="modal-actions">
+            <input type="file" id="captura-arquivo" style="display:none"
+              accept="image/*,video/*" capture="environment"
+              onchange="Vistorias.guardar(this.files[0])">
+            <button type="button" class="btn btn-secondary"
+              onclick="document.getElementById('captura-arquivo').click()">Escolher arquivo</button>
+            <button type="button" class="btn btn-secondary" onclick="Vistorias.fecharCaptura()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="captura-acao" onclick="Vistorias.capturar()">Capturar</button>
+          </div>
+        </div>
       </div>
     `;
   },
@@ -310,7 +357,28 @@ const Vistorias = {
 
   abrir(id) {
     this.abertaId = id;
+    this.midias = [];
     this.render(document.getElementById('main-content'));
+    this.recarregarMidias(id);
+  },
+
+  // A lista vem do servidor ao abrir a vistoria — e não do cache do Storage,
+  // que é o espelho das cinco tabelas do CRUD genérico.
+  async recarregarMidias(id) {
+    try {
+      this.midias = await Api.listarMidias(id);
+    } catch (e) {
+      console.warn('Mídia indisponível:', e && e.message);
+      Utils.toast('Não foi possível carregar as fotos desta vistoria.', 'error');
+      return;
+    }
+    // Só redesenha se a vistoria ainda for a aberta: a resposta pode chegar
+    // depois de o locador ter voltado para a lista.
+    if (this.abertaId === id) this.render(document.getElementById('main-content'));
+  },
+
+  midiasDo(ambiente, tipo) {
+    return this.midias.filter(m => m.ambiente === ambiente && (!tipo || m.tipo === tipo));
   },
 
   voltar() {
@@ -337,6 +405,74 @@ const Vistorias = {
     const v = Storage.getInspection(id);
     if (!v || v.status === 'Fechada') return;
     Storage.saveInspection({ ...v, [campo]: valor });
+    this.render(document.getElementById('main-content'));
+  },
+
+  // Abre o modal de captura: câmera quando dá, seletor de arquivo sempre.
+  abrirCaptura(vistoriaId, ambiente, tipo) {
+    const jaTem = this.midiasDo(ambiente, tipo).length;
+    if (jaTem >= Midias.LIMITES[tipo].max) {
+      Utils.toast(`Limite de ${Midias.LIMITES[tipo].max} ${tipo === 'foto' ? 'fotos' : 'vídeos'} por ambiente atingido.`, 'error');
+      return;
+    }
+    this.captura = { vistoriaId, ambiente, tipo };
+
+    const titulo = document.getElementById('captura-titulo');
+    if (titulo) titulo.textContent = tipo === 'foto' ? 'Foto do ambiente' : 'Vídeo do ambiente';
+    const acao = document.getElementById('captura-acao');
+    if (acao) acao.textContent = tipo === 'foto' ? 'Capturar' : 'Gravar';
+
+    document.getElementById('captura-modal').style.display = 'flex';
+    Midias.abrirCamera(document.getElementById('captura-video'), tipo === 'video');
+  },
+
+  fecharCaptura() {
+    Midias.pararGravacao();
+    Midias.fecharCamera();
+    this.captura = null;
+    const modal = document.getElementById('captura-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  // Foto sai num quadro; vídeo alterna gravar/parar no mesmo botão.
+  capturar() {
+    if (!this.captura) return;
+    const video = document.getElementById('captura-video');
+    if (this.captura.tipo === 'foto') {
+      Midias.fotografar(video).then(blob => this.guardar(blob));
+      return;
+    }
+    if (Midias.gravando()) { Midias.pararGravacao(); return; }
+    Midias.gravar(blob => this.guardar(blob));
+    const acao = document.getElementById('captura-acao');
+    if (acao) acao.textContent = 'Parar';
+    Utils.toast(`Gravando — para sozinho em ${Midias.LIMITES.video.segundos}s.`);
+  },
+
+  // Vem da câmera (Blob pronto) ou do seletor de arquivo (File).
+  async guardar(arquivo) {
+    const c = this.captura;
+    if (!c || !arquivo) return;
+    const criada = await Midias.enviar(
+      c.vistoriaId, c.ambiente, c.tipo, arquivo, this.midiasDo(c.ambiente, c.tipo).length);
+    this.fecharCaptura();
+    // A miniatura só aparece depois do sucesso: a tela nunca mostra mídia que o
+    // servidor não confirmou.
+    if (!criada) return;
+    this.midias.push(criada);
+    Utils.toast(c.tipo === 'foto' ? 'Foto anexada.' : 'Vídeo anexado.');
+    this.render(document.getElementById('main-content'));
+  },
+
+  async excluirMidia(vistoriaId, midiaId) {
+    if (!confirm('Remover esta mídia da vistoria?')) return;
+    try {
+      await Api.removerMidia(midiaId);
+    } catch (e) {
+      Utils.toast('Não foi possível remover: ' + (e.message || ''), 'error');
+      return;
+    }
+    this.midias = this.midias.filter(m => m.id !== midiaId);
     this.render(document.getElementById('main-content'));
   },
 
@@ -371,6 +507,12 @@ const Vistorias = {
     rooms.splice(i, 1);
     Storage.saveInspection({ ...v, rooms });
     this.render(document.getElementById('main-content'));
+
+    // As mídias seguem o índice do ambiente: sem reindexar, a foto da cozinha
+    // passa a ilustrar a sala.
+    Api.reindexarMidias(id, i)
+      .then(() => this.recarregarMidias(id))
+      .catch(e => Utils.toast('As fotos deste ambiente podem ter ficado fora de lugar: ' + (e.message || ''), 'error'));
   },
 
   fechar(id) {
