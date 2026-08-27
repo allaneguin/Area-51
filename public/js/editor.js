@@ -33,12 +33,7 @@ const Editor = {
       }
       
       // Auto-preencher Data da Assinatura com a data de hoje por extenso
-      const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-      const hoje = new Date();
-      const diaExtenso = String(hoje.getDate()).padStart(2, '0');
-      const mesExtenso = meses[hoje.getMonth()];
-      const anoExtenso = hoje.getFullYear();
-      this.contract.fields['data_assinatura'] = `${diaExtenso} de ${mesExtenso} de ${anoExtenso}`;
+      this.contract.fields['data_assinatura'] = Utils.dataPorExtenso(new Date());
 
       // Métodos de validação exigidos do inquilino — o locador escolhe (padrão: ambos).
       this.contract.fields['exigir_assinatura'] = true;
@@ -490,14 +485,7 @@ const Editor = {
   generateTenantLink() {
     // Não deixa gerar link com o contrato em branco: o aceite do inquilino só tem
     // valor jurídico se os termos essenciais já estiverem no documento que ele vai ler.
-    const f = this.contract.fields || {};
-    const faltando = [
-      !f.valor_aluguel && 'Valor do aluguel',
-      !f.end_imovel && 'Endereço do imóvel',
-      !f.data_inicio && 'Data de início',
-      !(Utils.mesesDoContrato(f) > 0) && 'Prazo do contrato',
-      !f.dia_vencimento && 'Dia de vencimento'
-    ].filter(Boolean);
+    const faltando = Utils.faltamParaOLink(this.contract.fields, this.template);
     if (faltando.length) {
       Utils.toast('Antes de enviar ao inquilino, preencha: ' + faltando.join(', ') + '.', 'error');
       return;

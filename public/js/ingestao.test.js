@@ -106,4 +106,18 @@ assert.strictEqual(rSemEv.aceite_ts_servidor, undefined,
   'sem carimbo do servidor, o campo fica ausente — o certificado avisa que nao foi registrado');
 assert.strictEqual(rSemEv.ip_servidor, undefined, 'idem para o IP');
 
+// ── Como o IP carimbado aparece na folha de prova ───────────────────────
+// Loopback e rede privada nao dizem de onde a pessoa assinou — dizem que ela
+// estava na mesma maquina/rede do servidor. Imprimir "::1" cru numa folha
+// chamada certificado sugere um endereco de internet que nunca existiu.
+assert.match(Utils.ipDeEvidencia('::1'), /nao identifica origem externa|não identifica origem externa/,
+  'loopback tem que se declarar');
+assert.match(Utils.ipDeEvidencia('127.0.0.1'), /não identifica origem externa/);
+assert.match(Utils.ipDeEvidencia('192.168.0.10'), /rede local/);
+assert.strictEqual(Utils.ipDeEvidencia('::ffff:177.74.156.13'), '177.74.156.13',
+  'o mapeamento IPv4-em-IPv6 do Node nao pode virar ruido no PDF');
+assert.strictEqual(Utils.ipDeEvidencia('177.74.156.13'), '177.74.156.13',
+  'IP publico sai limpo, sem ressalva');
+assert.strictEqual(Utils.ipDeEvidencia(''), 'Não registrado pelo servidor');
+
 console.log('ok — ingestao: lista branca + carimbo do servidor vence o autodeclarado');

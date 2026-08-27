@@ -320,6 +320,25 @@ test('a evidencia do aceite e carimbada pelo SERVIDOR', async () => {
   // quem assina nao redige.
 });
 
+test('o IP do aceite NAO sai de cabecalho que o signatario manda', async () => {
+  // `X-Forwarded-For` e um cabecalho como outro qualquer: quem assina escolhe o
+  // valor. Se o servidor carimbasse ele sem proxy na frente, o unico campo da
+  // trilha que o signatario nao deveria redigir passaria a ser o mais facil de
+  // forjar — e sairia numa folha que se chama certificado.
+  await A('POST', '/api/links', { id: 'l-xff', payload: 'v1', key_proof: PROVA });
+  const r = await fetch(base + '/api/links/l-xff', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '8.8.8.8' },
+    body: JSON.stringify({ payload: 'assinado', key_proof: PROVA, finalize: true })
+  });
+  assert.strictEqual((await r.json()).gravou, true);
+
+  const { db } = require('./db');
+  const linha = db.prepare('select finalized_ip from tenant_links where id = ?').get('l-xff');
+  assert.notStrictEqual(linha.finalized_ip, '8.8.8.8', 'cabecalho forjado nao pode virar evidencia');
+  assert.ok(/^(::1|127\.)/.test(linha.finalized_ip), 'vale o endereco do socket: ' + linha.finalized_ip);
+});
+
 test('link inexistente e link expirado dao 404', async () => {
   assert.strictEqual((await anon('GET', '/api/links/nao-existe')).status, 404);
 

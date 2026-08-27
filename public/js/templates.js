@@ -9,6 +9,22 @@ const Templates = {
     return Storage.getAll().filter(c => c.templateId === templateId).length;
   },
 
+  // Contrato com tudo preenchido, para não digitar 40 campos a cada teste do
+  // fluxo do inquilino. O botão só aparece rodando local (Utils.ehLocal): num
+  // painel de verdade, isso é dado falso esperando ser confundido com contrato.
+  contratoDeTeste(templateId) {
+    const fields = Utils.dadosDeTeste(templateId);
+    if (!fields) { Utils.toast('Modelo não encontrado.', 'error'); return; }
+
+    const c = Storage.create({
+      name: 'TESTE — ' + Contracts[templateId].title,
+      templateId: templateId,
+      fields: fields
+    });
+    Utils.toast('Contrato de teste criado, pronto para gerar o link do inquilino.');
+    window.location.hash = '#editor?id=' + c.id;
+  },
+
   render(container) {
     const templates = Object.values(Contracts);
 
@@ -38,6 +54,8 @@ const Templates = {
               <span class="text-muted" style="font-size:12px;">${n ? `${n} contrato${n === 1 ? '' : 's'}` : 'ainda não usado'}</span>
             </div>
             <a class="btn btn-primary btn-block" href="#editor?template=${Utils.esc(t.id)}">Usar este modelo</a>
+            ${Utils.ehLocal() ? `<button type="button" class="btn btn-secondary btn-block" style="margin-top:8px;"
+              onclick="Templates.contratoDeTeste('${Utils.esc(t.id)}')">Contrato de teste (preenchido)</button>` : ''}
           </div>
         `;
         }).join('')}

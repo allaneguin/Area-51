@@ -396,8 +396,15 @@ const Utils = {
   // (file:// ou localhost) mantém o caminho real.
   shareBaseUrl(loc) {
     loc = loc || window.location;
-    const local = loc.protocol === 'file:' || /^(localhost|127\.)/.test(loc.hostname);
-    return local ? loc.href.split('#')[0] : loc.origin + '/c';
+    return Utils.ehLocal(loc) ? loc.href.split('#')[0] : loc.origin + '/c';
+  },
+
+  // Rodando na máquina de quem desenvolve? Decide o formato do link do
+  // inquilino e a exibição do botão de contrato de teste — ferramenta de teste
+  // no painel de um locador de verdade é dado falso esperando ser confundido.
+  ehLocal(loc) {
+    loc = loc || window.location;
+    return loc.protocol === 'file:' || /^(localhost|127\.|\[?::1)/.test(loc.hostname);
   },
 
   // ── Modal de Compartilhamento do Link (Substitui prompt nativo no celular) ──
@@ -878,6 +885,137 @@ const Utils = {
     });
   },
 
+  // O que ainda falta para poder mandar o contrato ao inquilino.
+  //
+  // O aceite dele só tem valor se os termos essenciais já estiverem no
+  // documento que ele lê — por isso a porta existe. Mas ela só pode cobrar o
+  // que o MODELO tem: a minuta simples não possui campo de dia de vencimento, e
+  // a lista fixa exigia esse campo mesmo assim — nenhum contrato daquele modelo
+  // conseguia gerar link, pedindo um campo que não existe no formulário.
+  faltamParaOLink(fields, tpl) {
+    fields = fields || {};
+    const tem = (nome) => !!(tpl && (tpl.fields || []).some(c => c.name === nome));
+    const exigir = (nome, rotulo) => tem(nome) && !fields[nome] && rotulo;
+
+    return [
+      exigir('valor_aluguel', 'Valor do aluguel'),
+      exigir('end_imovel', 'Endereço do imóvel'),
+      exigir('data_inicio', 'Data de início'),
+      !(Utils.mesesDoContrato(fields) > 0) && 'Prazo do contrato',
+      exigir('dia_vencimento', 'Dia de vencimento')
+    ].filter(Boolean);
+  },
+
+  // ── Contrato de teste ───────────────────────────────────────────────────
+  //
+  // Preenche um modelo inteiro com dados plausíveis, para não digitar 40 campos
+  // a cada vez que se quer testar o fluxo do inquilino.
+  //
+  // Os valores saem da DEFINIÇÃO do modelo (tipo, máscara, nome do campo), não
+  // de uma lista fixa: uma fixture com os 86 campos dos três modelos ficaria
+  // desatualizada no primeiro campo novo, e o teste passaria mentindo. Aqui,
+  // campo novo no modelo nasce preenchido sozinho.
+  //
+  // Fica em Utils (e não numa tela) porque quem chama é a tela E o teste.
+  dadosDeTeste(templateId) {
+    const tpl = (typeof Contracts !== 'undefined' && Contracts[templateId]) || null;
+    if (!tpl) return null;
+
+    const hoje = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+
+    const f = {};
+    tpl.fields.forEach(campo => {
+      f[campo.name] = Utils._valorDeTeste(campo, iso(hoje));
+    });
+
+    // Campos que o editor deriva de outros quando o locador digita. Sem isto o
+    // contrato de teste nasce com prazo e valor por extenso em branco — e é
+    // justamente o que o inquilino lê antes de assinar.
+    if ('data_termino' in f) f.data_termino = Utils.calcularDataTermino(f) || f.data_termino;
+    if ('valor_extenso' in f && f.valor_aluguel) f.valor_extenso = Utils.writeBRLInWords(f.valor_aluguel);
+    if ('valor_bonus_extenso' in f && f.valor_bonus) f.valor_bonus_extenso = Utils.writeBRLInWords(f.valor_bonus);
+    if ('data_assinatura' in f) f.data_assinatura = Utils.dataPorExtenso(hoje);
+
+    return f;
+  },
+
+  // Um valor para um campo, na ordem em que a informação é confiável:
+  // máscara > tipo > nome > rótulo.
+  _valorDeTeste(campo, hojeISO) {
+    const nome = campo.name;
+
+    if (campo.mask === 'cpfcnpj') return nome.indexOf('locador') >= 0 ? '529.982.247-25' : '111.444.777-35';
+    if (campo.mask === 'currency') return nome.indexOf('bonus') >= 0 ? 'R$ 150,00' : 'R$ 1.500,00';
+
+    if (campo.type === 'select') {
+      // Primeira opção com valor de verdade: a primeira costuma ser "Selecione...".
+      const op = (campo.options || []).find(o => o.value !== '' && o.value != null);
+      return op ? op.value : '';
+    }
+
+    if (campo.type === 'date') return hojeISO;
+
+    if (campo.type === 'number') {
+      if (nome.indexOf('dia_vencimento') >= 0) return '10';
+      if (nome.indexOf('prazo') >= 0) return '12';
+      return '1';
+    }
+
+    // Texto: alguns campos alimentam regra de negócio ou saem no PDF em lugar
+    // visível, e "teste" ali atrapalha mais que ajuda.
+    const porNome = {
+      nome_locador: 'Locador de Teste',
+      nome_locatario: 'Locatária de Teste',
+      nome_fiador: 'Fiador de Teste',
+      rg_locador: '12.345.678 SSP/MT',
+      rg_locatario: '98.765.432 SSP/MT',
+      rg_fiador: '11.222.333 SSP/MT',
+      prof_locatario: 'Analista',
+      prof_locador: 'Administrador',
+      cep_imovel: '78200-000',
+      end_imovel: 'Rua de Teste, 100, Centro, Cáceres - MT',
+      desc_imovel: 'Imóvel urbano de uso residencial, em bom estado de conservação.',
+      foro_cidade: 'Cáceres',
+      mat_agua: '000000',
+      uc_energia: '0000000',
+      banco_locador: 'Banco de Teste',
+      agencia_locador: '0001',
+      conta_locador: '12345-6',
+      pix_locador: 'teste@exemplo.com',
+      titular_conta: 'Locador de Teste'
+    };
+    if (porNome[nome]) return porNome[nome];
+
+    // Sobrou: o rótulo do próprio campo, marcado como teste. Fica óbvio na tela
+    // que aquilo não é dado real — que é o ponto de um contrato de teste.
+    return (campo.label || nome).replace(/\s*\(.*\)\s*$/, '') + ' (teste)';
+  },
+
+  // "27 de agosto de 2026" — formato que o contrato usa no fecho.
+  dataPorExtenso(d) {
+    const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    return `${String(d.getDate()).padStart(2, '0')} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+  },
+
+  // O IP carimbado pelo servidor, como ele deve aparecer numa folha de prova.
+  // Endereço de loopback ou de rede privada NÃO identifica origem externa: o
+  // inquilino assinou na mesma máquina (ou na mesma rede) do servidor. Imprimir
+  // "::1" cru sugere um endereço de internet e é pior que dizer o que é —
+  // certificado que insinua mais do que sabe não vale o papel.
+  ipDeEvidencia(ip) {
+    if (!ip) return 'Não registrado pelo servidor';
+    const limpo = String(ip).replace(/^::ffff:/i, '').trim();
+    if (limpo === '::1' || /^127\./.test(limpo)) {
+      return limpo + ' — mesma máquina do servidor, não identifica origem externa';
+    }
+    if (/^(10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|f[cd])/i.test(limpo)) {
+      return limpo + ' — rede local do servidor, não identifica origem externa';
+    }
+    return limpo;
+  },
+
   // ── Renderizar Folha de Certificado de Assinatura Eletrônica ──
   renderCertificadoHTML(fields) {
     fields = fields || {};
@@ -894,7 +1032,7 @@ const Utils = {
     const dataAceite = fields.aceite_ts_servidor
       ? new Date(fields.aceite_ts_servidor).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
       : 'Não registrado pelo servidor';
-    const ip = fields.ip_servidor || 'Não registrado pelo servidor';
+    const ip = Utils.ipDeEvidencia(fields.ip_servidor);
     const gpsStr = fields.geo_lat && fields.geo_lng ? `${fields.geo_lat}, ${fields.geo_lng} (Precisão ±${fields.geo_acc || 0}m)` : 'Não fornecido pelo dispositivo';
     const hashDoc = fields.aceite_hash ? fields.aceite_hash.toUpperCase() : 'N/A';
     const userAgent = fields.user_agent || navigator.userAgent;

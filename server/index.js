@@ -16,6 +16,14 @@ const PORTA = Number(process.env.PORT) || 3000;
 const app = express();
 app.disable('x-powered-by');
 
+// Desligado por padrao, e isso e a parte que importa. O IP do aceite e a unica
+// evidencia da trilha que quem assina nao redige — mas `X-Forwarded-For` e um
+// cabecalho como outro qualquer: confiar nele sem proxy na frente deixa o
+// proprio signatario escolher o IP que vai sair no certificado. Atras de um
+// proxy de verdade, o operador liga: TRUST_PROXY=1 (ou 'loopback', ou o IP do
+// proxy). Sem isso vale o endereco do socket, que ninguem forja.
+app.set('trust proxy', process.env.TRUST_PROXY || false);
+
 // 1 MB: o maior corpo legítimo é o payload cifrado do link (teto de 512 KB),
 // que cresce ~33% em base64 no transporte JSON.
 app.use(express.json({ limit: '1mb' }));

@@ -33,9 +33,12 @@ function expurgar() {
   db.prepare('delete from tenant_links where expires_at < ?').run(agora());
 }
 
+// `req.ip` ja resolve XFF conforme o `trust proxy` de index.js — com ele
+// desligado (o padrao), cabecalho forjado pelo signatario nao entra.
+// O ::ffff: e o mapeamento IPv4-em-IPv6 do Node: some aqui, na gravacao, para
+// nao virar ruido numa folha que alguem vai ler em juizo.
 function ipDe(req) {
-  const encaminhado = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return encaminhado || req.socket.remoteAddress || '';
+  return String(req.ip || req.socket.remoteAddress || '').replace(/^::ffff:/i, '');
 }
 
 // ── Criar (locador, exige sessão) ───────────────────────────────────────
