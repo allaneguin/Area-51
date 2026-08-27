@@ -69,6 +69,45 @@ const Api = {
       { payload, key_proof: keyProof, finalize: !!finalizar });
   },
 
+  // ── Mídia da vistoria ─────────────────────────────────────────────────
+  // O upload NÃO passa por `_req`: o corpo é o arquivo cru, não JSON, e o
+  // Content-Type é o do próprio arquivo — é assim que a rota dispensa multipart.
+  listarMidias(vistoriaId) {
+    return this._req('GET', 'midias?vistoria=' + encodeURIComponent(vistoriaId));
+  },
+
+  removerMidia(id) { return this._req('DELETE', 'midias/' + encodeURIComponent(id)); },
+
+  reindexarMidias(vistoriaId, removido) {
+    return this._req('POST', 'midias/reindexar', { vistoria: vistoriaId, removido: removido });
+  },
+
+  async enviarMidia(vistoriaId, ambiente, tipo, arquivo) {
+    const qs = `vistoria=${encodeURIComponent(vistoriaId)}&ambiente=${ambiente}&tipo=${tipo}`;
+    let r;
+    try {
+      r = await fetch('/api/midias?' + qs, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': arquivo.type },
+        body: arquivo
+      });
+    } catch (e) {
+      const erro = new Error('Não foi possível falar com o servidor. Verifique a conexão e tente de novo.');
+      erro.transporte = true;
+      throw erro;
+    }
+    const texto = await r.text();
+    let dados = null;
+    try { dados = texto ? JSON.parse(texto) : null; } catch { /* resposta não-JSON */ }
+    if (!r.ok) {
+      const erro = new Error((dados && dados.erro) || ('Erro ' + r.status));
+      erro.status = r.status;
+      throw erro;
+    }
+    return dados;
+  },
+
   // ── Administração ─────────────────────────────────────────────────────
   adminContratos() { return this._req('GET', 'admin/contracts'); },
   adminPerfis() { return this._req('GET', 'admin/profiles'); },

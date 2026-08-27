@@ -27,7 +27,7 @@
        Sem frame-ancestors: o navegador ignora essa diretiva quando ela vem por
        <meta> (só vale como cabeçalho). Quem barra clickjacking é o
        X-Frame-Options que o server/index.js envia. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' https://api.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.ipify.org https://ipapi.co https://viacep.com.br; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>MEUS IMÓVEIS APP</title>
   <script>
     // Aplica o tema ANTES da pintura para nao piscar branco ao carregar.
@@ -78,6 +78,7 @@
   <script src="js/dashboard.js?v=2.0.0" defer></script>
   <script src="js/financeiro.js?v=2.0.0" defer></script>
   <script src="js/renovacoes.js?v=2.0.0" defer></script>
+  <script src="js/midias.js?v=2.0.0" defer></script>
   <script src="js/vistorias.js?v=2.0.0" defer></script>
   <script src="js/templates.js?v=2.0.0" defer></script>
   <script src="js/admin.js?v=2.0.0" defer></script>
