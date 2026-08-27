@@ -538,6 +538,11 @@ button.nav-item {
 
 
 /* Segmented tabs */
+/* Vive dentro do .page-header, que alinha as acoes pela base (align-items:
+   flex-end). Uma margem inferior aqui empurrava o seletor 18px ACIMA dessa
+   base — era por isso que o "Foco do dia / Portfolio" e o seletor de mes do
+   financeiro flutuavam mais alto que o botao das outras telas. Espaco antes do
+   conteudo, se um dia precisar em uso solto, e do container, nao do controle. */
 .seg-tabs {
   display: flex;
   gap: 6px;
@@ -545,7 +550,6 @@ button.nav-item {
   border-radius: var(--radius-md);
   padding: 5px;
   width: fit-content;
-  margin-bottom: 18px;
 }
 
 .seg-tab {
@@ -985,6 +989,13 @@ button.nav-item {
   color: var(--sidebar-title);
   margin: 0;
   letter-spacing: -0.02em;
+}
+
+/* Quando o painel nao tem corpo (o estado "Nada pedindo atencao"), o cabecalho
+   e o ultimo filho e essa margem vira espaco morto no rodape do bloco escuro —
+   o texto sobe e desalinha do centro do cartao. */
+.hero-panel-head:last-child {
+  margin-bottom: 0;
 }
 
 .hero-panel-nota {

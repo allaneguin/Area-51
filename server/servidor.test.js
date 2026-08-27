@@ -194,6 +194,35 @@ test('B nao apaga registro de A mesmo sabendo o id', async () => {
   }
 });
 
+test('gravacao parcial de registro existente persiste (bug do created_at)', async () => {
+  // O front manda so os campos alterados. O upsert avalia o INSERT antes do
+  // `on conflict`, entao sem created_at no corpo a coluna NOT NULL estourava e
+  // a rota devolvia 500: nenhuma edicao de contrato chegava ao banco. Era isso
+  // que fazia o cloud_id do link do inquilino nunca gravar — e a importacao,
+  // sem achar o contrato pelo cloud_id, criava uma COPIA so com os dados dele.
+  const criacao = await A('PUT', '/api/contracts/parcial-1', {
+    id: 'parcial-1', name: 'Contrato', template_id: 'residencial',
+    fields: { valor_aluguel: '1.500,00' },
+    created_at: '2020-01-01T00:00:00.000Z', updated_at: '2020-01-01T00:00:00.000Z'
+  });
+  assert.strictEqual(criacao.status, 200);
+
+  const parcial = await A('PUT', '/api/contracts/parcial-1', {
+    id: 'parcial-1', name: 'Contrato', template_id: 'residencial',
+    fields: { valor_aluguel: '1.500,00' },
+    cloud_id: '40733ad4-1b43-4151-b55e-722879043795', cloud_key: 'chave-do-link'
+  });
+  assert.strictEqual(parcial.status, 200, 'gravacao sem created_at nao pode dar 500');
+  assert.strictEqual(parcial.dados.cloud_id, '40733ad4-1b43-4151-b55e-722879043795');
+  assert.strictEqual(parcial.dados.created_at, '2020-01-01T00:00:00.000Z',
+    'a data de criacao e imutavel — o update nao pode reescreve-la');
+
+  const lido = (await A('GET', '/api/contracts')).dados.find(c => c.id === 'parcial-1');
+  assert.strictEqual(lido.cloud_id, '40733ad4-1b43-4151-b55e-722879043795',
+    'o cloud_id tem que sobreviver ao recarregamento');
+  await A('DELETE', '/api/contracts/parcial-1');
+});
+
 test('o perfil de A nao vaza para B', async () => {
   await A('PUT', '/api/perfil', { nome_locador: 'Locador A', doc_locador: '123' });
   assert.strictEqual((await A('GET', '/api/perfil')).dados.nome_locador, 'Locador A');

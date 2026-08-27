@@ -206,7 +206,7 @@ const SuperAdmin = {
     }).join('');
 
     const aviso = this.semDadosDeConta ? `
-      <div style="margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--warning); background: var(--warning-bg); color: var(--warning); border-radius: var(--radius-md); font-size: 13px;">
+      <div style="padding: 12px 16px; border: 1px solid var(--warning); background: var(--warning-bg); color: var(--warning); border-radius: var(--radius-md); font-size: 13px;">
         E-mail e datas de acesso indisponíveis: aplique as migrations de <strong>supabase/migrations/</strong> para criar a função <strong>admin_list_users</strong>.
       </div>` : '';
 
@@ -218,7 +218,7 @@ const SuperAdmin = {
         </div>
       </div>
 
-      <div class="stats-grid animate-fade-in-up" style="margin-bottom: 24px;">
+      <div class="stats-grid animate-fade-in-up">
         <div class="card stat-card">
           <div class="stat-head"><span class="stat-label">Contas</span></div>
           <div class="stat-value">${contas.length}</div>

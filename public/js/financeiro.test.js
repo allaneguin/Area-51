@@ -37,6 +37,22 @@ assert.strictEqual(Financeiro.situacao({ status: 'Pendente' }).label, 'Pendente'
 assert.strictEqual(Financeiro.situacao({ status: 'Pago' }).classe, 'badge-teal');
 assert.strictEqual(Financeiro.situacao({ status: 'Pendente', due_date: dia(-3) }).classe, 'badge-red');
 
+// ── Vencimento da cobranca do mes ───────────────────────────────────────
+// A geracao de cobrancas cravava dia 10. Cobranca que nasce vencida e pior que
+// cobranca nenhuma: ela entra na fila de atraso do locador no mesmo instante.
+const venc = (f, m) => Utils.vencimentoDoMes(f, m);
+
+assert.strictEqual(venc({ dia_vencimento: '5', data_inicio: '2026-01-01' }, '2026-08'), '2026-08-05',
+  'o dia sai do contrato, nao do 10 cravado');
+assert.strictEqual(venc({ data_inicio: '2026-01-01' }, '2026-08'), '2026-08-10',
+  'sem dia no contrato, o 10 continua sendo o padrao');
+assert.strictEqual(venc({ dia_vencimento: '10', data_inicio: '2026-08-27' }, '2026-08'), '2026-08-27',
+  'contrato que comeca dia 27 nao pode vencer dia 10 do mesmo mes');
+assert.strictEqual(venc({ dia_vencimento: '31', data_inicio: '2026-01-01' }, '2026-02'), '2026-02-28',
+  'dia 31 em mes curto cai no ultimo dia');
+assert.strictEqual(venc({ dia_vencimento: '0' }, '2026-08'), '2026-08-10',
+  'dia invalido volta para o padrao, nunca gera data quebrada');
+
 // ── Recorte por mes ─────────────────────────────────────────────────────
 // doMes filtra por "YYYY-MM" do vencimento e devolve em ordem de data.
 global.Storage = {

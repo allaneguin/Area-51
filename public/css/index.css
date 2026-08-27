@@ -313,6 +313,15 @@ html.is-tenant-boot body:not(.tenant-mode) #main-content {
   margin-right: auto;
 }
 
+/* O espaco entre os blocos de uma tela mora AQUI, e so aqui. Antes cada view
+   carregava o seu: `style="margin-bottom:20px"` numa, 24px noutra, e as que
+   nao carregavam nada colavam um bloco no outro — telas diferentes respirando
+   diferente. Margens de irmaos colapsam, entao o 26px do .page-header continua
+   valendo onde ele existe. */
+#main-content>*+* {
+  margin-top: 20px;
+}
+
 /* ═══ Cabeçalho de página ═══ */
 .page-header {
   display: flex;

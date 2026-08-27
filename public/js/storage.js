@@ -389,8 +389,7 @@ const Storage = {
         const feeValue = rentValue * (feePercentDefault / 100);
         const netPayout = rentValue - feeValue;
 
-        // Vencimento padrão: dia 10 do mês
-        const dueDate = `${yearMonth}-10`;
+        const dueDate = Utils.vencimentoDoMes(c.fields, yearMonth);
 
         this.saveFinancialRecord({
           contract_id: c.id,

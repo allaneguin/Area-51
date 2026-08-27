@@ -77,7 +77,7 @@ const ContractsView = {
         </a>
       </div>
 
-      <div class="filtros animate-fade-in-up" style="margin-bottom:20px;">${filtros}</div>
+      <div class="filtros animate-fade-in-up">${filtros}</div>
 
       ${lista.length ? `<div class="card animate-fade-in-up" style="padding:8px 10px;">
         ${lista.map(c => this.linha(c)).join('')}

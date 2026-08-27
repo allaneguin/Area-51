@@ -12,6 +12,30 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ---
 
+## 2026-08-27
+
+**Nenhuma edicao de contrato chegava ao banco** — e era isso que criava a "copia" do contrato assinado.
+
+O `PUT /api/:recurso/:id` monta um upsert (`insert ... on conflict(id) do update`). O SQLite avalia o INSERT primeiro, e `created_at` e NOT NULL: como o front so manda os campos alterados numa edicao, a coluna faltava e a rota devolvia **500** em toda gravacao de registro ja existente. O `Storage._cloudWrite` mostrava o toast de erro, o cache em memoria seguia certo, e na recarga a alteracao tinha sumido.
+
+O efeito visivel foi no fluxo do inquilino: ao gerar o link, o `cloud_id`/`cloud_key` nunca gravava. Sem `cloud_id` no contrato, a sincronizacao automatica do editor nunca rodava e a importacao (`#import`) nao achava o contrato de origem — entao criava um **contrato novo, so com os campos do inquilino** e o do locador em branco. Dai o par: o original "aguardando" e a copia "Pendente" (sem datas, `getContractStatus` nao tem como dizer outra coisa) com o selo de assinado.
+
+Correcao numa linha so, no ponto por onde passam os 5 recursos: `created_at` reusa o valor da linha existente (o `set` do upsert continua sem incluir a coluna, entao a data de criacao segue imutavel). Coberto por teste que falha sem a correcao — **36 testes do backend passam**.
+
+Contratos ja partidos em dois nao se juntam sozinhos, e o caso real tinha perdido o original (apagado pela tela). `reparo-contrato-copia.js` reconstroi o contrato a partir do **payload cifrado do proprio link** — a `cloud_key` fica na linha do contrato, entao da para decifrar o que o inquilino leu e assinou: locador, imovel, prazo, valor e as duas assinaturas voltaram inteiros. O carimbo do aceite continua vindo do servidor (`tenant_links.finalized_at`), nunca do payload.
+
+**Alinhamento.** Tres coisas, todas com causa unica no CSS, nenhuma resolvida empurrando pixel:
+
+- `.seg-tabs` (o "Foco do dia / Portfolio" e o seletor de mes do financeiro) carregava `margin-bottom: 18px`. Ele vive dentro do `.page-header`, que alinha as acoes pela BASE — a margem empurrava o controle 18px acima dessa linha, e so nessas duas telas o botao do canto ficava mais alto que nas outras.
+- O painel escuro sem corpo (o estado "Nada pedindo atencao") ficava 20px mais alto do que precisa: a margem do `.hero-panel-head` virava espaco morto quando o cabecalho e o ultimo filho, e o texto subia dentro do bloco.
+- **O espaco entre os blocos de uma tela agora mora num lugar so** (`#main-content > * + *`). Antes cada view carregava o seu: `margin-bottom:20px` inline numa, 24px noutra, `.stats-grid` com 20px na folha, e as que nao carregavam nada colavam um bloco no outro — telas diferentes respiravam diferente. As margens ad-hoc sairam; margens de irmaos colapsam, entao o 26px do `.page-header` continua valendo onde existe.
+
+**Cobranca do mes deixou de nascer vencida.** A geracao de cobrancas cravava vencimento no dia 10, ignorando o `dia_vencimento` do contrato e a data de inicio: um contrato que comeca dia 27 ganhava, no mesmo mes, uma cobranca vencida em 10 — atrasada no instante em que era criada. Agora o dia sai do contrato e nunca cai antes do inicio da locacao (`Utils.vencimentoDoMes`, ao lado dos outros calculos de data); dia 31 em mes curto cai no ultimo dia. Cinco casos no `financeiro.test.js`.
+
+A **aba Financeiro** fica: ela tinha sido removida em 5b38be8 e voltou na migracao para `public/` (o `app.html` veio do `redesign-organic.dc.html`, que ainda tinha o link). Decisao do dono do projeto, nesta sessao — manter a aba e consertar o vencimento.
+
+---
+
 ## 2026-08-26
 
 **A Supabase saiu. O sistema passou a ter backend próprio** (assets: 1.32.0 → **2.0.0**; versão do projeto: 2.0.0).

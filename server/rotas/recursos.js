@@ -43,7 +43,7 @@ router.put('/:recurso/:id', meta, (req, res) => {
   // qualquer usuário sobrescrever a linha de outro só conhecendo o id — os ids
   // são gerados no cliente e viajam em link, então "conhecer o id" é barato.
   const dono = db
-    .prepare(`select user_id from ${req.tabela} where id = ?`)
+    .prepare(`select user_id, created_at from ${req.tabela} where id = ?`)
     .get(id);
   if (dono && dono.user_id !== req.usuario.id) {
     return res.status(403).json({ erro: 'Este registro é de outra conta.' });
@@ -53,7 +53,12 @@ router.put('/:recurso/:id', meta, (req, res) => {
   // é ignorado, não rejeitado — cliente antigo mandava ambos no corpo.
   const entrada = { ...req.body, id, user_id: req.usuario.id };
   entrada.updated_at = agora;
-  if (!dono) entrada.created_at = entrada.created_at || agora;
+  // `created_at` NUNCA pode faltar aqui. O upsert avalia o INSERT primeiro, e a
+  // coluna e NOT NULL: uma gravacao que so mande os campos alterados (o front
+  // faz isso a cada edicao) estourava a constraint e voltava 500 — a alteracao
+  // se perdia. Linha ja existente reusa o proprio valor; o `set` abaixo nao
+  // inclui created_at, entao a data de criacao continua imutavel.
+  entrada.created_at = (dono && dono.created_at) || entrada.created_at || agora;
 
   const cols = req.meta.colunas.filter(c => c in entrada);
   const valores = cols.map(c => paraDentro(entrada[c], c, req.meta));

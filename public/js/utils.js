@@ -373,6 +373,23 @@ const Utils = {
     return `${ano}-${mes}-${dia}`;
   },
 
+  // Vencimento do aluguel num mês (AAAA-MM).
+  //
+  // Duas correções sobre o "dia 10" que estava cravado na geração de cobranças:
+  // o dia sai do CONTRATO (o inquilino assinou aquele dia, não o 10), e a
+  // cobrança nunca vence antes do início da locação — um contrato que começa
+  // dia 27 ganhava, no mesmo mês, uma cobrança vencida em 10, atrasada no
+  // instante em que nascia. Dia 31 em mês curto cai no último dia do mês.
+  vencimentoDoMes(fields, anoMes) {
+    fields = fields || {};
+    const dia = Math.min(Math.max(parseInt(fields.dia_vencimento, 10) || 10, 1), 31);
+    const [ano, mes] = anoMes.split('-').map(Number);
+    const ultimoDia = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+    const data = `${anoMes}-${String(Math.min(dia, ultimoDia)).padStart(2, '0')}`;
+    // Comparação de texto basta: ISO ordena como data.
+    return fields.data_inicio && data < fields.data_inicio ? fields.data_inicio : data;
+  },
+
   // ── Base dos links compartilháveis (inquilino/importação) ──
   // Em produção usa o atalho /c (rota em `server/index.js`): o link fica curto
   // e sem "app.html" no meio, o que lê melhor no WhatsApp. Rodando local
