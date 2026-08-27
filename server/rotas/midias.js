@@ -129,6 +129,37 @@ router.get('/', (req, res) => {
   res.json(linhas);
 });
 
+// ── Reindexar depois de remover um ambiente ─────────────────────────────
+// `ambiente` e indice posicional dentro de inspections.rooms: tirar a Sala faz
+// a Cozinha virar 0. Sem este passo, a foto da Sala apagada reaparece na
+// Cozinha — e a vistoria passa a documentar o comodo errado.
+//
+// No servidor, e nao no cliente: sao um DELETE e um UPDATE na mesma requisicao.
+// A mesma coisa no cliente seria uma sequencia de pedidos que uma recarga no
+// meio deixa pela metade.
+router.post('/reindexar', express.json(), (req, res) => {
+  const { vistoria, removido } = req.body || {};
+  const i = Number(removido);
+  if (!Number.isInteger(i) || i < 0) return res.status(400).json({ erro: 'Ambiente inválido.' });
+  if (!vistoriaDaSessao(String(vistoria || ''), req.usuario.id)) {
+    return res.status(404).json({ erro: 'Vistoria não encontrada.' });
+  }
+
+  const doRemovido = db.prepare(
+    'select arquivo from midias where inspection_id = ? and user_id = ? and ambiente = ?'
+  ).all(vistoria, req.usuario.id, i);
+
+  db.prepare('delete from midias where inspection_id = ? and user_id = ? and ambiente = ?')
+    .run(vistoria, req.usuario.id, i);
+  db.prepare('update midias set ambiente = ambiente - 1 where inspection_id = ? and user_id = ? and ambiente > ?')
+    .run(vistoria, req.usuario.id, i);
+
+  for (const m of doRemovido) {
+    try { fs.unlinkSync(path.join(PASTA_UPLOADS, m.arquivo)); } catch { /* já sumiu */ }
+  }
+  res.json({ ok: true });
+});
+
 // ── O arquivo ───────────────────────────────────────────────────────────
 // NUNCA uma pasta estatica: foto do imovel de um cliente com nome adivinhavel
 // vaza por URL, sem sessao nenhuma. `sendFile` tambem trata `Range` sozinho, e

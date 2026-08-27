@@ -496,6 +496,27 @@ test('a varredura recolhe arquivo orfao', async () => {
     'e assim que o arquivo da vistoria apagada some — a cascata do SQLite nao alcanca o disco');
 });
 
+test('remover um ambiente do meio reindexa as midias dos seguintes', async () => {
+  await A('PUT', '/api/inspections/v-reidx', {
+    id: 'v-reidx', tipo: 'Entrada',
+    rooms: [{ nome: 'Sala' }, { nome: 'Cozinha' }, { nome: 'Quarto' }]
+  });
+  await enviar(A.cookie(), 'vistoria=v-reidx&ambiente=0&tipo=foto', 'image/jpeg', Buffer.from('da-sala'));
+  await enviar(A.cookie(), 'vistoria=v-reidx&ambiente=1&tipo=foto', 'image/jpeg', Buffer.from('da-cozinha'));
+  await enviar(A.cookie(), 'vistoria=v-reidx&ambiente=2&tipo=foto', 'image/jpeg', Buffer.from('do-quarto'));
+
+  const r = await A('POST', '/api/midias/reindexar', { vistoria: 'v-reidx', removido: 0 });
+  assert.strictEqual(r.status, 200);
+
+  const lista = (await A('GET', '/api/midias?vistoria=v-reidx')).dados;
+  assert.strictEqual(lista.length, 2, 'a foto do ambiente removido foi junto');
+  assert.deepStrictEqual(lista.map(m => m.ambiente), [0, 1],
+    'cozinha e quarto andaram uma casa para tras — senao a foto da cozinha aparece na sala');
+
+  const deB = await B('POST', '/api/midias/reindexar', { vistoria: 'v-reidx', removido: 0 });
+  assert.strictEqual(deB.status, 404, 'B nao reindexa vistoria de A');
+});
+
 test('nao-admin recebe 403 nas rotas de administracao', async () => {
   for (const rota of ['users', 'contracts', 'profiles']) {
     assert.strictEqual((await B('GET', `/api/admin/${rota}`)).status, 403);
