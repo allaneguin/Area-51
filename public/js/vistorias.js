@@ -2,16 +2,15 @@
 // Vistorias de imóvel
 //
 // Registra o estado do imóvel na entrada e na saída, ambiente por ambiente.
-// Depende da migration 004 (`supabase/migrations/004_vistorias.sql`). Enquanto
-// ela não for aplicada, a tela NÃO quebra: `Storage.inspectionsDisponivel` fica
-// falso e o que aparece é a instrução do que fazer — errar em silêncio aqui
-// significaria o locador achar que salvou uma vistoria que nunca existiu.
+// A comparação entre as duas é o que sustenta reter ou devolver a caução — por
+// isso a vistoria de SAÍDA nasce com os ambientes da entrada já fechada do
+// mesmo imóvel: comparar exige a mesma lista dos dois lados, e redigitar é
+// onde o ambiente que interessava some.
 //
-// FOTOS ficaram de fora desta primeira versão, de propósito. A maquete mostra
-// três por ambiente; guardar imagem exige um bucket no Supabase Storage com
-// política de dono, teto de tamanho e limpeza — é uma superfície de segurança
-// própria, não um campo a mais. Enfiar base64 no jsonb resolveria em uma linha
-// e estouraria a cota do projeto na primeira vistoria de verdade.
+// FOTOS ficaram de fora de propósito. Guardar imagem exige um lugar para o
+// arquivo (com dono, teto de tamanho e limpeza) — é uma superfície própria,
+// não um campo a mais. Base64 dentro do registro resolveria em uma linha e
+// inchava o banco na primeira vistoria de verdade.
 // ═══════════════════════════════════════════════════════
 
 const Vistorias = {
@@ -29,38 +28,12 @@ const Vistorias = {
   abertaId: null,
 
   render(container) {
-    if (Storage.inspectionsDisponivel === false) return this.renderIndisponivel(container);
     if (this.abertaId) {
       const v = Storage.getInspection(this.abertaId);
       if (v) return this.renderDetalhe(container, v);
       this.abertaId = null;
     }
     return this.renderLista(container);
-  },
-
-  renderIndisponivel(container) {
-    container.innerHTML = `
-      <div class="page-header animate-fade-in-down">
-        <div>
-          <div class="page-kicker">Cadastros</div>
-          <h1 class="page-title">Vistorias</h1>
-          <p class="page-subtitle">Um passo de banco falta para esta tela funcionar.</p>
-        </div>
-      </div>
-      <div class="card animate-fade-in-up">
-        <div class="painel-secao-head"><h4>Migration 004 ainda não aplicada</h4></div>
-        <p class="text-muted" style="font-size:14px; margin:0 0 14px;">
-          A tabela <code>inspections</code> não respondeu neste projeto. Ela é criada por
-          <code>supabase/migrations/004_vistorias.sql</code> — abra o SQL Editor do Supabase,
-          cole o arquivo e execute. Depois rode <code>supabase/verificacao.sql</code>:
-          as checagens 20 a 23 confirmam que a tabela, a RLS e o teto de tamanho ficaram de pé.
-        </p>
-        <p class="text-muted" style="font-size:13px; margin:0;">
-          Nada mais no sistema depende dela: contratos, imóveis, clientes e financeiro
-          seguem funcionando normalmente.
-        </p>
-      </div>
-    `;
   },
 
   renderLista(container) {
@@ -127,6 +100,36 @@ const Vistorias = {
             : '<a class="btn btn-primary" href="#properties">Cadastrar imóvel</a>'}
         </div>
       `}
+
+      <div id="vistoria-modal" class="modal-backdrop">
+        <div class="modal-card">
+          <h3>Nova vistoria</h3>
+          <form onsubmit="Vistorias.criarDoForm(event)">
+            <div class="form-group">
+              <label class="form-label" for="vist-imovel">Imóvel</label>
+              <select class="form-input" id="vist-imovel" required>
+                ${imoveis.map(p => `<option value="${Utils.esc(p.id)}">${Utils.esc(p.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="vist-tipo">Momento</label>
+              <select class="form-input" id="vist-tipo">
+                <option value="Entrada">Entrada — o inquilino está recebendo as chaves</option>
+                <option value="Saída">Saída — o inquilino está devolvendo o imóvel</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="vist-data">Data da vistoria</label>
+              <input class="form-input" type="date" id="vist-data" required
+                value="${Utils.esc(new Date().toISOString().slice(0, 10))}">
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" onclick="Vistorias.fecharModal()">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Criar vistoria</button>
+            </div>
+          </form>
+        </div>
+      </div>
     `;
   },
 
@@ -197,7 +200,24 @@ const Vistorias = {
           <div class="card">
             <div class="painel-secao-head" style="margin-bottom:12px;"><h4>Resumo</h4></div>
             <div style="display:flex; flex-direction:column; gap:11px;">
-              <div class="mini-bar-head" style="margin:0;"><span>Ambientes</span><b>${rooms.length}</b></div>
+              ${fechada ? `
+              <div class="mini-bar-head" style="margin:0;"><span class="text-muted">Momento</span><b>${Utils.esc(v.tipo || 'Entrada')}</b></div>
+              <div class="mini-bar-head" style="margin:0;"><span class="text-muted">Data</span><b>${Utils.esc(Utils.formatDate(v.inspected_on))}</b></div>
+            ` : `
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Momento</label>
+                <select class="form-input" onchange="Vistorias.setCampo('${Utils.esc(v.id)}', 'tipo', this.value)">
+                  <option value="Entrada" ${v.tipo === 'Saída' ? '' : 'selected'}>Entrada</option>
+                  <option value="Saída" ${v.tipo === 'Saída' ? 'selected' : ''}>Saída</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Data da vistoria</label>
+                <input class="form-input" type="date" value="${Utils.esc(v.inspected_on || '')}"
+                  onchange="Vistorias.setCampo('${Utils.esc(v.id)}', 'inspected_on', this.value)">
+              </div>
+            `}
+            <div class="mini-bar-head" style="margin:0;"><span>Ambientes</span><b>${rooms.length}</b></div>
               ${contagem.map(c => `
                 <div class="mini-bar-head" style="margin:0;">
                   <span class="text-muted">${Utils.esc(c.e)}</span><b>${c.n}</b>
@@ -211,7 +231,7 @@ const Vistorias = {
             <div class="painel-secao-head" style="margin-bottom:8px;"><h4>Fotos</h4></div>
             <p class="text-muted" style="font-size:13px; margin:0;">
               Esta versão registra estado e observações por escrito. Anexar fotos exige um
-              bucket de arquivos com política de dono no Supabase — ainda não configurado.
+              lugar para guardar arquivo, com dono e teto de tamanho — ainda não existe.
             </p>
           </div>
         </aside>
@@ -221,16 +241,38 @@ const Vistorias = {
 
   // ── Ações ────────────────────────────────────────────────────────────
   nova() {
-    const imoveis = Storage.getProperties();
-    if (!imoveis.length) return;
-
-    const lista = imoveis.map((p, i) => `${i + 1}) ${p.name}`).join('\n');
-    const escolha = prompt(`Vistoria de qual imóvel?\n\n${lista}\n\nDigite o número:`, '1');
-    if (escolha === null) return;
-    const imovel = imoveis[parseInt(escolha, 10) - 1];
-    if (!imovel) {
-      Utils.toast('Número fora da lista.', 'error');
+    if (!Storage.getProperties().length) {
+      Utils.toast('Cadastre um imóvel antes da primeira vistoria.', 'error');
       return;
+    }
+    document.getElementById('vistoria-modal').style.display = 'flex';
+  },
+
+  fecharModal() {
+    document.getElementById('vistoria-modal').style.display = 'none';
+  },
+
+  criarDoForm(e) {
+    e.preventDefault();
+    const v = this.criar(
+      document.getElementById('vist-imovel').value,
+      document.getElementById('vist-tipo').value,
+      document.getElementById('vist-data').value
+    );
+    this.fecharModal();
+    if (!v) return;
+    this.abertaId = v.id;
+    Utils.toast(`Vistoria de ${v.tipo.toLowerCase()} criada.`);
+    this.render(document.getElementById('main-content'));
+  },
+
+  // Monta a vistoria. Sem DOM aqui de propósito: é a regra, e é o que o teste
+  // alcança — `nova()` só abre o formulário.
+  criar(imovelId, tipo, data) {
+    const imovel = Storage.getProperties().find(p => p.id === imovelId);
+    if (!imovel) {
+      Utils.toast('Imóvel não encontrado.', 'error');
+      return null;
     }
 
     // Inquilino sai do contrato ATIVO do imóvel, quando há um: digitar de novo
@@ -238,19 +280,32 @@ const Vistorias = {
     const ativo = Storage.getContractsForProperty(imovel.id)
       .find(c => Utils.getContractStatus(c).label === 'Ativo');
 
-    const v = Storage.saveInspection({
+    return Storage.saveInspection({
       property_id: imovel.id,
       contract_id: ativo ? ativo.id : null,
-      tipo: 'Entrada',
+      tipo: tipo === 'Saída' ? 'Saída' : 'Entrada',
       status: 'Rascunho',
       tenant_name: ativo ? (ativo.fields.nome_locatario || '') : '',
-      inspected_on: new Date().toISOString().slice(0, 10),
-      rooms: this.AMBIENTES_PADRAO.map(nome => ({ nome, estado: 'Bom', obs: '' }))
+      inspected_on: data || new Date().toISOString().slice(0, 10),
+      rooms: this.ambientesIniciais(imovel.id, tipo)
     });
+  },
 
-    this.abertaId = v.id;
-    Utils.toast(`Vistoria de ${imovel.name} criada.`);
-    this.render(document.getElementById('main-content'));
+  // A saída herda os ambientes da última entrada FECHADA do mesmo imóvel: a
+  // vistoria de saída só vale pela comparação, e comparar exige os dois lados
+  // com a mesma lista. Sem entrada fechada — ou numa vistoria de entrada — cai
+  // nos ambientes sugeridos, que são ponto de partida editável.
+  ambientesIniciais(imovelId, tipo) {
+    if (tipo === 'Saída') {
+      const entrada = Storage.getInspectionsForProperty(imovelId)
+        .filter(v => v.tipo === 'Entrada' && v.status === 'Fechada')
+        .sort((a, b) => String(b.inspected_on || '').localeCompare(String(a.inspected_on || '')))[0];
+      if (entrada && Array.isArray(entrada.rooms) && entrada.rooms.length) {
+        // Estado e observação NÃO vêm junto: são o que a saída vai constatar.
+        return entrada.rooms.map(r => ({ nome: r.nome, estado: 'Bom', obs: '' }));
+      }
+    }
+    return this.AMBIENTES_PADRAO.map(nome => ({ nome, estado: 'Bom', obs: '' }));
   },
 
   abrir(id) {
@@ -273,6 +328,16 @@ const Vistorias = {
     if (!rooms[i]) return null;
     rooms[i] = { ...rooms[i], ...patch };
     return Storage.saveInspection({ ...v, rooms });
+  },
+
+  // Corrige o cabecalho da vistoria (momento, data) enquanto ela e rascunho.
+  // Vistoria fechada nao muda: e ela que sustenta a conversa da caucao, e o
+  // valor de prova vem justamente de nao dar para reescrever depois.
+  setCampo(id, campo, valor) {
+    const v = Storage.getInspection(id);
+    if (!v || v.status === 'Fechada') return;
+    Storage.saveInspection({ ...v, [campo]: valor });
+    this.render(document.getElementById('main-content'));
   },
 
   setEstado(id, i, valor) {

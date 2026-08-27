@@ -24,6 +24,10 @@ Correcao numa linha so, no ponto por onde passam os 5 recursos: `created_at` reu
 
 Contratos ja partidos em dois nao se juntam sozinhos, e o caso real tinha perdido o original (apagado pela tela). `reparo-contrato-copia.js` reconstroi o contrato a partir do **payload cifrado do proprio link** — a `cloud_key` fica na linha do contrato, entao da para decifrar o que o inquilino leu e assinou: locador, imovel, prazo, valor e as duas assinaturas voltaram inteiros. O carimbo do aceite continua vindo do servidor (`tenant_links.finalized_at`), nunca do payload.
 
+**Vistorias: a de saida passou a existir.** O `tipo` era gravado como `'Entrada'` na criacao e nao havia caminho nenhum para muda-lo — ou seja, metade do proposito da tela (comparar entrada x saida para decidir a caucao) era inalcancavel pela interface. A criacao virou formulario: imovel (lista, nao mais um `prompt()` do navegador pedindo um numero), momento e data. E a **saida nasce com os ambientes da ultima entrada FECHADA do mesmo imovel** — comparar exige os dois lados com a mesma lista, e redigitar e onde o ambiente que interessava some; estado e observacao nao vem junto, porque sao o que a saida vai constatar. Momento e data ficam corrigiveis enquanto a vistoria e rascunho; vistoria fechada nao muda, que e de onde vem o valor de prova dela. Coberto por `vistorias.test.js` (6 casos, na suite do `npm test`).
+
+Saiu junto a tela `renderIndisponivel`, que mandava o locador abrir o SQL Editor da Supabase e rodar a migration 004 — instrucao morta desde 26/08 (a tabela nasce com o banco, e nada mais escreve `inspectionsDisponivel = false`), e enganosa: apontava para um servico que o sistema nao usa mais. O aviso das fotos, que citava bucket da Supabase, tambem foi reescrito.
+
 **Alinhamento.** Tres coisas, todas com causa unica no CSS, nenhuma resolvida empurrando pixel:
 
 - `.seg-tabs` (o "Foco do dia / Portfolio" e o seletor de mes do financeiro) carregava `margin-bottom: 18px`. Ele vive dentro do `.page-header`, que alinha as acoes pela BASE — a margem empurrava o controle 18px acima dessa linha, e so nessas duas telas o botao do canto ficava mais alto que nas outras.
