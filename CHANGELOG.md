@@ -12,9 +12,11 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ---
 
-## 2026-08-27
+## 2026-08-28
 
 **Criar link com id repetido devolvia 500.** O `insert` em `tenant_links` era puro, sem tratar conflito de chave: uma retentativa depois de conexao instavel — mesmo id de novo — batia na constraint e virava "Erro interno", que nao diz nada a quem chama. Agora e **409** com a frase certa, e o payload original fica intacto. Vale tambem para o caso hostil: outra conta mandando um id conhecido recebe a mesma recusa, **sem descobrir de quem e o link** e sem sobrescrever nada. Dois testes.
+
+**`arquitetura_sistema.md` reescrito com os nomes reais.** Chegou uma versao gerada do documento com **16 nomes de coluna errados** (`title` por `name`, `amount` por `rent_value`, `vistoria_id` por `inspection_id`, `key_proof_hash` por `key_proof`, `users.created_at` por `criado_em`…) e quatro erros de comportamento — o pior deles um `AND finalized = 0` na leitura do link, que se fosse verdade impediria o locador de importar o contrato assinado. A estrutura dela era melhor que a nossa (atores separados, `autonumber`, o passo de importacao); ficou a estrutura, entraram os fatos conferidos contra `pragma table_info`. O documento agora abre dizendo que a referencia e `server/db.js`, e que quando divergirem quem esta errado e o diagrama.
 
 **Diagramas de estado** (`arquitetura_sistema.md` §5): ciclo de vida do contrato — o derivado das datas (`Pendente → A Iniciar → Ativo → Vencido`) separado do gravado (`is_finalized`, caminho so de ida) — e o da vistoria (`Rascunho ↔ Fechada`). A separacao e o ponto: estado derivado nunca envelhece; estado gravado envelhece se ninguem atualizar.
 
@@ -36,6 +38,10 @@ Tres detalhes que decidem se isso protege ou so parece proteger:
 - **Sem dependencia nova.** `express-rate-limit` resolveria, mas traz cinco transitivas para substituir trinta linhas, e o que ele da a mais (store compartilhado, janela deslizante) supoe varios processos — este e um, com um arquivo de banco. Quando houver mais de um, o `Map` deixa de bastar e o pacote entra pelo motivo certo. Registrado em `server/limite.js`.
 
 O scrypt da senha ja custava ~70ms por tentativa, mas freio de CPU nao e limite: com paralelismo, um dicionario de 10 mil senhas sai em minutos. Com 5/min por IP, vira 33 horas contra uma unica conta.
+
+---
+
+## 2026-08-27
 
 **Vistoria ganhou foto e video por ambiente** (ramo `feat/midia-vistoria`, 7 commits). A vistoria existe para sustentar uma conversa que acontece meses depois — reter ou devolver a caucao — e ate aqui ela guardava so texto. Texto contra texto e a palavra de um contra a do outro.
 

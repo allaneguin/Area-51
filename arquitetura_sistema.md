@@ -1,136 +1,154 @@
-# Arquitetura do Sistema — Meus Imóveis (Área-51)
+# Arquitetura do Sistema — Diagramas e Fluxos
 
-Documento executivo e técnico com os diagramas visuais e mapeamento de componentes da aplicação.
+**Versão 2.1 — 2026-08-28.** Os diagramas do sistema: camadas, o ciclo do link
+do inquilino, o modelo de dados e os estados.
+
+> **Os nomes aqui são os nomes reais das colunas e das rotas.** Diagrama que
+> renomeia campo para ficar mais bonito ("title" em vez de `name`, "amount" em
+> vez de `rent_value`) é pior que diagrama nenhum: quem confia nele escreve
+> código que não roda, e quem descobre isso passa a não confiar em documento
+> algum. A referência é `server/db.js` e `server/rotas/`; quando divergirem,
+> quem está errado é este arquivo.
+>
+> Este documento tem irmãos: `docs/ARQUITETURA.md` (as regras e as dívidas),
+> `docs/REFERENCIA.md` (regras de negócio e contrato de API) e o `CHANGELOG.md`
+> (por que cada coisa é assim).
 
 ---
 
-## 1. Visão Geral da Arquitetura (Visão em Camadas)
+## 1. Camadas e comunicação
+
+Separação de responsabilidades (R2 do `ARQUITETURA.md`): front sem build,
+servidor Express, e persistência em **duas** partes — o banco em arquivo e o
+diretório de mídia.
 
 ```mermaid
-graph TB
-    subgraph CLIENTE_LOCADOR["Navegador do Locador (Desktop / Mobile)"]
-        UI_L["Shell SPA (app.html + CSS)"]
-        VIEWS_L["Views (Dashboard, Contratos, Editor, Imóveis, Clientes, Financeiro, Vistorias)"]
-        STORAGE_L["Storage (Cache em Memória + Fire-and-Forget)"]
-        API_L["Api (Cliente HTTP Fetch)"]
-        CRYPTO_L["CloudDB (WebCrypto AES-256-GCM)"]
+flowchart TD
+    subgraph Browser ["Navegador (public/)"]
+        App["Shell & Router (app.js)"]
+        Views["Views (editor, dashboard, vistorias, tenant, …)"]
+        Utils["Núcleo puro + UI (utils.js)"]
+        Storage["Cache e CRUD (storage.js)"]
+        CloudDB["AES-GCM e sanitização (database.js)"]
+        Midias["Captura e upload (midias.js)"]
+        ApiFront["Transporte (api.js)"]
+
+        App --> Views
+        Views --> Utils
+        Views --> Storage
+        Views --> CloudDB
+        Views --> Midias
+        Storage --> ApiFront
+        CloudDB --> ApiFront
+        Midias --> ApiFront
     end
 
-    subgraph CLIENTE_INQUILINO["Navegador do Inquilino (Mobile / Público)"]
-        UI_T["Tela do Inquilino (#tenant?id=...&key=...)"]
-        TENANT_JS["tenant-v2.js (Preenchimento, Selfie, Assinatura)"]
-        CRYPTO_T["WebCrypto (Decifra contrato e Cifra resposta)"]
-    end
+    subgraph Server ["Backend Node (server/)"]
+        Express["index.js — estático, CSP e cabeçalhos"]
 
-    subgraph SERVIDOR["Backend (Node.js + Express - server/)"]
-        direction TB
-        STATIC["express.static (public/) + Headers de Segurança"]
-        SEC_HEADERS["X-Frame-Options: DENY\nContent-Type-Options: nosniff\nCSP"]
-        
-        subgraph MIDDLEWARES["Filtros e Segurança"]
-            COOKIE_AUTH["Sessão por Cookie httpOnly (scrypt / SHA-256)"]
-            EXIGIR_LOGIN["exigirLogin (Isolamento por user_id)"]
-            EXIGIR_ADMIN["exigirAdmin (is_admin === true)"]
+        subgraph Rotas ["Routers em /api"]
+            AuthRoutes["/auth — limite por rota"]
+            LinksRoutes["/links — PÚBLICO + limite por rota"]
+            PerfilRoutes["/perfil — exigirLogin"]
+            RecursosRoutes["/:recurso — exigirLogin"]
+            MidiasRoutes["/midias — exigirLogin"]
+            AdminRoutes["/admin — exigirLogin + exigirAdmin"]
         end
 
-        subgraph ROTAS["Rotas de API (/api)"]
-            R_AUTH["/api/auth (Login, Registro, Senha, Logout)"]
-            R_PERFIL["/api/perfil (Perfil do Locador - sem :id)"]
-            R_RECURSOS["/api/:recurso (contracts, properties, clients, financial_records, inspections)"]
-            R_LINKS["/api/links (Links do Inquilino - Público)"]
-            R_ADMIN["/api/admin (Supervisão de Contas - Read-Only)"]
-        end
-
-        DB_LAYER["db.js (node:sqlite + Lista Branca RECURSOS + Serialização JSON)"]
+        DBModule["db.js — schema, mapa RECURSOS, conversão de borda"]
     end
 
-    subgraph BANCO_DADOS["Banco de Dados (data.db - SQLite)"]
-        T_USERS[("users")]
-        T_SESSIONS[("sessions")]
-        T_PROFILES[("profiles")]
-        T_CONTRACTS[("contracts")]
-        T_PROPERTIES[("properties")]
-        T_CLIENTS[("clients")]
-        T_FINANCIAL[("financial_records")]
-        T_INSPECTIONS[("inspections")]
-        T_LINKS[("tenant_links")]
+    subgraph Disco ["Persistência local"]
+        SqliteDB[("data.db")]
+        UploadsDir[("uploads/ — fotos e vídeos")]
     end
 
-    %% Relações Locador
-    UI_L --> VIEWS_L
-    VIEWS_L --> STORAGE_L
-    VIEWS_L --> CRYPTO_L
-    STORAGE_L --> API_L
-    API_L -->|HTTP Requests + Cookie| SERVIDOR
-
-    %% Relações Inquilino
-    UI_T --> TENANT_JS
-    TENANT_JS --> CRYPTO_T
-    CRYPTO_T -->|HTTP Requests sem Sessão| R_LINKS
-
-    %% Backend interno
-    STATIC --> SEC_HEADERS
-    SERVIDOR --> MIDDLEWARES
-    MIDDLEWARES --> ROTAS
-    ROTAS --> DB_LAYER
-    DB_LAYER --> BANCO_DADOS
+    ApiFront -- "HTTP/JSON + cookie httpOnly" --> Express
+    Express --> Rotas
+    Rotas --> DBModule
+    DBModule --> SqliteDB
+    MidiasRoutes --> UploadsDir
 ```
+
+**Onde a proteção mora, e por que não é uma pilha global:** `exigirLogin` é a
+**primeira linha de cada router** que precisa dele (`router.use`), não um
+middleware antes de tudo — `/api/links` e `/api/auth/entrar` são públicos por
+definição, e uma pilha global precisaria de exceções, que é onde o furo nasce.
+O limite por IP (`limite.js`) é montado **na definição da rota**, e só nas que
+podem ser marteladas: login, cadastro e as rotas públicas de link.
 
 ---
 
-## 2. Fluxo do Inquilino & Criptografia Ponta a Ponta
+## 2. Ciclo do link do inquilino (ponta a ponta)
 
-Este é o fluxo mais crítico do sistema: o contrato é protegido de modo que o servidor armazena os dados cifrados sem conhecer o conteúdo legível durante o trânsito do link.
+O servidor nunca vê o conteúdo: ele guarda bytes cifrados no navegador do
+locador e decifrados no do inquilino. A chave viaja no **fragmento** da URL,
+que não vai em requisição nem em `Referer`.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Locador as 🧑‍💼 Locador
-    participant Editor as 💻 Editor (Browser)
-    participant CloudDB as 🔐 CloudDB (WebCrypto)
-    participant Servidor as 🖥️ Servidor (/api/links)
-    participant Banco as 🗄️ SQLite (data.db)
-    actor Inquilino as 📱 Inquilino
+    actor Locador
+    participant FrontL as Navegador do locador<br/>(CloudDB + WebCrypto)
+    participant Srv as Servidor<br/>(/api/links)
+    participant DB as SQLite<br/>(tenant_links)
+    actor Inquilino
+    participant FrontI as Navegador do inquilino<br/>(tenant-v2.js)
 
-    Locador->>Editor: Finaliza minuta e clica em "Gerar link do inquilino"
-    Editor->>CloudDB: Gera chave aleatória AES de 16 chars (CSPRNG)
-    CloudDB->>CloudDB: Cifra dados do contrato (AES-256-GCM)
-    CloudDB->>CloudDB: Gera key_proof = SHA-256(chave)
-    CloudDB->>Servidor: POST /api/links { id, encrypted_payload, key_proof }
-    Servidor->>Banco: Grava tenant_links (guarda SHA-256(key_proof))
-    Servidor-->>Editor: Link criado com sucesso
-    Editor-->>Locador: Gera URL: meusite.com/#tenant?id=UUID&key=CHAVE
+    Note over Locador,FrontL: 1. Geração
+    Locador->>FrontL: "Gerar link do inquilino"
+    FrontL->>FrontL: recusa se faltar valor, endereço,<br/>início, prazo ou dia de vencimento
+    FrontL->>FrontL: chave CSPRNG (16 chars) · id UUID<br/>AES-256-GCM (IV de 12 bytes)<br/>key_proof = SHA-256(chave)
+    FrontL->>Srv: POST /api/links {id, payload, key_proof}
+    Srv->>Srv: id já existe? → 409 (não sobrescreve)
+    Srv->>DB: INSERT (guarda SHA-256 DA PROVA, expires_at = +30 dias)
+    Srv-->>FrontL: 201
+    FrontL->>FrontL: grava cloud_id e cloud_key NO CONTRATO
+    FrontL-->>Locador: .../c#tenant?id={id}&key={chave}
 
-    Note over Locador,Inquilino: A chave trafega apenas no fragmento da URL (#), nunca em headers HTTP
+    Note over Locador,Inquilino: link vai por WhatsApp — a chave está no fragmento
 
-    Locador->>Inquilino: Envia link via WhatsApp / Mensagem
-    Inquilino->>Servidor: GET /api/links/:id (Sem autenticação)
-    Servidor->>Banco: Busca payload e confere expiração (30 dias)
-    Servidor-->>Inquilino: Retorna encrypted_payload
-    Inquilino->>Inquilino: Decifra contrato usando a chave do fragmento (#)
-    Inquilino->>Inquilino: Preenche RG, profissão, assina e tira selfie
-    Inquilino->>CloudDB: Cifra dados preenchidos com a mesma chave
-    Inquilino->>Servidor: PUT /api/links/:id { payload_cifrado, proof }
-    Note over Servidor: Servidor valida SHA-256(proof), carimba finalized_at e IP
-    Servidor->>Banco: Atualiza tenant_links (finalized = 1, finalized_at, finalized_ip)
-    Servidor-->>Inquilino: Confirmação de assinatura
+    Inquilino->>FrontI: abre a URL
+    FrontI->>Srv: GET /api/links/:id
+    Srv->>DB: SELECT … WHERE id = ? (expirado some na leitura)
+    Note right of Srv: NÃO filtra finalized:<br/>ler link assinado é o que<br/>permite o locador importar
+    Srv-->>FrontI: 200 {payload}
+    FrontI->>FrontI: decifra com a chave do fragmento<br/>sanitiza data: URLs na fronteira
 
-    Locador->>Editor: Abre contrato e clica em "Importar dados do Inquilino"
-    Editor->>Servidor: GET /api/links/:id
-    Servidor-->>Editor: Retorna payload cifrado + carimbo oficial do servidor
-    Editor->>CloudDB: Decifra com a cloud_key salva no contrato
-    Editor->>Editor: mesclarCamposDoInquilino (Lista branca estrita: protege locador, valor e conta bancária)
-    Editor->>Servidor: Salva contrato mesclado em /api/contracts/:id
+    Note over Inquilino,FrontI: 2. Preenchimento e aceite
+    Inquilino->>FrontI: dados, assinatura e selfie
+    FrontI->>FrontI: aceite_ts, user_agent, IP e GPS (autodeclarados)<br/>aceite_hash = SHA-256(texto lido)
+    FrontI->>Srv: PUT /api/links/:id {payload, key_proof, finalize: true}
+    Srv->>Srv: SHA-256(key_proof) bate com o guardado?
+    Srv->>DB: UPDATE … finalized = 1, finalized_at, finalized_ip,<br/>expires_at encurtado para +7 dias
+    Srv-->>FrontI: 200 {gravou: true}
+    Note right of Srv: gravou:false (não erro HTTP) quando<br/>expirado, já finalizado ou prova errada
+
+    Note over Locador,DB: 3. Ingestão
+    alt Contrato ainda tem cloud_id (caminho normal)
+        Locador->>FrontL: abre o contrato no editor
+        FrontL->>Srv: GET /links/:id + GET /links/:id/evidencia
+        Srv-->>FrontL: payload cifrado + carimbo do servidor
+    else Locador usa o link de importação (#import)
+        Locador->>FrontL: cola .../c#import?id={id}&key={chave}
+    end
+    FrontL->>FrontL: LISTA BRANCA: só a seção Locatário<br/>e a trilha de aceite entram
+    FrontL->>FrontL: carimbo do servidor (data/IP) vence o autodeclarado
+    FrontL->>Srv: PUT /api/contracts/:id {fields, is_finalized: true}
 ```
 
 ---
 
-## 3. Modelo de Dados e Relacionamentos (SQLite)
+## 3. Modelo de dados
+
+Nove tabelas em `data.db`. **Os nomes abaixo são os do `pragma table_info`.**
+O escopo por conta é da aplicação, não do banco: não há RLS — quem garante é
+`user_id` da sessão em todo SQL, e os testes de escopo são a cobrança disso.
 
 ```mermaid
 erDiagram
     users ||--o{ sessions : "possui"
-    users ||--|| profiles : "possui"
+    users ||--o| profiles : "possui"
     users ||--o{ contracts : "cria"
     users ||--o{ properties : "gerencia"
     users ||--o{ clients : "cadastra"
@@ -140,101 +158,115 @@ erDiagram
     inspections ||--o{ midias : "documenta"
 
     users {
-        text id PK "UUID do servidor"
-        text email UK "E-mail único"
-        text senha_hash "scrypt + salt"
-        text salt "16 bytes aleatórios"
-        integer is_admin "0 ou 1"
-        text criado_em "ISO-8601"
-        text ultimo_login "ISO-8601"
+        TEXT id PK "UUID do servidor — o cliente não escolhe identidade"
+        TEXT email UK "collate nocase"
+        TEXT senha_hash "scrypt"
+        TEXT salt "16 bytes por usuário"
+        INTEGER is_admin "a primeira conta nasce 1"
+        TEXT criado_em "ISO-8601"
+        TEXT ultimo_login "ISO-8601"
     }
 
     sessions {
-        text token PK "Token da sessão"
-        text user_id FK "users.id"
-        text expira_em "ISO-8601 (7 dias)"
-        text created_at "ISO-8601"
+        TEXT token PK "cookie httpOnly, SameSite=Strict"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT expira_em "30 dias; expirada some na leitura"
     }
 
     profiles {
-        text id PK "users.id (sem parâmetro :id na rota)"
-        text profile_data "JSON com dados do locador"
-        text updated_at "ISO-8601"
+        TEXT id PK "É users(id) — não há coluna user_id"
+        TEXT profile_data "JSON: o perfil do locador"
+        TEXT updated_at "ISO-8601"
     }
 
     contracts {
-        text id PK "UUID gerado no cliente"
-        text user_id FK "users.id"
-        text name "Título do contrato"
-        text template_id "locacao_residencial, etc."
-        text fields "JSON: partes, imóvel, valores, assinaturas"
-        text cloud_id "ID do tenant_link gerado"
-        text cloud_key "Chave AES para decifrar"
-        integer is_finalized "0 ou 1"
-        text created_at "ISO-8601 imutável"
-        text updated_at "ISO-8601"
+        TEXT id PK "gerado no cliente"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT name "nome do contrato"
+        TEXT template_id "locacao_residencial | comercial | simples"
+        TEXT fields "JSON: partes, valores, prazo, assinaturas, trilha"
+        INTEGER is_finalized "1 = assinado, vira só leitura"
+        TEXT cloud_id "id do tenant_links — o vínculo com o link"
+        TEXT cloud_key "chave AES do link (em claro: dívida aberta)"
+        TEXT created_at "imutável no upsert"
+        TEXT updated_at "carimbado pelo servidor"
     }
 
     properties {
-        text id PK "UUID do cliente"
-        text user_id FK "users.id"
-        text title "Nome/Identificação"
-        text address "Endereço completo"
-        real rent_value "Valor numérico do aluguel"
-        text status "Disponível ou Alugado (derivado)"
+        TEXT id PK "gerado no cliente"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT name "identificação do imóvel"
+        TEXT address "endereço; cep, type, area e valores em colunas próprias"
+        TEXT status "manual; Alugado é DERIVADO de contrato ativo"
+        REAL rent_value "aluguel de referência"
     }
 
     clients {
-        text id PK "UUID do cliente"
-        text user_id FK "users.id"
-        text name "Nome do cliente"
-        text document "CPF ou CNPJ"
-        text client_type "Locador ou Locatário"
+        TEXT id PK "gerado no cliente"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT name "nome"
+        TEXT document "CPF/CNPJ — SEM unique; a dedupe é do app"
+        TEXT client_type "Inquilino | Locador | Fiador"
+        TEXT person_type "PF | PJ"
     }
 
     financial_records {
-        text id PK "UUID do cliente"
-        text user_id FK "users.id"
-        text contract_id "Vínculo lógico com contracts.id"
-        real rent_value "Valor do aluguel"
-        real fee_value "Taxa de administração"
-        real net_payout "Repasse líquido ao locador"
-        text due_date "Vencimento: dia do contrato, nunca antes do início"
-        text status "Pendente ou Pago (Atrasado é derivado)"
+        TEXT id PK "gerado no cliente"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT contract_id "vínculo lógico — sem FK"
+        REAL rent_value "valor do aluguel"
+        REAL fee_value "taxa de administração"
+        REAL net_payout "repasse ao locador"
+        TEXT due_date "dia do contrato, nunca antes do início"
+        TEXT status "Pendente | Pago — Atrasado é DERIVADO"
+        TEXT paid_at "quando foi marcado como pago"
     }
 
     inspections {
-        text id PK "UUID do cliente"
-        text user_id FK "users.id"
-        text property_id "Vínculo com o imóvel"
-        text tipo "Entrada ou Saída"
-        text rooms "JSON: [{nome, estado, obs}]"
-        text status "Rascunho ou Fechada"
-        text closed_at "Carimbo do fechamento"
+        TEXT id PK "gerado no cliente"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT property_id "vínculo lógico com properties(id)"
+        TEXT contract_id "contrato ativo do imóvel, quando há"
+        TEXT tipo "Entrada | Saída"
+        TEXT status "Rascunho | Fechada"
+        TEXT inspected_on "data da vistoria"
+        TEXT rooms "JSON: [{nome, estado, obs}]"
+        TEXT closed_at "carimbo do fechamento"
     }
 
     midias {
-        text id PK "UUID do servidor"
-        text user_id FK "users.id"
-        text inspection_id FK "inspections.id (cascata)"
-        integer ambiente "Índice posicional dentro de rooms"
-        text tipo "foto ou video"
-        text mime "image/jpeg, video/webm, ..."
-        integer bytes "Tamanho do arquivo"
-        text arquivo "Nome em uploads/ — decidido pelo SERVIDOR"
+        TEXT id PK "UUID do servidor"
+        TEXT user_id FK "users(id) ON DELETE CASCADE"
+        TEXT inspection_id FK "inspections(id) ON DELETE CASCADE"
+        INTEGER ambiente "índice POSICIONAL dentro de rooms"
+        TEXT tipo "foto | video"
+        TEXT mime "image/jpeg, video/webm, …"
+        INTEGER bytes "8 MB foto, 25 MB vídeo"
+        TEXT arquivo "nome em uploads/ — decidido pelo SERVIDOR"
     }
 
     tenant_links {
-        text id PK "UUID do cliente"
-        text created_by FK "users.id (nome real da coluna)"
-        text encrypted_payload "Blob cifrado (AES-GCM <= 512KB)"
-        text key_proof "SHA-256(SHA-256(chave))"
-        integer finalized "0 ou 1 (só de ida)"
-        text finalized_at "Carimbo UTC pelo servidor"
-        text finalized_ip "IP capturado pelo servidor"
-        text expires_at "Data de expiração (30 dias)"
+        TEXT id PK "UUID do CSPRNG do cliente"
+        TEXT created_by FK "users(id) — NÃO se chama user_id"
+        TEXT encrypted_payload "AES-256-GCM, até 512 KB"
+        TEXT key_proof "SHA-256 DA PROVA que o cliente manda"
+        INTEGER finalized "caminho só de ida"
+        TEXT finalized_at "carimbo do servidor, fora do payload"
+        TEXT finalized_ip "req.ip — não sai de X-Forwarded-For"
+        TEXT expires_at "30 dias; 7 depois de assinado"
     }
 ```
+
+**Três armadilhas que o diagrama esconde:**
+
+1. **`ambiente` é índice posicional.** Remover um ambiente do meio de `rooms`
+   desloca os seguintes — por isso existe `POST /api/midias/reindexar`.
+2. **`contracts.fields` é o blob central**, e nele moram assinatura e selfie em
+   base64: ~53 KB por contrato, baixados **todos** a cada login. É a dívida de
+   escala mais concreta do sistema.
+3. **Vínculos lógicos sem FK**: contrato→imóvel (`fields.property_id`),
+   `financial_records.contract_id`, e cliente↔contrato por CPF/CNPJ. Apagar um
+   imóvel não limpa nada disso.
 
 ---
 
