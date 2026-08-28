@@ -250,7 +250,53 @@ const Utils = {
   imgSeguro(dataUrl, alt, style) {
     if (typeof dataUrl !== 'string') return '';
     if (!Utils.IMG_DATA_URL_OK.test(dataUrl)) return '';
-    return `<img src="${dataUrl}" alt="${Utils.esc(alt || '')}" style="${Utils.esc(style || '')}">`;
+    // Clicar amplia. O handler recebe o ELEMENTO (`this`), nunca a URL: a
+    // selfie tem ~30 KB de base64, e enfiar isso dentro de um atributo onclick
+    // seria enorme e ainda faria dado do inquilino virar código.
+    return `<img src="${dataUrl}" alt="${Utils.esc(alt || '')}"` +
+      ` style="${Utils.esc(style || '')}" class="img-ampliavel"` +
+      ` title="Clique para ampliar" onclick="Utils.ampliarImagem(this)">`;
+  },
+
+  // ── Ampliar uma imagem em tela cheia ────────────────────────────────────
+  //
+  // A selfie de validação sai com 100px de altura no certificado — tamanho de
+  // documento impresso, não de conferência. Quem precisa comparar o rosto com o
+  // documento na mão precisa ver grande, e a folha não pode crescer por isso.
+  //
+  // Recebe o <img> clicado, não a URL: assim serve para a selfie e a rubrica
+  // (data: URL de 30 KB) e para a foto de vistoria (rota autenticada) sem que o
+  // chamador precise saber a diferença.
+  ampliarImagem(el) {
+    if (!el || !el.src) return;
+
+    let caixa = document.getElementById('zoom-imagem');
+    if (!caixa) {
+      caixa = document.createElement('div');
+      caixa.id = 'zoom-imagem';
+      caixa.className = 'modal-backdrop zoom-backdrop';
+      // Clicar em qualquer lugar fecha — inclusive na própria imagem. Não há o
+      // que fazer aqui além de olhar e sair.
+      caixa.onclick = () => Utils.fecharZoom();
+      document.body.appendChild(caixa);
+    }
+
+    caixa.innerHTML = `<img src="${el.src}" alt="${Utils.esc(el.alt || '')}" class="zoom-img">`;
+    caixa.style.display = 'flex';
+
+    // Esc fecha, e o ouvinte se remove sozinho: sobrar ouvinte em documento que
+    // re-renderiza a cada clique é vazamento silencioso.
+    Utils._zoomEsc = (e) => { if (e.key === 'Escape') Utils.fecharZoom(); };
+    document.addEventListener('keydown', Utils._zoomEsc);
+  },
+
+  fecharZoom() {
+    const caixa = document.getElementById('zoom-imagem');
+    if (caixa) { caixa.style.display = 'none'; caixa.innerHTML = ''; }
+    if (Utils._zoomEsc) {
+      document.removeEventListener('keydown', Utils._zoomEsc);
+      Utils._zoomEsc = null;
+    }
   },
 
   // ── Lista branca do que o inquilino escreve ─────────────────────────────

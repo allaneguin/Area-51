@@ -877,6 +877,34 @@ button.nav-item {
   justify-content: center;
   padding: 1rem;
 }
+/* — Imagem ampliada (selfie de validacao, rubrica, foto de vistoria) —
+   Reusa o .modal-backdrop; o que muda e que aqui a imagem ocupa a tela e o
+   fundo e mais escuro, porque o que importa e o que esta na foto. */
+/* O cursor mora aqui, e nao no atributo style da tag: `imgSeguro` monta o
+   `style` com o que o chamador pediu, e concatenar mais coisa ali sujava o
+   valor (`...;; cursor:`) e quebrava o teste que guarda esse sink. */
+.img-ampliavel { cursor: zoom-in; }
+
+.zoom-backdrop {
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+  padding: 24px;
+}
+
+.zoom-img {
+  max-width: 96vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* O certificado vira PDF por window.print(): caixa de zoom aberta na hora da
+   impressao sairia por cima da folha. */
+@media print {
+  .zoom-backdrop { display: none !important; }
+}
+
 .modal-card {
   background: var(--card-bg);
   border: 1px solid var(--border-light);

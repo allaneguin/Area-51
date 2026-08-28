@@ -193,7 +193,9 @@ const Vistorias = {
                 ${this.midiasDo(i).map(m => `
                   <figure class="midia-item">
                     ${m.tipo === 'foto'
-                      ? `<img src="${Utils.esc(Midias.url(m.id))}" alt="Foto de ${Utils.esc(r.nome || 'ambiente')}" loading="lazy">`
+                      ? `<img src="${Utils.esc(Midias.url(m.id))}" alt="Foto de ${Utils.esc(r.nome || 'ambiente')}"
+                          loading="lazy" class="img-ampliavel" title="Clique para ampliar"
+                          onclick="Utils.ampliarImagem(this)">`
                       : `<video src="${Utils.esc(Midias.url(m.id))}" controls preload="metadata"></video>`}
                     ${fechada ? '' : `<button type="button" class="midia-remover" title="Remover"
                       aria-label="Remover mídia de ${Utils.esc(r.nome || 'ambiente')}"

@@ -14,6 +14,12 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-28
 
+**A selfie de validacao agora amplia com um clique.** Ela sai com 100px de altura no certificado — tamanho de documento impresso, nao de conferencia: quem precisa comparar o rosto com o documento na mao nao enxergava nada, e a folha nao pode crescer por causa disso.
+
+A mudanca entrou no **unico sink de imagem do sistema** (`Utils.imgSeguro`), entao vale de uma vez para a selfie, a rubrica manuscrita e a foto de vistoria — sem tres implementacoes. O handler recebe o **elemento** (`this`), nunca a URL: a selfie tem ~30 KB de base64, e enfiar isso dentro de um atributo `onclick` seria enorme e faria dado do inquilino virar codigo.
+
+Dois detalhes que o teste de seguranca cobrou na hora: o cursor `zoom-in` foi para uma **classe CSS** em vez de ser concatenado no atributo `style` (a concatenacao sujava o valor que o chamador pediu), e a caixa de zoom tem `display: none` na impressao — aberta na hora do `window.print()`, ela sairia por cima da folha. Tres asserts novos no `seguranca.test.js`, incluindo o que garante que a URL nao entra no `onclick`.
+
 **Criar link com id repetido devolvia 500.** O `insert` em `tenant_links` era puro, sem tratar conflito de chave: uma retentativa depois de conexao instavel — mesmo id de novo — batia na constraint e virava "Erro interno", que nao diz nada a quem chama. Agora e **409** com a frase certa, e o payload original fica intacto. Vale tambem para o caso hostil: outra conta mandando um id conhecido recebe a mesma recusa, **sem descobrir de quem e o link** e sem sobrescrever nada. Dois testes.
 
 **`arquitetura_sistema.md` reescrito com os nomes reais.** Chegou uma versao gerada do documento com **16 nomes de coluna errados** (`title` por `name`, `amount` por `rent_value`, `vistoria_id` por `inspection_id`, `key_proof_hash` por `key_proof`, `users.created_at` por `criado_em`…) e quatro erros de comportamento — o pior deles um `AND finalized = 0` na leitura do link, que se fosse verdade impediria o locador de importar o contrato assinado. A estrutura dela era melhor que a nossa (atores separados, `autonumber`, o passo de importacao); ficou a estrutura, entraram os fatos conferidos contra `pragma table_info`. O documento agora abre dizendo que a referencia e `server/db.js`, e que quando divergirem quem esta errado e o diagrama.

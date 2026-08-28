@@ -73,6 +73,13 @@ assert.ok(tag.startsWith('<img src="data:image/png;base64,'), 'monta a tag');
 assert.ok(tag.includes('alt="Assinatura"'), 'alt presente');
 assert.ok(tag.includes('style="max-height: 55px;"'), 'style presente');
 
+// Clicar amplia — e o handler recebe o ELEMENTO, nunca a URL. A selfie tem
+// ~30 KB de base64: dentro de um atributo onclick isso seria enorme e, pior,
+// faria dado do inquilino virar codigo.
+assert.ok(tag.includes('onclick="Utils.ampliarImagem(this)"'), 'clique amplia');
+assert.ok(!tag.includes("ampliarImagem('data:"), 'a URL NAO entra no onclick');
+assert.ok(tag.includes('class="img-ampliavel"'), 'o cursor vem de classe, nao de style sujo');
+
 // injecao pela data-URL: nao sai tag nenhuma
 assert.strictEqual(Utils.imgSeguro('data:image/png;base64,AA" onerror="alert(1)', 'x', 'y'), '',
   'data-URL adulterada nao vira tag');
