@@ -111,6 +111,19 @@ Depois acesse `http://localhost:3000/` (landing) ou `http://localhost:3000/app.h
 
 O banco (`data.db`) é criado no primeiro boot, com o schema completo — não há passo de provisionamento e não há sistema de migration. **A primeira conta cadastrada vira administradora**; as seguintes, não.
 
+### Variáveis de ambiente
+
+Nenhuma é obrigatória — o sistema sobe sem definir nenhuma, e é assim que se
+roda local. Elas existem para o dia em que houver um servidor de verdade.
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `PORT` | `3000` | Porta do servidor. |
+| `DB_FILE` | `./data.db` | Caminho do banco. Os testes apontam para um arquivo descartável. |
+| `UPLOADS_DIR` | `./uploads` | Pasta das fotos e vídeos de vistoria. |
+| `HTTPS` | *(vazio)* | Qualquer valor liga a flag `Secure` no cookie de sessão. **Ligue assim que houver HTTPS**: sem ela, o cookie trafega em claro. |
+| `TRUST_PROXY` | `false` | Só defina se houver um proxy reverso na frente (`1`, `loopback`, ou o IP dele). Com isso ligado sem proxy, qualquer um forja o IP do aceite mandando `X-Forwarded-For`. |
+
 ### Backup são duas coisas
 
 `data.db` guarda os registros; `uploads/` guarda as fotos e vídeos das vistorias.

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning server/index.js",
     "dev": "node --no-warnings=ExperimentalWarning --watch server/index.js",
-    "test": "node --no-warnings=ExperimentalWarning --test server/servidor.test.js && node public/js/busca.test.js && node public/js/tokens.test.js && node public/js/dashboard.test.js && node public/js/financeiro.test.js && node public/js/ingestao.test.js && node public/js/prazo.test.js && node public/js/properties.test.js && node public/js/seguranca.test.js && node public/js/superadmin.test.js && node public/js/vistorias.test.js && node public/js/gerador.test.js && node public/js/midias.test.js"
+    "test": "node --no-warnings=ExperimentalWarning --test server/servidor.test.js && node public/js/busca.test.js && node public/js/tokens.test.js && node public/js/dashboard.test.js && node public/js/financeiro.test.js && node public/js/ingestao.test.js && node public/js/prazo.test.js && node public/js/properties.test.js && node public/js/seguranca.test.js && node public/js/superadmin.test.js && node public/js/vistorias.test.js && node public/js/gerador.test.js && node public/js/midias.test.js && node public/js/sintaxe.test.js"
   },
   "dependencies": {
     "express": "^5.2.1"

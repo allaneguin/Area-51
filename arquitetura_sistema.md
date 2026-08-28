@@ -137,6 +137,7 @@ erDiagram
     users ||--o{ financial_records : "lança"
     users ||--o{ inspections : "realiza"
     users ||--o{ tenant_links : "gera"
+    inspections ||--o{ midias : "documenta"
 
     users {
         text id PK "UUID do servidor"
@@ -144,7 +145,7 @@ erDiagram
         text senha_hash "scrypt + salt"
         text salt "16 bytes aleatórios"
         integer is_admin "0 ou 1"
-        text created_at "ISO-8601"
+        text criado_em "ISO-8601"
         text ultimo_login "ISO-8601"
     }
 
@@ -195,22 +196,37 @@ erDiagram
         text id PK "UUID do cliente"
         text user_id FK "users.id"
         text contract_id "Vínculo lógico com contracts.id"
-        real amount "Valor da cobrança"
-        text due_date "Data de vencimento (vencimento do mês)"
-        text status "paid ou pending"
+        real rent_value "Valor do aluguel"
+        real fee_value "Taxa de administração"
+        real net_payout "Repasse líquido ao locador"
+        text due_date "Vencimento: dia do contrato, nunca antes do início"
+        text status "Pendente ou Pago (Atrasado é derivado)"
     }
 
     inspections {
         text id PK "UUID do cliente"
         text user_id FK "users.id"
         text property_id "Vínculo com o imóvel"
-        text rooms "JSON com lista de cômodos e itens"
-        text status "draft ou finalized"
+        text tipo "Entrada ou Saída"
+        text rooms "JSON: [{nome, estado, obs}]"
+        text status "Rascunho ou Fechada"
+        text closed_at "Carimbo do fechamento"
+    }
+
+    midias {
+        text id PK "UUID do servidor"
+        text user_id FK "users.id"
+        text inspection_id FK "inspections.id (cascata)"
+        integer ambiente "Índice posicional dentro de rooms"
+        text tipo "foto ou video"
+        text mime "image/jpeg, video/webm, ..."
+        integer bytes "Tamanho do arquivo"
+        text arquivo "Nome em uploads/ — decidido pelo SERVIDOR"
     }
 
     tenant_links {
         text id PK "UUID do cliente"
-        text user_id FK "users.id"
+        text created_by FK "users.id (nome real da coluna)"
         text encrypted_payload "Blob cifrado (AES-GCM <= 512KB)"
         text key_proof "SHA-256(SHA-256(chave))"
         integer finalized "0 ou 1 (só de ida)"

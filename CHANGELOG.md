@@ -14,6 +14,13 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-27
 
+**Documentacao: escrito o que faltava, corrigido o que mentia.** Um levantamento das quatro fases pedidas mostrou que arquitetura, fluxos, debito tecnico e auditoria de seguranca **ja estavam documentados** (`docs/ARQUITETURA.md`, `arquitetura_sistema.md`) — reescrever criaria duas verdades concorrentes. Foi escrito so o que nao existia:
+
+- **`docs/REFERENCIA.md`** (novo): Parte I com os requisitos funcionais e as **regras de negocio** de verdade — status derivado por datas e nunca digitado, primeira conta vira admin, lista branca da ingestao, saida da vistoria herdando a entrada, vencimento que nunca cai antes do inicio do contrato. Parte II com o **contrato dos 24 endpoints**: metodo, corpo, sucesso e erro, incluindo por que `gravou: false` do link nao e erro HTTP.
+- **`arquitetura_sistema.md` corrigido**: o diagrama descrevia colunas que nao existem — `users.created_at` (e `criado_em`), `financial_records.amount` (e `rent_value`), status em ingles (`draft`/`paid`) onde o banco guarda `Rascunho`/`Pago`, e `tenant_links.user_id` (e `created_by`). Documentacao que mente e pior que documentacao nenhuma. Entrou tambem a tabela `midias`, de hoje.
+- **README**: as **cinco variaveis de ambiente** (`PORT`, `DB_FILE`, `UPLOADS_DIR`, `HTTPS`, `TRUST_PROXY`) estavam no codigo e em documento nenhum — inclusive as duas de seguranca, cujo efeito de ligar (ou nao ligar) so se descobria lendo `sessao.js` e `index.js`.
+- **Check de sintaxe na suite** (`sintaxe.test.js`): sem build, um parentese a menos em `editor.js` so aparecia quando alguem abria aquela tela. Dez arquivos do front — os maiores — nao eram carregados por teste nenhum. `node --check` em **44 arquivos**, sem dependencia nova. Verificado por mutacao: quebrando o `editor.js` de proposito, o teste falha.
+
 **Login e leitura de link ganharam teto por IP.** Nao havia limite de tentativas em duas portas publicas: `POST /api/auth/entrar` (forca bruta de senha) e `GET /api/links/:id` (varredura de UUID atras de contrato). Agora sao 5 logins/min, 10 cadastros/hora, 30 leituras de link/min e 20 escritas/min, por IP, com `429` e `Retry-After`.
 
 Tres detalhes que decidem se isso protege ou so parece proteger:
