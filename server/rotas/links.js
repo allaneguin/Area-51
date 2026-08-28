@@ -93,6 +93,16 @@ router.post('/', exigirLogin, (req, res) => {
   // Guarda SHA-256 DA PROVA, não a prova. O cliente já manda SHA-256(chave);
   // aqui hasheia de novo. Assim quem lê o banco não consegue escrever no link:
   // teria a prova guardada, mas não a prova que o servidor cobra.
+  // Id repetido nao pode virar 500. Acontece de verdade numa retentativa depois
+  // de conexao instavel — o cliente manda o mesmo id de novo e precisa de uma
+  // resposta que signifique alguma coisa. E, na outra ponta, um id conhecido de
+  // OUTRA conta tem que ser recusado sem sobrescrever nada: 409 para os dois,
+  // sem dizer de quem e o link.
+  const jaExiste = db.prepare('select 1 from tenant_links where id = ?').get(id);
+  if (jaExiste) {
+    return res.status(409).json({ erro: 'Este id de link já está em uso. Gere outro.' });
+  }
+
   db.prepare(`
     insert into tenant_links
       (id, encrypted_payload, key_proof, created_by, created_at, expires_at)

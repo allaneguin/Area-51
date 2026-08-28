@@ -295,6 +295,25 @@ test('ciclo do link: criar, ler sem sessao, gravar com a prova certa', async () 
   assert.strictEqual((await anon('GET', '/api/links/l1')).dados.payload, 'cifrado-v2');
 });
 
+test('criar link com id repetido responde 409, nao 500', async () => {
+  // Retentativa depois de uma conexao instavel manda o MESMO id de novo. Um 500
+  // ali nao diz nada a quem chama; 409 diz "esse id ja existe, gere outro".
+  // O id nao vaza nada sozinho: sem a chave (que so vive no fragmento da URL) o
+  // payload continua opaco, e a leitura ja tem teto por IP.
+  await A('POST', '/api/links', { id: 'l-repetido', payload: 'v1', key_proof: PROVA });
+  const segunda = await A('POST', '/api/links', { id: 'l-repetido', payload: 'v2', key_proof: PROVA });
+  assert.strictEqual(segunda.status, 409);
+
+  // E o payload original continua de pe: repetir id nao sobrescreve.
+  assert.strictEqual((await anon('GET', '/api/links/l-repetido')).dados.payload, 'v1');
+});
+
+test('B nao sobrescreve link de A mandando o id dele', async () => {
+  const r = await B('POST', '/api/links', { id: 'l-repetido', payload: 'invasao', key_proof: PROVA });
+  assert.strictEqual(r.status, 409, 'recusa sem dizer de quem e');
+  assert.strictEqual((await anon('GET', '/api/links/l-repetido')).dados.payload, 'v1', 'intacto');
+});
+
 test('prova de chave errada NAO grava', async () => {
   const r = await anon('PUT', '/api/links/l1', { payload: 'invasao', key_proof: sha256('chave-errada') });
   // `gravou: false`, nao erro HTTP: quem chama precisa separar recusa de falha

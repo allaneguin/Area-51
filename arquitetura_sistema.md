@@ -261,3 +261,75 @@ graph LR
         ADMIN_CHECK -- "Sim" --> VIEW_ADMIN["Visualização de Auditoria (Sem cloud_key, Sem ERP)"]
     end
 ```
+
+---
+
+## 5. Ciclo de Vida: Contrato e Vistoria
+
+Os dois estados que o sistema **deriva** e os que ele **grava** — a distinção
+importa: estado derivado nunca envelhece, estado gravado envelhece se ninguém
+atualizar.
+
+### 5.1 Contrato
+
+O quadrado de cima é **derivado das datas** a cada render (`Utils.getContractStatus`):
+não existe coluna de status no banco, e é por isso que ele nunca mente. O de
+baixo é **gravado** (`is_finalized`) e só anda uma vez.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Pendente: contrato criado
+    Pendente: Pendente<br/>(falta início ou término)
+    Pendente --> AIniciar: datas preenchidas
+    AIniciar: A Iniciar<br/>(hoje < início)
+    AIniciar --> Ativo: chega a data de início
+    Ativo: Ativo<br/>(início ≤ hoje ≤ término)
+    Ativo --> Vencido: passa do término
+    Vencido: Vencido<br/>(hoje > término)
+    Vencido --> Ativo: reajuste/renovação estende o prazo
+
+    note right of Pendente
+        Derivado das datas em toda leitura.
+        Nenhuma coluna guarda isto.
+    end note
+```
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Rascunho: is_finalized = 0
+    Rascunho --> AguardandoInquilino: link gerado (cloud_id)
+    AguardandoInquilino: Aguardando inquilino
+    AguardandoInquilino --> Assinado: inquilino envia (finalize)
+    Assinado: Assinado<br/>(is_finalized = 1, só leitura)
+    Assinado --> [*]
+
+    note right of Assinado
+        Caminho só de ida: o link recusa
+        reescrita e a tela vira consulta.
+    end note
+```
+
+### 5.2 Vistoria
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Rascunho: criada (Entrada ou Saída)
+    Rascunho: Rascunho<br/>edita ambientes, estado, foto e vídeo
+    Rascunho --> Fechada: "Fechar vistoria" (closed_at)
+    Fechada: Fechada<br/>tudo em leitura, mídia visível
+    Fechada --> Rascunho: "Reabrir"
+
+    note right of Fechada
+        Só a vistoria de ENTRADA fechada
+        serve de base para a de saída:
+        a saída herda os ambientes dela.
+    end note
+```
+
+**Por que a saída depende do fechamento da entrada:** enquanto a entrada é
+rascunho, a lista de ambientes ainda pode mudar. Herdar de uma lista instável
+faria os dois lados da comparação divergirem — e a comparação é a razão de a
+vistoria existir.

@@ -14,6 +14,12 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-27
 
+**Criar link com id repetido devolvia 500.** O `insert` em `tenant_links` era puro, sem tratar conflito de chave: uma retentativa depois de conexao instavel — mesmo id de novo — batia na constraint e virava "Erro interno", que nao diz nada a quem chama. Agora e **409** com a frase certa, e o payload original fica intacto. Vale tambem para o caso hostil: outra conta mandando um id conhecido recebe a mesma recusa, **sem descobrir de quem e o link** e sem sobrescrever nada. Dois testes.
+
+**Diagramas de estado** (`arquitetura_sistema.md` §5): ciclo de vida do contrato — o derivado das datas (`Pendente → A Iniciar → Ativo → Vencido`) separado do gravado (`is_finalized`, caminho so de ida) — e o da vistoria (`Rascunho ↔ Fechada`). A separacao e o ponto: estado derivado nunca envelhece; estado gravado envelhece se ninguem atualizar.
+
+**`ARQUITETURA.md` R2** ganhou as quatro regras que o trabalho desta semana criou de fato: recurso cujo dado o cliente nao pode escolher fica fora do `RECURSOS` (por que `profiles` e `midias` tem rota propria), protecao de porta e middleware e nao `if` em handler (`sessao.js` + `limite.js`), e arquivo servido ao usuario passa por rota autenticada, nunca por pasta estatica. O mapa de modulos do servidor tambem passou a existir.
+
 **Documentacao: escrito o que faltava, corrigido o que mentia.** Um levantamento das quatro fases pedidas mostrou que arquitetura, fluxos, debito tecnico e auditoria de seguranca **ja estavam documentados** (`docs/ARQUITETURA.md`, `arquitetura_sistema.md`) — reescrever criaria duas verdades concorrentes. Foi escrito so o que nao existia:
 
 - **`docs/REFERENCIA.md`** (novo): Parte I com os requisitos funcionais e as **regras de negocio** de verdade — status derivado por datas e nunca digitado, primeira conta vira admin, lista branca da ingestao, saida da vistoria herdando a entrada, vencimento que nunca cai antes do inicio do contrato. Parte II com o **contrato dos 24 endpoints**: metodo, corpo, sucesso e erro, incluindo por que `gravou: false` do link nao e erro HTTP.

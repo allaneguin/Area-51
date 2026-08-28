@@ -210,7 +210,11 @@ Shell (App) ──► Views ──► UI compartilhada (toast, modal, tema, cert
                   ├─────► Núcleo puro (máscaras, CPF/CNPJ, datas, dinheiro,
                   │        prazo, status, modelos) — sem DOM, sem rede
                   │
-                  └─────► Dados (Storage, CloudDB) ──► Api ──► /api ──► server/
+                  └─────► Dados (Storage, CloudDB, Midias) ──► Api ──► /api ──► server/
+
+server/  index.js ──► sessao.js (quem é) ──► limite.js (quantas vezes)
+                 └──► rotas/{auth, perfil, links, midias, admin, recursos} ──► db.js
+                                                                       └──► uploads/
 ```
 
 Setas só nessa direção. Em particular:
@@ -222,6 +226,9 @@ Setas só nessa direção. Em particular:
 5. **View só mexe no próprio DOM**, dentro de `#main-content`, no ciclo de render dela.
 6. **Regra de negócio não mora em view nem em `Storage`.** Cálculo (status, cobrança, reajuste, parse de dinheiro) mora no núcleo puro e é testável com `node`.
 7. **No backend, rota não fala com o banco por conta própria.** Nome de tabela vem do mapa `RECURSOS` em `db.js` e de lugar nenhum mais.
+8. **Recurso cujo dado o cliente não pode escolher fica FORA do `RECURSOS`.** `profiles` (a chave primária é o usuário) e `midias` (a coluna `arquivo` é o nome de um arquivo real no disco) têm rotas próprias. O CRUD genérico grava o que o corpo mandar nas colunas declaradas — cliente que escolhe nome de arquivo lê o arquivo de qualquer um.
+9. **Proteção de porta é middleware, não `if` em handler.** `sessao.js` (quem é), `limite.js` (quantas vezes) — montados na definição da rota, onde se lê de uma vez quem passa. Regra repetida em cada handler é a que alguém esquece de repetir, e a esquecida é a que vaza.
+10. **Arquivo servido ao usuário passa por rota autenticada, nunca por pasta estática.** `uploads/` não é servido pelo `express.static`: quem tem o nome do arquivo não pode ter a foto.
 
 ## R3 — Estado
 
