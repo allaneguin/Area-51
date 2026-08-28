@@ -26,6 +26,12 @@ const app = require('./index');
 let base;
 const servidor = app.listen(0);
 test.before(() => { base = `http://127.0.0.1:${servidor.address().port}`; });
+
+// A suite faz uma duzia de logins do mesmo IP; sem zerar a janela entre casos,
+// o limite de 5/min derrubaria os testes que nada tem a ver com ele. O reset
+// vive so aqui — rota que zera limite seria a porta que o limite fecha.
+const limite = require('./limite');
+test.beforeEach(() => limite.limpar());
 test.after(() => {
   servidor.close();
   try { fs.rmSync(UPLOADS, { recursive: true, force: true }); } catch {}
@@ -515,6 +521,47 @@ test('remover um ambiente do meio reindexa as midias dos seguintes', async () =>
 
   const deB = await B('POST', '/api/midias/reindexar', { vistoria: 'v-reidx', removido: 0 });
   assert.strictEqual(deB.status, 404, 'B nao reindexa vistoria de A');
+});
+
+// ── Limite de tentativas por IP ─────────────────────────────────────────
+
+test('login tem teto de tentativas por IP', async () => {
+  const c = cliente();
+  for (let i = 0; i < 5; i++) {
+    const r = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'chute-' + i });
+    assert.strictEqual(r.status, 401, `tentativa ${i + 1} ainda e recusa normal de senha`);
+  }
+  const sexta = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'chute-5' });
+  assert.strictEqual(sexta.status, 429, 'a sexta tentativa no mesmo minuto e barrada');
+
+  // Senha CERTA tambem e barrada: o teto e da porta, nao do chute. Se a certa
+  // passasse, bastaria intercalar para varrer a vontade.
+  const certa = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'segredo123' });
+  assert.strictEqual(certa.status, 429);
+
+  limite.limpar();
+  const depois = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'segredo123' });
+  assert.strictEqual(depois.status, 200, 'passada a janela, a conta volta a entrar');
+});
+
+test('a leitura de link e limitada por IP, NAO por id', async () => {
+  // E este o ataque: varrer UUIDs ate achar um link vivo. Se a chave do limite
+  // levasse o id, cada UUID teria orcamento proprio e a varredura passaria
+  // inteira sem encostar no teto.
+  const c = cliente();
+  let barrou = 0;
+  for (let i = 0; i < 32; i++) {
+    const r = await c('GET', '/api/links/uuid-inventado-' + i);
+    if (r.status === 429) barrou++;
+  }
+  assert.ok(barrou > 0, 'varredura de UUIDs diferentes tem que bater no teto');
+});
+
+test('o teto do login nao consome o orcamento da leitura de link', async () => {
+  const c = cliente();
+  for (let i = 0; i < 6; i++) await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'x' });
+  const link = await c('GET', '/api/links/nao-existe');
+  assert.strictEqual(link.status, 404, 'escopos separados: 404 de link inexistente, nao 429');
 });
 
 test('nao-admin recebe 403 nas rotas de administracao', async () => {

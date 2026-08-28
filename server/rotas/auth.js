@@ -13,8 +13,29 @@ const {
   criarSenha, conferirSenha, abrirSessao, fecharSessao,
   usuarioDaSessao, exigirLogin
 } = require('../sessao');
+const { limitar } = require('../limite');
 
 const router = express.Router();
+
+// Senha guardada com scrypt custa ~70ms para conferir, o que ja e um freio
+// natural — mas freio de CPU nao e limite: com paralelismo, o atacante testa
+// milhares por minuto. Cinco por minuto por IP transforma um dicionario de
+// 10 mil senhas em 33 horas de tentativa contra UMA conta.
+//
+// O teto vale para tentativa CERTA tambem, de proposito: se a senha certa
+// passasse livre, bastaria intercalar um acerto conhecido para zerar o
+// contador e varrer a vontade.
+const limiteLogin = limitar({
+  escopo: 'auth-entrar', max: 5, janelaMs: 60_000,
+  mensagem: 'Muitas tentativas de acesso. Espere um minuto e tente de novo.'
+});
+
+// Cadastro tem teto mais largo e janela mais longa: ninguem abre dez contas por
+// engano, e sem isto uma unica maquina enche a tabela de usuarios.
+const limiteCadastro = limitar({
+  escopo: 'auth-registrar', max: 10, janelaMs: 60 * 60_000,
+  mensagem: 'Muitos cadastros a partir deste endereço. Tente de novo mais tarde.'
+});
 
 const MIN_SENHA = 6;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,7 +53,7 @@ function validar(email, senha) {
 const publico = (u) => ({ id: u.id, email: u.email, is_admin: !!u.is_admin });
 
 // ── Cadastro ────────────────────────────────────────────────────────────
-router.post('/registrar', (req, res) => {
+router.post('/registrar', limiteCadastro, (req, res) => {
   const email = String(req.body.email || '').trim();
   const senha = req.body.senha;
 
@@ -62,7 +83,7 @@ router.post('/registrar', (req, res) => {
 });
 
 // ── Entrar ──────────────────────────────────────────────────────────────
-router.post('/entrar', (req, res) => {
+router.post('/entrar', limiteLogin, (req, res) => {
   const email = String(req.body.email || '').trim();
   const senha = String(req.body.senha || '');
 
@@ -93,7 +114,7 @@ router.get('/sessao', (req, res) => {
 });
 
 // ── Trocar a senha (logado) ─────────────────────────────────────────────
-router.put('/senha', exigirLogin, (req, res) => {
+router.put('/senha', exigirLogin, limiteLogin, (req, res) => {
   const senha = req.body.senha;
   if (!senha || String(senha).length < MIN_SENHA) {
     return res.status(400).json({ erro: `A senha precisa ter ao menos ${MIN_SENHA} caracteres.` });
@@ -117,7 +138,7 @@ router.put('/senha', exigirLogin, (req, res) => {
 // ── Excluir a própria conta ─────────────────────────────────────────────
 // Substitui a RPC delete_own_account. A senha é cobrada de novo aqui, e não só
 // na tela: é a última confirmação antes de um apagamento em cascata.
-router.delete('/conta', exigirLogin, (req, res) => {
+router.delete('/conta', exigirLogin, limiteLogin, (req, res) => {
   const senha = String(req.body.senha || '');
   const u = db.prepare('select * from users where id = ?').get(req.usuario.id);
 

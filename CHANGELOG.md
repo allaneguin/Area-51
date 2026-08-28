@@ -14,6 +14,16 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-27
 
+**Login e leitura de link ganharam teto por IP.** Nao havia limite de tentativas em duas portas publicas: `POST /api/auth/entrar` (forca bruta de senha) e `GET /api/links/:id` (varredura de UUID atras de contrato). Agora sao 5 logins/min, 10 cadastros/hora, 30 leituras de link/min e 20 escritas/min, por IP, com `429` e `Retry-After`.
+
+Tres detalhes que decidem se isso protege ou so parece proteger:
+
+- **A chave do limite e `escopo + IP`, nunca a URL.** Com o `:id` na chave, cada UUID tentado teria orcamento proprio e a varredura — o ataque que a regra existe para barrar — passaria inteira sem encostar no teto. Ha teste que pede 32 UUIDs *diferentes* e exige que o teto apareca.
+- **O teto vale para a senha certa tambem.** Se o acerto passasse livre, bastaria intercalar um login conhecido para zerar o contador.
+- **Sem dependencia nova.** `express-rate-limit` resolveria, mas traz cinco transitivas para substituir trinta linhas, e o que ele da a mais (store compartilhado, janela deslizante) supoe varios processos — este e um, com um arquivo de banco. Quando houver mais de um, o `Map` deixa de bastar e o pacote entra pelo motivo certo. Registrado em `server/limite.js`.
+
+O scrypt da senha ja custava ~70ms por tentativa, mas freio de CPU nao e limite: com paralelismo, um dicionario de 10 mil senhas sai em minutos. Com 5/min por IP, vira 33 horas contra uma unica conta.
+
 **Vistoria ganhou foto e video por ambiente** (ramo `feat/midia-vistoria`, 7 commits). A vistoria existe para sustentar uma conversa que acontece meses depois — reter ou devolver a caucao — e ate aqui ela guardava so texto. Texto contra texto e a palavra de um contra a do outro.
 
 Desenho em `docs/superpowers/specs/2026-08-27-midia-vistoria-design.md`, plano em `docs/superpowers/plans/2026-08-27-midia-vistoria.md`. Tres decisoes foram do dono do projeto; em duas a recomendacao era outra, e o preco de cada uma virou trabalho no lugar de ressalva:

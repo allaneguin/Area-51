@@ -15,8 +15,31 @@ const express = require('express');
 const crypto = require('node:crypto');
 const { db } = require('../db');
 const { exigirLogin } = require('../sessao');
+const { limitar } = require('../limite');
 
 const router = express.Router();
+
+// Estas rotas sao publicas, e o id e a unica coisa que separa um estranho do
+// payload cifrado de um contrato. UUID v4 nao se adivinha por forca bruta, mas
+// varredura nao precisa acertar de primeira: precisa ter quantas tentativas
+// quiser. E isto que tira essa condicao.
+//
+// O escopo e FIXO ('links-leitura'), nunca a URL: com o id na chave, cada UUID
+// tentado teria orcamento proprio e a varredura passaria inteira sem tocar no
+// teto — o limite existiria no papel e em lugar nenhum.
+//
+// 30/min cabe folgado no uso real (abrir o link faz duas requisicoes: payload e
+// evidencia) e reduz uma varredura a nada.
+const limiteLeitura = limitar({
+  escopo: 'links-leitura', max: 30, janelaMs: 60_000,
+  mensagem: 'Muitas consultas deste endereço. Espere um minuto e tente de novo.'
+});
+
+// A escrita ja exige a prova da chave (SHA-256), mas prova tambem se chuta.
+const limiteEscrita = limitar({
+  escopo: 'links-escrita', max: 20, janelaMs: 60_000,
+  mensagem: 'Muitos envios deste endereço. Espere um minuto e tente de novo.'
+});
 
 const TETO_PAYLOAD = 524288;        // 512 KB
 const LIMITE_DIARIO = 100;          // links por usuário por dia
@@ -85,7 +108,7 @@ router.post('/', exigirLogin, (req, res) => {
 });
 
 // ── Ler (público) ───────────────────────────────────────────────────────
-router.get('/:id', (req, res) => {
+router.get('/:id', limiteLeitura, (req, res) => {
   expurgar();
   const linha = db
     .prepare('select encrypted_payload from tenant_links where id = ?')
@@ -100,7 +123,7 @@ router.get('/:id', (req, res) => {
 // ── Evidência do aceite (público) ───────────────────────────────────────
 // Rota separada de propósito: é a única parte da trilha que quem assina não
 // redige, e mantê-la fora do payload cifrado é o que a torna evidência.
-router.get('/:id/evidencia', (req, res) => {
+router.get('/:id/evidencia', limiteLeitura, (req, res) => {
   const linha = db
     .prepare('select finalized_at, finalized_ip from tenant_links where id = ?')
     .get(req.params.id);
@@ -112,7 +135,7 @@ router.get('/:id/evidencia', (req, res) => {
 });
 
 // ── Gravar (público — é o inquilino que escreve) ────────────────────────
-router.put('/:id', (req, res) => {
+router.put('/:id', limiteEscrita, (req, res) => {
   const { payload, key_proof, finalize } = req.body || {};
 
   if (typeof payload !== 'string' || !payload) {
