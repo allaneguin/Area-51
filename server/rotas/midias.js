@@ -16,6 +16,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { db, PASTA_UPLOADS } = require('../db');
 const { exigirLogin } = require('../sessao');
+const { limitar } = require('../limite');
 
 const router = express.Router();
 
@@ -43,6 +44,19 @@ const TODOS_OS_MIMES = Object.values(TIPOS).flatMap(t => Object.keys(t.mimes));
 // handler. Corpo acima disto o Express recusa antes de alocar memória.
 const corpoCru = express.raw({ type: TODOS_OS_MIMES, limit: '25mb' });
 
+// A cota por ambiente (8 fotos, 2 vídeos) não impede criar vistorias e
+// ambientes sem parar: um laço de `fetch` de uma sessão legítima enche o disco,
+// e não há cota de disco por conta (dívida registrada na Parte III).
+//
+// Por CONTA, e não por IP: quem sobe arquivo já está autenticado, e o disco que
+// enche é o dele. 120/hora cobre a vistoria mais detalhada com folga — 5
+// ambientes com 8 fotos e 2 vídeos dão 50.
+const limiteUpload = limitar({
+  escopo: 'midia-upload', max: 120, janelaMs: 60 * 60_000,
+  chave: req => req.usuario.id,
+  mensagem: 'Muitos envios seguidos. Espere alguns minutos e continue.'
+});
+
 // Arquivo sem linha é lixo: acontece se o processo morrer entre gravar o
 // arquivo e inserir a linha, e é o que sobra quando a cascata do SQLite apaga
 // as linhas de uma vistoria excluída. Quem recolhe é a própria leitura — o
@@ -65,7 +79,7 @@ function vistoriaDaSessao(id, usuarioId) {
 }
 
 // ── Subir ───────────────────────────────────────────────────────────────
-router.post('/', corpoCru, (req, res) => {
+router.post('/', limiteUpload, corpoCru, (req, res) => {
   varrer();
 
   const meta = TIPOS[req.query.tipo];

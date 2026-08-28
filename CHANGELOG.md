@@ -14,6 +14,15 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-28
 
+**Os quatro furos do proprio rate limit, fechados.** A analise critica do que eu tinha escrito na vespera achou dois problemas serios e dois de segunda ordem:
+
+- **IPv6 anulava o limite.** A chave era o endereco inteiro — mas um cliente IPv6 nao recebe UM endereco, recebe um bloco **/64**: 18 quintilhoes deles. Trocar de endereco dentro do proprio bloco e uma linha de configuracao, e cada troca ganhava orcamento novo. Agora a chave e o **bloco**, com a forma comprimida (`2001:db8::1`) expandida antes de cortar — senao o mesmo endereco escrito de duas maneiras viraria duas chaves. De quebra resolve o crescimento do Map, que ganhava uma entrada por tentativa.
+- **Nao havia limite por CONTA.** O teto por IP protege a porta, nao a conta: mil enderecos fazendo cinco tentativas cada nao encostam no teto, e sao cinco mil por minuto contra a mesma senha. Entrou um contador chaveado pelo e-mail — 20 falhas por hora. **Conta so o que falha, e o acerto zera**: contar acerto junto criaria um jeito barato de trancar a conta de alguem de fora, so queimando as tentativas no e-mail dela.
+- **Upload de midia nao tinha teto.** A cota por ambiente (8 fotos, 2 videos) nao impede criar vistorias e ambientes sem parar; um laco de `fetch` de uma sessao legitima enchia o disco, que nao tem cota. Agora sao 120/hora **por conta** (nao por IP: quem sobe arquivo ja esta autenticado, e o disco que enche e o dele), e o limite roda **antes** do parser de corpo — pedido recusado nao aloca 25 MB.
+- **A armadilha que esperava o deploy.** Com `TRUST_PROXY` indefinida atras de um proxy reverso, o IP de todo mundo vira o do proxy: o limite de 5 logins/min deixa de ser por pessoa e vira um teto **global** — o sexto login do dia, de qualquer um, e recusado — e o certificado passa a registrar o IP errado. O servidor agora **avisa no console** no primeiro pedido que chega assim, e o README explica os dois lados (ligar sem proxy deixa forjar o IP; nao ligar com proxy quebra o limite).
+
+Nenhum dos dois primeiros seria resolvido trocando por `express-rate-limit`: sao furos de **desenho da chave**, nao de contagem. Quatro testes novos, incluindo o que prova que dois enderecos do mesmo /64 dividem o mesmo orcamento e o que prova que acertar a senha zera o contador da conta. **59 testes de backend.**
+
 **A selfie de validacao agora amplia com um clique.** Ela sai com 100px de altura no certificado — tamanho de documento impresso, nao de conferencia: quem precisa comparar o rosto com o documento na mao nao enxergava nada, e a folha nao pode crescer por causa disso.
 
 A mudanca entrou no **unico sink de imagem do sistema** (`Utils.imgSeguro`), entao vale de uma vez para a selfie, a rubrica manuscrita e a foto de vistoria — sem tres implementacoes. O handler recebe o **elemento** (`this`), nunca a URL: a selfie tem ~30 KB de base64, e enfiar isso dentro de um atributo `onclick` seria enorme e faria dado do inquilino virar codigo.

@@ -122,7 +122,7 @@ roda local. Elas existem para o dia em que houver um servidor de verdade.
 | `DB_FILE` | `./data.db` | Caminho do banco. Os testes apontam para um arquivo descartável. |
 | `UPLOADS_DIR` | `./uploads` | Pasta das fotos e vídeos de vistoria. |
 | `HTTPS` | *(vazio)* | Qualquer valor liga a flag `Secure` no cookie de sessão. **Ligue assim que houver HTTPS**: sem ela, o cookie trafega em claro. |
-| `TRUST_PROXY` | `false` | Só defina se houver um proxy reverso na frente (`1`, `loopback`, ou o IP dele). Com isso ligado sem proxy, qualquer um forja o IP do aceite mandando `X-Forwarded-For`. |
+| `TRUST_PROXY` | `false` | Defina **se e somente se** houver proxy reverso na frente (`1`, `loopback`, ou o IP dele). **Ligada sem proxy**, qualquer um forja o IP do aceite mandando `X-Forwarded-For`. **Desligada com proxy**, o IP de todos vira o do proxy: o limite por IP passa a valer para o site inteiro e o certificado registra o IP errado. O servidor avisa no console quando detecta o segundo caso. |
 
 ### Backup são duas coisas
 

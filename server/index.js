@@ -35,6 +35,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Aviso único, no primeiro pedido que chegar assim: `X-Forwarded-For` presente
+// com `trust proxy` DESLIGADO significa que há um proxy na frente e ninguém
+// definiu TRUST_PROXY. Nesse estado o IP de todo mundo é o do proxy — e o
+// limite de 5 logins/min deixa de ser por pessoa e vira um teto GLOBAL: o sexto
+// login do dia, de qualquer um, é recusado, e nada no log explica.
+let avisouProxy = false;
+app.use((req, res, next) => {
+  if (!avisouProxy && req.headers['x-forwarded-for'] && !app.get('trust proxy')) {
+    avisouProxy = true;
+    console.warn('[ATENCAO] Chegou X-Forwarded-For com trust proxy desligado.');
+    console.warn('  O IP de TODAS as requisicoes passa a ser o do proxy: o limite por IP');
+    console.warn('  virou teto global e o certificado registra o IP errado.');
+    console.warn('  Defina TRUST_PROXY=1 (ou o IP do proxy) e reinicie.');
+  }
+  next();
+});
+
 app.use('/api/auth', require('./rotas/auth'));
 app.use('/api/perfil', require('./rotas/perfil'));
 app.use('/api/links', require('./rotas/links'));

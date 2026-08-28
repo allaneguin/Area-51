@@ -583,6 +583,80 @@ test('o teto do login nao consome o orcamento da leitura de link', async () => {
   assert.strictEqual(link.status, 404, 'escopos separados: 404 de link inexistente, nao 429');
 });
 
+test('IPv6 do mesmo bloco /64 divide o MESMO orcamento', () => {
+  // Um cliente IPv6 recebe um bloco /64 inteiro. Chavear pelo endereco seria o
+  // mesmo que nao ter limite: trocar de endereco dentro do proprio bloco e uma
+  // linha de configuracao.
+  const a = limite.normalizarIp('2001:db8:1:2:aaaa:bbbb:cccc:dddd');
+  const b = limite.normalizarIp('2001:db8:1:2:9999:8888:7777:6666');
+  assert.strictEqual(a, b, 'dois enderecos do mesmo /64 tem que dar a mesma chave');
+
+  const outro = limite.normalizarIp('2001:db8:1:3:aaaa:bbbb:cccc:dddd');
+  assert.notStrictEqual(a, outro, 'bloco diferente, orcamento diferente');
+
+  // Forma comprimida e a expandida sao o MESMO endereco.
+  assert.strictEqual(limite.normalizarIp('2001:db8::1'),
+                     limite.normalizarIp('2001:0db8:0:0:0:0:0:1'));
+
+  // IPv4 passa inteiro, e o mapeamento IPv4-em-IPv6 do Node some.
+  assert.strictEqual(limite.normalizarIp('177.74.156.13'), '177.74.156.13');
+  assert.strictEqual(limite.normalizarIp('::ffff:177.74.156.13'), '177.74.156.13');
+});
+
+test('a conta trava depois de 20 falhas, venham de onde vierem', async () => {
+  const c = cliente();
+  // Limpa so a janela do IP a cada volta: o alvo do teste e o contador POR
+  // CONTA, que e o unico que sobrevive a um atacante trocando de endereco.
+  for (let i = 0; i < limite.FALHAS.max; i++) {
+    const r = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'chute-' + i });
+    assert.strictEqual(r.status, 401, `falha ${i + 1} e recusa normal`);
+    limite.limpar('auth-entrar');
+  }
+
+  const bloqueada = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'segredo123' });
+  assert.strictEqual(bloqueada.status, 429, 'a conta esta trancada mesmo com a senha CERTA');
+
+  // Outra conta nao e afetada — senao trancar uma trancaria todas.
+  limite.limpar('auth-entrar');
+  const outra = await c('POST', '/api/auth/entrar', { email: 'b@teste.com', senha: 'segredo456' });
+  assert.strictEqual(outra.status, 200, 'conta diferente, contador diferente');
+
+  limite.limpar();
+});
+
+test('acertar a senha zera o contador de falhas da conta', async () => {
+  const c = cliente();
+  for (let i = 0; i < 5; i++) {
+    await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'errada' });
+    limite.limpar('auth-entrar');
+  }
+  assert.strictEqual((await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'segredo123' })).status, 200);
+
+  // Se o acerto nao zerasse, dava para trancar a conta de alguem de fora so
+  // queimando as tentativas no e-mail dela.
+  limite.limpar('auth-entrar');
+  for (let i = 0; i < 16; i++) {
+    const r = await c('POST', '/api/auth/entrar', { email: 'a@teste.com', senha: 'errada' });
+    assert.strictEqual(r.status, 401, `pos-acerto, falha ${i + 1} ainda e 401`);
+    limite.limpar('auth-entrar');
+  }
+  limite.limpar();
+});
+
+test('upload de midia tem teto por conta', async () => {
+  await A('PUT', '/api/inspections/v-teto', { id: 'v-teto', tipo: 'Entrada', rooms: [{ nome: 'Sala' }] });
+  let barrou = false;
+  // O teto e por CONTA (a rota exige sessao), nao por IP: quem sobe arquivo ja
+  // esta autenticado, e o disco que enche e o da conta dele.
+  for (let i = 0; i < 130 && !barrou; i++) {
+    const r = await enviar(A.cookie(), 'vistoria=v-teto&ambiente=' + i + '&tipo=foto',
+      'image/jpeg', Buffer.from('f' + i));
+    if (r.status === 429) barrou = true;
+  }
+  assert.ok(barrou, 'um laco de upload tem que encontrar um teto — o disco nao tem cota');
+  limite.limpar();
+});
+
 test('nao-admin recebe 403 nas rotas de administracao', async () => {
   for (const rota of ['users', 'contracts', 'profiles']) {
     assert.strictEqual((await B('GET', `/api/admin/${rota}`)).status, 403);

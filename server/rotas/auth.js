@@ -13,7 +13,8 @@ const {
   criarSenha, conferirSenha, abrirSessao, fecharSessao,
   usuarioDaSessao, exigirLogin
 } = require('../sessao');
-const { limitar } = require('../limite');
+const limite = require('../limite');
+const { limitar } = limite;
 
 const router = express.Router();
 
@@ -87,14 +88,27 @@ router.post('/entrar', limiteLogin, (req, res) => {
   const email = String(req.body.email || '').trim();
   const senha = String(req.body.senha || '');
 
+  // O limite por IP acima protege a PORTA; este protege a CONTA. Mil endereços
+  // fazendo cinco tentativas cada não encostam no teto por IP — e são cinco mil
+  // por minuto contra a mesma senha.
+  if (limite.contaBloqueada(email)) {
+    return res.status(429).json({
+      erro: 'Muitas tentativas nesta conta. Espere uma hora e tente de novo.'
+    });
+  }
+
   const u = db.prepare('select * from users where email = ?').get(email);
 
   // Mesma resposta para e-mail inexistente e senha errada: distinguir os dois
   // transforma o login num verificador de quem tem conta aqui.
   if (!u || !conferirSenha(senha, u.salt, u.senha_hash)) {
+    limite.registrarFalhaDeLogin(email);
     return res.status(401).json({ erro: 'Invalid login credentials' });
   }
 
+  // Acerto zera: sem isto, trancar a conta de alguém de fora seria só queimar
+  // as tentativas no e-mail dela.
+  limite.limparFalhasDeLogin(email);
   db.prepare('update users set ultimo_login = ? where id = ?').run(new Date().toISOString(), u.id);
   abrirSessao(res, u.id);
   res.json({ user: publico(u) });
