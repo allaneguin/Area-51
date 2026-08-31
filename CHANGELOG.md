@@ -14,6 +14,20 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ## 2026-08-28
 
+**Decidida a volta a Supabase — Auth, Postgres e Storage.** Decisao do dono do projeto, tomada depois de duas rodadas de contraponto. O motivo declarado e um so, e vale registrar porque explica a escolha: *"quero um lugar simples e facil para o banco de dados, sem ter que ficar rodando no terminal, como eu fazia no terminal do Supabase"* — o Table Editor de volta.
+
+Foram oferecidas duas alternativas mais baratas para exatamente esse motivo (extensao SQLite Viewer no VS Code, DB Browser for SQLite — zero migracao, zero infraestrutura). O dono optou pela Supabase mesmo assim, e pelo escopo completo. **Isto desfaz a migracao de 26/08.**
+
+Desenho em `docs/superpowers/specs/2026-08-28-volta-supabase-design.md`, e o que ele muda em relacao a um pedido de "migrar tudo" e a **rota**: tres fases, cada uma terminando com o sistema funcionando.
+
+- **Fase 1 — Postgres (~2 dias):** a Supabase vira o banco na nuvem com painel; servidor, login, `limite.js` e os 59 testes ficam como estao. **O motivo declarado da migracao ja esta satisfeito ao fim desta fase.**
+- **Fase 2 — Storage (~1 dia):** some `uploads/`, some a varredura de orfao, some o backup em duas partes.
+- **Fase 3 — Auth e RLS (~1 a 2 semanas):** a cara. As contas **nao migram** (scrypt nao vira bcrypt), as 4 RPCs `SECURITY DEFINER` do link precisam ser reescritas, e os 59 testes de escopo viram politicas RLS.
+
+O spec registra o que se **perde**, item por item, porque isso nao pode ficar implicito: o limite por conta e por bloco IPv6 (de ontem), a suite que roda sem infraestrutura, os zero segredos no repositorio, e — o mais serio — **o IP do aceite volta a sair de `x-forwarded-for`**, o cabecalho forjavel que a correcao de ontem eliminou. Ha mitigacao obrigatoria proposta (Edge Function como porta do `finalize`).
+
+Duas decisoes ficaram pendentes com o dono: **migrar ou recomecar os dados** (diferente de 26/08, agora ha um contrato assinado com valor juridico — selfie, assinatura, hash e carimbo do servidor) e a mitigacao do §7. E um criterio de parada explicito: se o painel ja resolver na Fase 1 ou 2, parar ali e vitoria.
+
 **Os quatro furos do proprio rate limit, fechados.** A analise critica do que eu tinha escrito na vespera achou dois problemas serios e dois de segunda ordem:
 
 - **IPv6 anulava o limite.** A chave era o endereco inteiro — mas um cliente IPv6 nao recebe UM endereco, recebe um bloco **/64**: 18 quintilhoes deles. Trocar de endereco dentro do proprio bloco e uma linha de configuracao, e cada troca ganhava orcamento novo. Agora a chave e o **bloco**, com a forma comprimida (`2001:db8::1`) expandida antes de cortar — senao o mesmo endereco escrito de duas maneiras viraria duas chaves. De quebra resolve o crescimento do Map, que ganhava uma entrada por tentativa.
