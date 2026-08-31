@@ -40,4 +40,9 @@ data.db-shm
 uploads/
 
 # Worktrees isolados (sessoes de agente)
-.worktrees/
+# SEM ponto no nome: express.sendFile/`send` recusa qualquer caminho cujo
+# algum segmento comece com "." (protecao anti-dotfile do proprio `send`),
+# entao um worktree em .worktrees/ faz toda rota que serve arquivo estatico
+# devolver 404 -- foi assim que a suite acusou 1 teste falho so dentro do
+# worktree. worktrees/ sem ponto nao tem esse problema.
+worktrees/
