@@ -504,8 +504,9 @@
   flex-direction: column;
 }
 
-/* Faixa de capa: substitui a foto que o sistema não guarda. Cor de token,
-   inicial grande — identifica o cartão sem inventar uma imagem. */
+/* Faixa de capa: a foto do imóvel quando existe uma marcada como capa. Sem
+   foto, cor de token e inicial grande — identifica o cartão sem inventar uma
+   imagem que o dono não cadastrou. */
 .imovel-capa {
   height: 128px;
   flex-shrink: 0;
@@ -522,6 +523,55 @@
   text-transform: uppercase;
   opacity: 0.75;
 }
+
+/* A foto preenche a faixa inteira. `stretch` não é enfeite: `place-items:
+   center` acima dimensiona o item pelo conteúdo, e aí `height: 100%` resolve
+   para a altura natural da imagem — ela transborda os 128px e cobre o cartão
+   inteiro. O `overflow` da faixa é a segunda tranca. */
+.imovel-capa { overflow: hidden; }
+.imovel-capa img {
+  grid-area: 1 / 1;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A mesma faixa da vistoria, em miniatura: o cartão do imóvel tem cerca de um
+   terço da largura daquela tela, e 116px ali cabem duas fotos e olhe lá. */
+.midia-faixa-mini .midia-item,
+.midia-faixa-mini .midia-add {
+  width: 64px;
+  height: 64px;
+}
+.midia-faixa-mini { gap: 6px; margin-bottom: 0; }
+.midia-faixa-mini .midia-add { font-size: 11.5px; }
+
+/* "Capa" é rótulo na foto que já é capa e botão nas outras — mesmo lugar,
+   mesma forma, para o olho comparar sem procurar. */
+.midia-capa-marca,
+.midia-capa-btn {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.midia-capa-marca { background: var(--primary); color: #fff; }
+/* Sempre visível, nunca só no hover: em tela de toque não existe hover, e a
+   troca de capa ficaria inalcançável justo no aparelho que tira a foto. */
+.midia-capa-btn {
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.midia-capa-btn:hover { background: var(--primary); }
 
 .imovel-corpo {
   padding: 20px 22px;

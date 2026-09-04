@@ -9,6 +9,66 @@ const ClientsView = {
     return `<span class="badge ${classe}">${Utils.esc(tipo || '')}</span>`;
   },
 
+  // Contratos que citam este cliente. O vínculo é por CPF/CNPJ, que é como o
+  // resto do sistema casa cliente com contrato (não há FK) — e os dois lados
+  // guardam o documento em formatos diferentes, daí a normalização.
+  contratosDe(cli) {
+    const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+    const doc = soDigitos(cli && cli.document);
+    if (!doc) return [];
+    return Storage.getAll().filter(c => c.fields && soDigitos(c.fields.cpf_locatario) === doc);
+  },
+
+  // Painel de leitura: a tabela mostra 5 colunas de 13 campos, e até aqui ler o
+  // resto exigia abrir "Editar" — entrar no modo de mexer para só olhar.
+  detalhe(id) {
+    const c = Storage.getClients().find(x => x.id === id);
+    if (!c) return '';
+    const contratos = this.contratosDe(c);
+
+    return `
+      <h4 class="detalhe-secao">Cadastro</h4>
+      <dl class="detalhe-lista">
+        ${Utils.linhaDetalhe('Papel', c.client_type)}
+        ${Utils.linhaDetalhe('Pessoa', c.person_type === 'PJ' ? 'Jurídica' : 'Física')}
+        ${Utils.linhaDetalhe(c.person_type === 'PJ' ? 'CNPJ' : 'CPF', c.document ? Utils.maskCPFCNPJ(c.document) : '')}
+        ${Utils.linhaDetalhe('RG', c.rg)}
+        ${Utils.linhaDetalhe('Telefone', c.phone)}
+        ${Utils.linhaDetalhe('E-mail', c.email)}
+        ${Utils.linhaDetalhe('Endereço', c.address)}
+        ${Utils.linhaDetalhe('Profissão', c.profession)}
+        ${Utils.linhaDetalhe('Renda', c.income ? Utils.formatCurrency(c.income) : '')}
+        ${Utils.linhaDetalhe('Observações', c.notes)}
+      </dl>
+
+      <h4 class="detalhe-secao">Contratos ${contratos.length ? `(${contratos.length})` : ''}</h4>
+      ${contratos.length ? `<ul class="detalhe-vinculos">
+        ${contratos.map(ct => {
+          const st = Utils.getContractStatus(ct);
+          return `<li>
+            <span>${Utils.esc(ct.name || 'Sem nome')}</span>
+            <span class="badge ${st.label === 'Ativo' ? 'badge-teal' : 'badge-amber'}">${Utils.esc(st.label)}</span>
+            <span class="td-sub">${Utils.esc(Utils.formatDate(ct.fields && ct.fields.data_termino) || '—')}</span>
+          </li>`;
+        }).join('')}
+      </ul>` : `<p class="text-muted detalhe-vazio">Nenhum contrato encontrado para este documento.</p>`}
+    `;
+  },
+
+  verDetalhe(id) {
+    const c = Storage.getClients().find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('client-detalhe-titulo').textContent = c.name || 'Cliente';
+    document.getElementById('client-detalhe-corpo').innerHTML = this.detalhe(id);
+    document.getElementById('client-detalhe-editar').setAttribute('onclick',
+      `ClientsView.fecharDetalhe(); ClientsView.openModal('${Utils.esc(id)}')`);
+    document.getElementById('client-detalhe').style.display = 'flex';
+  },
+
+  fecharDetalhe() {
+    document.getElementById('client-detalhe').style.display = 'none';
+  },
+
   render(container) {
     const clients = Storage.getClients();
 
@@ -20,15 +80,9 @@ const ClientsView = {
         (outros > 0 ? ` · ${outros} fiador${outros === 1 ? '' : 'es'}/outros` : '')
       : 'Locadores, inquilinos e fiadores num só lugar.';
 
-    // Quantos contratos citam este cliente. O vínculo é por CPF/CNPJ, que é
-    // como o resto do sistema casa cliente com contrato (não há FK).
-    const contratos = Storage.getAll();
-    const soDigitos = (v) => String(v || '').replace(/\D/g, '');
-    const contarContratos = (cli) => {
-      const doc = soDigitos(cli.document);
-      if (!doc) return 0;
-      return contratos.filter(c => c.fields && soDigitos(c.fields.cpf_locatario) === doc).length;
-    };
+    // Uma definição só do vínculo cliente↔contrato: a coluna da tabela e o
+    // painel de detalhe têm que concordar sobre quais contratos são de quem.
+    const contarContratos = (cli) => this.contratosDe(cli).length;
 
     container.innerHTML = `
       <div class="page-header animate-fade-in-down">
@@ -85,6 +139,7 @@ const ClientsView = {
                     </td>
                     <td>${n ? `${n} contrato${n === 1 ? '' : 's'}` : '<span class="text-muted">—</span>'}</td>
                     <td class="td-acoes">
+                      <button class="btn btn-primary btn-sm" onclick="ClientsView.verDetalhe('${Utils.esc(c.id)}')">Ver</button>
                       <button class="btn btn-secondary btn-sm" onclick="ClientsView.openModal('${Utils.esc(c.id)}')">Editar</button>
                       <button class="btn btn-danger btn-sm" onclick="ClientsView.deleteClient('${Utils.esc(c.id)}')">Excluir</button>
                     </td>
@@ -98,6 +153,19 @@ const ClientsView = {
       `}
 
       <!-- Modal de Cadastro/Edição de Cliente -->
+      <!-- Painel de leitura. O corpo é montado no clique: o detalhe dos N
+           clientes a cada render seria trabalho para o que se abre um por vez. -->
+      <div id="client-detalhe" class="modal-backdrop">
+        <div class="modal-card modal-card-lg">
+          <h3 id="client-detalhe-titulo">Cliente</h3>
+          <div id="client-detalhe-corpo"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="ClientsView.fecharDetalhe()">Fechar</button>
+            <button type="button" class="btn btn-primary" id="client-detalhe-editar">Editar</button>
+          </div>
+        </div>
+      </div>
+
       <div id="client-modal" class="modal-backdrop">
         <div class="modal-card">
           <h3 id="client-modal-title">Cadastrar Cliente</h3>

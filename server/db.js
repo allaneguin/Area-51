@@ -157,6 +157,18 @@ create table if not exists midias (
   created_at    text not null
 );
 create index if not exists midias_vistoria_idx on midias (inspection_id, ambiente);
+
+create table if not exists midias_imovel (
+  id          text primary key,
+  user_id     text not null references users(id) on delete cascade,
+  property_id text not null references properties(id) on delete cascade,
+  capa        integer not null default 0,
+  mime        text not null,
+  bytes       integer not null,
+  arquivo     text not null,
+  created_at  text not null
+);
+create index if not exists midias_imovel_idx on midias_imovel (property_id, capa desc, created_at);
 `);
 
 // ── Pasta dos arquivos de midia ─────────────────────────────────────────
@@ -166,9 +178,18 @@ create index if not exists midias_vistoria_idx on midias (inspection_id, ambient
 // cascata do SQLite apaga a linha sem apagar o arquivo — quem recolhe o orfao e
 // a varredura em rotas/midias.js.
 //
-// `midias` de proposito NAO entra no mapa RECURSOS abaixo: o CRUD generico
-// grava o que o corpo mandar nas colunas declaradas, e `arquivo` e o nome de um
-// arquivo no disco. Nome de arquivo e decisao do servidor, nunca do pedido.
+// `midias` e `midias_imovel` de proposito NAO entram no mapa RECURSOS abaixo: o
+// CRUD generico grava o que o corpo mandar nas colunas declaradas, e `arquivo` e
+// o nome de um arquivo no disco. Nome de arquivo e decisao do servidor, nunca do
+// pedido.
+//
+// Duas tabelas, e nao uma com `inspection_id` anulavel: a foto do imovel vive
+// enquanto o imovel existir, a da vistoria morre com a vistoria. Sao dois ciclos
+// de vida, e cada um e uma cascata diferente. Juntar os dois exigiria afrouxar o
+// NOT NULL de `inspection_id` — que no SQLite significa reconstruir a tabela num
+// banco que ja tem contrato assinado dentro. As duas dividem a MESMA pasta de
+// arquivos, e e por isso que a varredura de orfao em rotas/midias.js precisa
+// olhar as duas: o que ela nao enxerga, ela apaga.
 const PASTA_UPLOADS = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(PASTA_UPLOADS, { recursive: true });
 

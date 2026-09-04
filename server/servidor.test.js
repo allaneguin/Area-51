@@ -542,6 +542,159 @@ test('remover um ambiente do meio reindexa as midias dos seguintes', async () =>
   assert.strictEqual(deB.status, 404, 'B nao reindexa vistoria de A');
 });
 
+// ── Midia do imovel ─────────────────────────────────────────────────────
+//
+// Mesmo desenho da vistoria (corpo cru, teto, lista branca), outro dono: o
+// imovel. Vive na MESMA rota de proposito — `varrer()` e `/:id/arquivo` sao
+// unicas, e uma varredura que nao conhecesse as duas tabelas apagaria do disco
+// as fotos da tabela que ela ignora.
+async function enviarImovel(cookie, qs, mime, bytes) {
+  const r = await fetch(base + '/api/midias/imovel?' + qs, {
+    method: 'POST',
+    headers: { 'Content-Type': mime, ...(cookie ? { Cookie: cookie } : {}) },
+    body: bytes
+  });
+  let dados = null;
+  try { dados = JSON.parse(await r.text()); } catch {}
+  return { status: r.status, dados };
+}
+
+test('sobe uma foto para o imovel, e a primeira vira capa sozinha', async () => {
+  await A('PUT', '/api/properties/p-foto', { id: 'p-foto', name: 'Casa 4', address: 'Rua dos Garis' });
+  const r = await enviarImovel(A.cookie(), 'imovel=p-foto', 'image/jpeg', Buffer.from('foto-da-casa'));
+  assert.strictEqual(r.status, 201);
+  assert.strictEqual(r.dados.bytes, 12);
+  // Sem isto o cartao fica com fotos e sem capa — o estado vazio continuaria na
+  // tela mesmo havendo foto, e ninguem entenderia por que.
+  assert.strictEqual(r.dados.capa, true, 'a primeira foto do imovel vira a capa sozinha');
+});
+
+test('a varredura de orfao NAO apaga a foto do imovel', async () => {
+  const { db, PASTA_UPLOADS } = require('./db');
+  const arquivo = db.prepare('select arquivo from midias_imovel').get().arquivo;
+  const caminho = path.join(PASTA_UPLOADS, arquivo);
+  assert.ok(fs.existsSync(caminho), 'a foto subiu de verdade');
+
+  await A('GET', '/api/midias?vistoria=v1');   // qualquer leitura de vistoria varre
+
+  // As duas tabelas dividem a pasta. Uma varredura que so olhe `midias` ve o
+  // arquivo do imovel como orfao e o apaga — sem erro, sem log, e o cartao
+  // aparece quebrado depois. E o unico jeito de perder foto neste desenho.
+  assert.strictEqual(fs.existsSync(caminho), true,
+    'a varredura precisa conhecer as DUAS tabelas, senao apaga a foto do imovel');
+});
+
+test('B nao sobe foto para imovel de A, mesmo sabendo o id', async () => {
+  const r = await enviarImovel(B.cookie(), 'imovel=p-foto', 'image/jpeg', Buffer.from('x'));
+  // 404, nao 403: mesmo motivo da vistoria — 403 confirmaria que o id existe.
+  assert.strictEqual(r.status, 404);
+});
+
+test('foto de imovel exige sessao', async () => {
+  const r = await enviarImovel('', 'imovel=p-foto', 'image/jpeg', Buffer.from('x'));
+  assert.strictEqual(r.status, 401);
+});
+
+test('lista as fotos de imovel da conta inteira numa requisicao so', async () => {
+  // Sem filtro de propósito: a tela de imoveis desenha N cartoes e precisa das
+  // fotos de todos. Um fetch por cartao seria N requisicoes para montar a lista.
+  const r = await A('GET', '/api/midias/imovel');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.dados.length, 1);
+  assert.strictEqual(r.dados[0].property_id, 'p-foto');
+  assert.strictEqual(r.dados[0].capa, true);
+  assert.strictEqual(r.dados[0].arquivo, undefined, 'nome de arquivo no disco nao sai para o cliente');
+
+  const deB = await B('GET', '/api/midias/imovel');
+  assert.deepStrictEqual(deB.dados, [], 'B nao enxerga foto de imovel de A');
+});
+
+test('o arquivo da foto do imovel volta pela MESMA rota da vistoria', async () => {
+  const id = (await A('GET', '/api/midias/imovel')).dados[0].id;
+  const r = await fetch(base + '/api/midias/' + id + '/arquivo', { headers: { Cookie: A.cookie() } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.headers.get('content-type').split(';')[0], 'image/jpeg');
+  assert.strictEqual(await r.text(), 'foto-da-casa');
+
+  const semSessao = await fetch(base + '/api/midias/' + id + '/arquivo');
+  assert.strictEqual(semSessao.status, 401, 'foto de imovel tambem nao e publica');
+
+  const deB = await fetch(base + '/api/midias/' + id + '/arquivo', { headers: { Cookie: B.cookie() } });
+  assert.strictEqual(deB.status, 404, 'nem para outra conta que saiba o id');
+});
+
+test('trocar a capa deixa exatamente UMA capa no imovel', async () => {
+  await enviarImovel(A.cookie(), 'imovel=p-foto', 'image/png', Buffer.from('a-segunda-foto'));
+  const fotos = (await A('GET', '/api/midias/imovel')).dados;
+  assert.strictEqual(fotos.length, 2, 'a segunda foto entrou');
+  assert.strictEqual(fotos.filter(f => f.capa).length, 1, 'e nao virou capa tambem');
+
+  const segunda = fotos.find(f => !f.capa);
+  assert.strictEqual((await B('POST', `/api/midias/imovel/${segunda.id}/capa`)).status, 404,
+    'B nao define capa em foto de A');
+  assert.strictEqual((await A('POST', `/api/midias/imovel/${segunda.id}/capa`)).status, 200);
+
+  const depois = (await A('GET', '/api/midias/imovel')).dados;
+  // Duas capas e capa nenhuma dao o mesmo estrago: o cartao passa a depender de
+  // qual linha o banco devolveu primeiro.
+  assert.strictEqual(depois.filter(f => f.capa).length, 1, 'a anterior deixou de ser capa');
+  assert.strictEqual(depois[0].id, segunda.id, 'a capa vem primeiro — e dela que o cartao tira a imagem');
+});
+
+test('apagar a capa promove outra foto, e leva o arquivo do disco junto', async () => {
+  const { db, PASTA_UPLOADS } = require('./db');
+  const capa = (await A('GET', '/api/midias/imovel')).dados.find(f => f.capa);
+  const arquivo = db.prepare('select arquivo from midias_imovel where id = ?').get(capa.id).arquivo;
+
+  assert.strictEqual((await B('DELETE', '/api/midias/' + capa.id)).status, 404, 'B nao apaga foto de A');
+  assert.strictEqual((await A('DELETE', '/api/midias/' + capa.id)).status, 200);
+
+  assert.strictEqual(fs.existsSync(path.join(PASTA_UPLOADS, arquivo)), false, 'o arquivo foi junto');
+
+  const depois = (await A('GET', '/api/midias/imovel')).dados;
+  assert.strictEqual(depois.length, 1);
+  // Sem promover, o imovel fica com foto no banco e estado vazio na tela — o
+  // usuario ve a inicial de volta e nao entende que ainda tem foto la.
+  assert.strictEqual(depois[0].capa, true, 'sobrou foto, entao tem que sobrar capa');
+});
+
+test('apagar o imovel leva as fotos dele junto (cascata)', async () => {
+  const { db } = require('./db');
+  assert.strictEqual(db.prepare('select count(*) n from midias_imovel').get().n, 1);
+
+  assert.strictEqual((await A('DELETE', '/api/properties/p-foto')).status, 200);
+
+  assert.strictEqual(db.prepare('select count(*) n from midias_imovel').get().n, 0,
+    'foto de imovel excluido nao pode sobreviver ao imovel');
+});
+
+test('formato fora da lista branca e recusado na foto do imovel', async () => {
+  await A('PUT', '/api/properties/p-limite', { id: 'p-limite', name: 'Casa cheia', address: 'Rua X' });
+  const r = await enviarImovel(A.cookie(), 'imovel=p-limite', 'application/pdf', Buffer.from('%PDF-'));
+  assert.strictEqual(r.status, 415, 'PDF nao e foto');
+});
+
+test('video no imovel e recusado — o cartao so mostra imagem', async () => {
+  const r = await enviarImovel(A.cookie(), 'imovel=p-limite', 'video/webm', Buffer.from('x'));
+  assert.strictEqual(r.status, 415);
+});
+
+test('acima do teto da foto do imovel e recusado', async () => {
+  const grande = Buffer.alloc(8 * 1024 * 1024 + 1, 1);
+  const r = await enviarImovel(A.cookie(), 'imovel=p-limite', 'image/jpeg', grande);
+  assert.strictEqual(r.status, 413);
+});
+
+test('estourar a quantidade de fotos por imovel e recusado', async () => {
+  for (let i = 0; i < 8; i++) {
+    const ok = await enviarImovel(A.cookie(), 'imovel=p-limite', 'image/jpeg', Buffer.from('f' + i));
+    assert.strictEqual(ok.status, 201, `a foto ${i + 1} entra`);
+  }
+  const nona = await enviarImovel(A.cookie(), 'imovel=p-limite', 'image/jpeg', Buffer.from('f9'));
+  // Sem teto de quantidade, um laco de fetch de sessao legitima enche o disco.
+  assert.strictEqual(nona.status, 409, 'a nona nao entra');
+});
+
 // ── Limite de tentativas por IP ─────────────────────────────────────────
 
 test('login tem teto de tentativas por IP', async () => {

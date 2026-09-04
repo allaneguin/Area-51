@@ -12,6 +12,9 @@ const Storage = {
   clientsCache: [],
   financialRecordsCache: [],
   inspectionsCache: [],
+  // Fotos de TODOS os imóveis da conta, numa lista só. A tela desenha N cartões
+  // de uma vez; uma busca por imóvel seria N requisições para montar uma lista.
+  propertyMediaCache: [],
   profileCache: {},
 
   // Troca/saída de conta: descarta TODOS os caches do usuário anterior.
@@ -23,6 +26,7 @@ const Storage = {
     this.clientsCache = [];
     this.financialRecordsCache = [];
     this.inspectionsCache = [];
+    this.propertyMediaCache = [];
     this.profileCache = {};
   },
 
@@ -67,17 +71,19 @@ const Storage = {
         updatedAt: item.updated_at
       }));
 
-      const [props, clients, fin, insp] = await Promise.all([
+      const [props, clients, fin, insp, fotos] = await Promise.all([
         Api.list('properties'),
         Api.list('clients'),
         Api.list('financial_records'),
-        Api.list('inspections')
+        Api.list('inspections'),
+        Api.listarMidiasImovel()
       ]);
 
       this.propertiesCache = props || [];
       this.clientsCache = clients || [];
       this.financialRecordsCache = fin || [];
       this.inspectionsCache = insp || [];
+      this.propertyMediaCache = fotos || [];
       // A tabela nasce com o banco agora, entao nunca falta. A bandeira fica
       // porque `vistorias.js` a le — e este trabalho nao toca as telas.
       this.inspectionsDisponivel = true;

@@ -916,6 +916,74 @@ button.nav-item {
   overflow-y: auto;
   padding: 1.5rem;
 }
+/* Painel de leitura: mais largo que um formulário porque mostra listas de
+   vínculos (contratos, vistorias) lado a lado com os campos. */
+.modal-card-lg { max-width: 680px; }
+
+/* ── Painel "Ver" ──────────────────────────────────────────────────────
+   Rótulo à esquerda, valor à direita. Grade e não tabela: o valor precisa
+   quebrar em várias linhas (endereço, observações) sem esticar a coluna. */
+.detalhe-secao {
+  margin: 1.5rem 0 0.6rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.detalhe-secao:first-child { margin-top: 0; }
+
+.detalhe-lista { margin: 0; }
+.detalhe-linha {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.detalhe-linha:last-child { border-bottom: none; }
+.detalhe-linha dt { color: var(--text-muted); font-size: 13px; }
+.detalhe-linha dd { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
+
+.detalhe-vinculos { list-style: none; margin: 0; padding: 0; }
+.detalhe-vinculos li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13.5px;
+}
+.detalhe-vinculos li:last-child { border-bottom: none; }
+.detalhe-vinculos li > span:first-child { flex: 1; min-width: 0; }
+
+.detalhe-vazio { margin: 0; font-size: 13px; }
+.detalhe-resumo { margin: 0 0 0.75rem; font-size: 13.5px; color: var(--text-muted); }
+
+/* As cláusulas são um documento inteiro dentro de uma janela. Rolam na própria
+   caixa, com moldura, para o leitor saber onde o contrato começa e termina —
+   e para os botões Fechar/Usar não fugirem para o fim de três páginas. */
+.detalhe-clausulas {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 16px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--surface-bg);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.detalhe-clausulas p { margin: 0 0 0.9rem; }
+.detalhe-clausulas .highlight {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.detalhe-total { margin: 0; font-size: 20px; font-weight: 700; }
+.detalhe-total .td-sub { display: block; font-size: 12px; font-weight: 400; }
+.detalhe-fotos { margin-bottom: 1.25rem; }
+
 .modal-card h3 {
   margin: 0 0 1.25rem;
   font-size: 17px;

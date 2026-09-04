@@ -52,4 +52,12 @@ assert.deepStrictEqual(Midias.reduzir(800, 600, 1600), { largura: 800, altura: 6
 // Sempre a rota autenticada, nunca caminho de disco.
 assert.strictEqual(Midias.url('abc-123'), '/api/midias/abc-123/arquivo');
 
-console.log('ok — midias: limites por tipo e reducao da foto antes do upload');
+// ── A mesma validação serve o imóvel ────────────────────────────────────
+// "Limite de 8 fotos por ambiente" num cartão de imóvel não quer dizer nada
+// para quem lê: ali não há ambiente nenhum.
+assert.match(Midias.validar('foto', arq('image/jpeg', 100), 8, 'imóvel'), /por imóvel/,
+  'o limite do imóvel fala em imóvel');
+assert.match(Midias.validar('foto', arq('image/jpeg', 100), 8), /por ambiente/,
+  'sem dizer onde, continua sendo o ambiente da vistoria');
+
+console.log('ok — midias: limites por tipo, reducao da foto e o mesmo validar para imovel');

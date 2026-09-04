@@ -82,11 +82,31 @@ const Api = {
     return this._req('POST', 'midias/reindexar', { vistoria: vistoriaId, removido: removido });
   },
 
-  async enviarMidia(vistoriaId, ambiente, tipo, arquivo) {
-    const qs = `vistoria=${encodeURIComponent(vistoriaId)}&ambiente=${ambiente}&tipo=${tipo}`;
+  // ── Foto do imóvel ────────────────────────────────────────────────────
+  // Sem filtro por imóvel: a tela de imóveis desenha todos os cartões de uma
+  // vez. `removerMidia` acima serve as duas — a rota de exclusão é a mesma.
+  listarMidiasImovel() { return this._req('GET', 'midias/imovel'); },
+
+  definirCapaImovel(midiaId) {
+    return this._req('POST', 'midias/imovel/' + encodeURIComponent(midiaId) + '/capa');
+  },
+
+  enviarMidiaImovel(imovelId, arquivo) {
+    return this._upload('/api/midias/imovel?imovel=' + encodeURIComponent(imovelId), arquivo);
+  },
+
+  enviarMidia(vistoriaId, ambiente, tipo, arquivo) {
+    return this._upload(
+      `/api/midias?vistoria=${encodeURIComponent(vistoriaId)}&ambiente=${ambiente}&tipo=${tipo}`,
+      arquivo);
+  },
+
+  // O corpo é o arquivo cru e o Content-Type é o dele — vale para a vistoria e
+  // para o imóvel, então mora num lugar só.
+  async _upload(url, arquivo) {
     let r;
     try {
-      r = await fetch('/api/midias?' + qs, {
+      r = await fetch(url, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': arquivo.type },

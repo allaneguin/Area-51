@@ -12,6 +12,38 @@ Registro de todas as alterações do sistema, para o time ter uma referência ú
 
 ---
 
+## 2026-09-04
+
+**Botão "Ver" em Imóveis, Clientes e Modelos** (assets e projeto: 2.1.0 → **2.2.0**). Até agora, para ler o que estava cadastrado era preciso abrir **"Editar"** — entrar no modo de mexer para fazer uma coisa que é só de olhar, com o risco de alterar sem querer. Agora cada item abre um painel de leitura.
+
+**Não é só repetir a lista: mostra o que ela esconde.** O cliente tem 13 campos e a tabela mostra 5 — RG, endereço, profissão, renda e observações não apareciam em lugar nenhum. O imóvel escondia CEP, tipo, IPTU, condomínio e observações. E o modelo de contrato só dava duas linhas de resumo: o locador escolhia no escuro e só descobria o que o documento dizia depois de criar um contrato com ele. **Agora dá para ler as cláusulas antes de escolher**, e ver os 40 campos que o modelo vai pedir, agrupados por seção.
+
+**Mostra também o que DEPENDE do registro,** que é a pergunta de quem está com o dedo no "Excluir": o imóvel lista contratos (com status e vigência), vistorias, fotos e o total recebido; o cliente lista os contratos dele. O vínculo cliente↔contrato é por CPF, e os dois lados guardam o documento em formatos diferentes — a normalização que a coluna "Contratos" já fazia virou `ClientsView.contratosDe()`, **uma definição só**, para a coluna e o painel não discordarem sobre quais contratos são de quem.
+
+**Três painéis, e não um componente configurável.** O conteúdo dos três é genuinamente diferente (fotos+contratos+vistorias vs contratos vs cláusulas); um renderizador genérico para três formas distintas seria abstração inventada. O que eles de fato dividem é uma linha "rótulo: valor", e essa virou `Utils.linhaDetalhe()` — as três cópias que eu tinha escrito divergiriam na primeira vez que alguém mexesse numa delas.
+
+**Verificação.** Dois arquivos de teste novos (`clients.test.js`, `templates.test.js`, que não existiam) e casos novos em `properties.test.js`; 15 arquivos de teste no total, todos passando, mais os 72 casos do backend. Cada painel é conferido pelo que a lista esconde, pelos vínculos certos (inclusive que contrato de OUTRO CPF não entra), pelo estado vazio explicado em vez de espaço em branco, e pelo escape de observação com HTML — é por ali que entra texto digitado. **O teste de tokens pegou um erro:** usei `var(--text-secondary)`, que não existe no tema. Os três painéis foram renderizados em Chrome headless e conferidos por captura.
+
+---
+
+## 2026-09-04
+
+**Foto do imóvel no cartão de Imóveis** (assets e projeto: 2.0.0 → **2.1.0**). Até agora a faixa do cartão mostrava a inicial do nome sobre um gradiente, com um comentário no código dizendo que a maquete pedia foto ali mas "não existe coluna nem bucket para isso". Passa a existir: até 8 fotos por imóvel, uma delas a capa, com miniaturas no próprio cartão.
+
+**Reaproveita a máquina que a vistoria já tinha,** em vez de criar outra. A rota é a mesma (`server/rotas/midias.js`), a pasta de arquivos é a mesma (`uploads/`), o teto de 8 MB e a lista branca de formatos são os mesmos, e a redução para 1600px antes do upload também. O que entrou de novo é o dono: `midias_imovel`, com cascata em `properties`.
+
+**Duas tabelas de mídia, e não uma com `inspection_id` anulável.** Os ciclos de vida são diferentes — a foto da vistoria morre com a vistoria, a do imóvel vive enquanto o imóvel existir — e afrouxar o `NOT NULL` no SQLite significa reconstruir a tabela num banco que já guarda contrato assinado.
+
+**A armadilha que isso criou, e o teste que a prova.** As duas tabelas dividem a pasta `uploads/`, e a varredura de órfão apaga do disco todo arquivo que não estiver na tabela que ela conhece. Uma tabela nova sem mexer na varredura significa: **toda foto de imóvel apagada em silêncio na primeira tela de vistoria que abrisse.** O teste `a varredura de orfao NAO apaga a foto do imovel` foi escrito antes da correção e falhou de verdade — a varredura agora consulta as duas.
+
+**Capa explícita, e não "a primeira que subiu".** A primeira foto vira capa sozinha (senão o cartão teria foto e mostraria o estado vazio assim mesmo), e há um botão por miniatura para trocar. Quando a capa é apagada, **o servidor promove a seguinte** — refazer essa conta no cliente daria duas fontes para a mesma verdade. O estado vazio antigo continua: imóvel sem foto ainda mostra a inicial, porque inventar uma imagem de exemplo faria o cartão mentir sobre um dado que ninguém cadastrou.
+
+**Verificação.** 72 casos no backend (11 novos) e os 13 arquivos de teste do front passam. Os limites e a checagem de dono foram conferidos por mutação — quebrando cada guarda de propósito para ver o teste acusar. Ponta a ponta contra o servidor real: PNG sobe, volta byte a byte idêntico pela rota autenticada, e o arquivo aparece no disco com nome escolhido pelo servidor. **Um defeito só apareceu na captura de tela:** `place-items: center` na faixa dimensiona o item pelo conteúdo, então a foto de capa ignorava os 128px e cobria o cartão inteiro — corrigido com `stretch` e `overflow`. Nenhum teste pegaria isso.
+
+**Também atualizado:** `docs/ARQUITETURA.md` dizia "9 tabelas" (já estava desatualizado em uma antes desta mudança, pela `midias`) — agora são 11, com as duas de mídia descritas e a regra da varredura registrada.
+
+---
+
 ## 2026-08-28
 
 **Decidida a volta a Supabase — Auth, Postgres e Storage.** Decisao do dono do projeto, tomada depois de duas rodadas de contraponto. O motivo declarado e um so, e vale registrar porque explica a escolha: *"quero um lugar simples e facil para o banco de dados, sem ter que ficar rodando no terminal, como eu fazia no terminal do Supabase"* — o Table Editor de volta.

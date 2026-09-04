@@ -236,6 +236,19 @@ const Utils = {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   },
+  // Uma linha "rótulo: valor" dos painéis "Ver" de imóvel, cliente e modelo.
+  // Vive aqui porque as três telas mostram a mesma coisa da mesma forma, e três
+  // cópias divergiriam na primeira vez que alguém mexesse numa delas. Campo em
+  // branco vira travessão: espaço vazio deixa dúvida se é "não preenchido" ou
+  // se a tela quebrou.
+  linhaDetalhe(rotulo, valor) {
+    const vazio = valor === null || valor === undefined || valor === '';
+    return `<div class="detalhe-linha">
+      <dt>${this.esc(rotulo)}</dt>
+      <dd>${vazio ? '<span class="text-muted">—</span>' : this.esc(valor)}</dd>
+    </div>`;
+  },
+
   // ── Imagem vinda de dado não confiável ──────────────────────────────────
   // Regra canônica: só as três formas que o próprio fluxo gera (canvas
   // .toDataURL e câmera). SVG fica de fora de propósito — carrega script.

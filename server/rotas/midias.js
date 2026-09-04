@@ -65,7 +65,13 @@ function varrer() {
   let nomes;
   try { nomes = fs.readdirSync(PASTA_UPLOADS); } catch { return; }
   if (!nomes.length) return;
-  const vivos = new Set(db.prepare('select arquivo from midias').all().map(l => l.arquivo));
+  // As DUAS tabelas, sempre. A pasta e uma so: arquivo de tabela que a
+  // varredura nao enxerga vira orfao aos olhos dela e some do disco.
+  const vivos = new Set(db.prepare(`
+    select arquivo from midias
+    union all
+    select arquivo from midias_imovel
+  `).all().map(l => l.arquivo));
   for (const nome of nomes) {
     if (vivos.has(nome)) continue;
     try { fs.unlinkSync(path.join(PASTA_UPLOADS, nome)); } catch { /* já sumiu */ }
@@ -174,13 +180,111 @@ router.post('/reindexar', express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Midia do imovel ─────────────────────────────────────────────────────
+//
+// Tabela propria (`midias_imovel`), mesma pasta de arquivos, mesmas rotas de
+// leitura e de exclusao mais abaixo. So FOTO: o cartao do imovel mostra uma
+// imagem, e video de imovel nao tem onde aparecer.
+const MAX_FOTOS_IMOVEL = 8;
+
+// O imovel e da sessao? Mesmo papel que `vistoriaDaSessao`, outro dono.
+function imovelDaSessao(id, usuarioId) {
+  const linha = db.prepare('select user_id from properties where id = ?').get(id);
+  return !!(linha && linha.user_id === usuarioId);
+}
+
+router.post('/imovel', limiteUpload, corpoCru, (req, res) => {
+  varrer();
+
+  const imovel = String(req.query.imovel || '');
+  if (!imovelDaSessao(imovel, req.usuario.id)) {
+    return res.status(404).json({ erro: 'Imóvel não encontrado.' });
+  }
+
+  const meta = TIPOS.foto;
+  const mime = String(req.headers['content-type'] || '').split(';')[0].trim();
+  const ext = meta.mimes[mime];
+  if (!ext) return res.status(415).json({ erro: 'Formato de arquivo não aceito.' });
+
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    return res.status(400).json({ erro: 'Arquivo vazio.' });
+  }
+  if (req.body.length > meta.teto) {
+    return res.status(413).json({ erro: 'Arquivo acima do limite.' });
+  }
+
+  const { n } = db.prepare('select count(*) n from midias_imovel where property_id = ?').get(imovel);
+  if (n >= MAX_FOTOS_IMOVEL) {
+    return res.status(409).json({ erro: `Limite de ${MAX_FOTOS_IMOVEL} fotos por imóvel atingido.` });
+  }
+
+  // Arquivo primeiro, linha depois — mesma ordem e mesmo motivo do upload da
+  // vistoria: linha sem arquivo e cartao quebrado, arquivo sem linha e lixo.
+  const id = crypto.randomUUID();
+  const arquivo = `${id}.${ext}`;
+  const criado = new Date().toISOString();
+  fs.writeFileSync(path.join(PASTA_UPLOADS, arquivo), req.body);
+
+  // A primeira foto vira capa sozinha: sem isto o cartao teria foto e mostraria
+  // o estado vazio assim mesmo, e ninguem entenderia por que.
+  const capa = n === 0 ? 1 : 0;
+  db.prepare(`
+    insert into midias_imovel (id, user_id, property_id, capa, mime, bytes, arquivo, created_at)
+    values (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, req.usuario.id, imovel, capa, mime, req.body.length, arquivo, criado);
+
+  res.status(201).json({
+    id, property_id: imovel, capa: !!capa, mime, bytes: req.body.length, created_at: criado
+  });
+});
+
+// Sem filtro por imovel de proposito: a tela de imoveis desenha N cartoes de
+// uma vez. Filtrar por imovel obrigaria uma requisicao por cartao para montar
+// uma lista que ja vem inteira do banco. `arquivo` fica de fora — nome de
+// arquivo no disco nao e assunto do cliente.
+router.get('/imovel', (req, res) => {
+  varrer();
+  const linhas = db.prepare(`
+    select id, property_id, capa, mime, bytes, created_at
+      from midias_imovel
+     where user_id = ?
+     order by property_id, capa desc, created_at
+  `).all(req.usuario.id);
+  res.json(linhas.map(l => ({ ...l, capa: !!l.capa })));
+});
+
+// Uma capa por imovel: zera as do imovel e marca a escolhida, na MESMA
+// requisicao. Duas capas e capa nenhuma quebram o cartao do mesmo jeito, e
+// fazer isso em dois pedidos do cliente deixa o estado quebrado se o segundo
+// nao chegar.
+router.post('/imovel/:id/capa', (req, res) => {
+  const foto = db.prepare('select property_id from midias_imovel where id = ? and user_id = ?')
+    .get(req.params.id, req.usuario.id);
+  if (!foto) return res.status(404).json({ erro: 'Foto não encontrada.' });
+
+  db.prepare('update midias_imovel set capa = 0 where property_id = ? and user_id = ?')
+    .run(foto.property_id, req.usuario.id);
+  db.prepare('update midias_imovel set capa = 1 where id = ? and user_id = ?')
+    .run(req.params.id, req.usuario.id);
+  res.json({ ok: true });
+});
+
 // ── O arquivo ───────────────────────────────────────────────────────────
 // NUNCA uma pasta estatica: foto do imovel de um cliente com nome adivinhavel
 // vaza por URL, sem sessao nenhuma. `sendFile` tambem trata `Range` sozinho, e
 // e com Range que o <video> busca no meio sem baixar os 25 MB.
+// A midia esta numa das duas tabelas, e para quem consome isso nao importa: id
+// de midia e id de midia. De que tabela veio e assunto do servidor.
+function acharMidia(id, usuarioId) {
+  return db.prepare(`
+    select arquivo, mime from midias        where id = ? and user_id = ?
+    union all
+    select arquivo, mime from midias_imovel where id = ? and user_id = ?
+  `).get(id, usuarioId, id, usuarioId);
+}
+
 router.get('/:id/arquivo', (req, res) => {
-  const m = db.prepare('select arquivo, mime from midias where id = ? and user_id = ?')
-    .get(req.params.id, req.usuario.id);
+  const m = acharMidia(req.params.id, req.usuario.id);
   if (!m) return res.status(404).json({ erro: 'Mídia não encontrada.' });
 
   res.setHeader('Content-Type', m.mime);
@@ -192,13 +296,29 @@ router.get('/:id/arquivo', (req, res) => {
 
 // ── Apagar ──────────────────────────────────────────────────────────────
 router.delete('/:id', (req, res) => {
-  const m = db.prepare('select arquivo from midias where id = ? and user_id = ?')
-    .get(req.params.id, req.usuario.id);
+  const m = acharMidia(req.params.id, req.usuario.id);
   // 404 tanto para "nao existe" quanto para "e de outro": distinguir os dois
   // contaria ao chamador que aquele id existe em alguma conta.
   if (!m) return res.status(404).json({ erro: 'Mídia não encontrada.' });
 
+  // Era a capa de um imovel? Precisa saber ANTES de apagar.
+  const foto = db.prepare('select property_id, capa from midias_imovel where id = ? and user_id = ?')
+    .get(req.params.id, req.usuario.id);
+
+  // Os dois DELETEs, sem descobrir a tabela: o que nao casar nao faz nada, e
+  // uma consulta a mais pelo mesmo fim so seria trabalho.
   db.prepare('delete from midias where id = ? and user_id = ?').run(req.params.id, req.usuario.id);
+  db.prepare('delete from midias_imovel where id = ? and user_id = ?').run(req.params.id, req.usuario.id);
+
+  // Apagou a capa e sobrou foto? A mais antiga assume. Sem isto o imovel fica
+  // com foto no banco e o estado vazio na tela — parece que a foto sumiu.
+  if (foto && foto.capa) {
+    const proxima = db.prepare(
+      'select id from midias_imovel where property_id = ? and user_id = ? order by created_at limit 1'
+    ).get(foto.property_id, req.usuario.id);
+    if (proxima) db.prepare('update midias_imovel set capa = 1 where id = ?').run(proxima.id);
+  }
+
   try { fs.unlinkSync(path.join(PASTA_UPLOADS, m.arquivo)); } catch { /* já sumiu */ }
   res.json({ ok: true });
 });

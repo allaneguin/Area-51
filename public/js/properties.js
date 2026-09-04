@@ -21,6 +21,118 @@ const PropertiesView = {
     };
   },
 
+  // ── Fotos do imóvel ────────────────────────────────────────────────────
+  //
+  // A lista chega da conta inteira numa requisição só (Storage.loadCloudData) e
+  // é fatiada aqui por imóvel. Capa primeiro: é dela que a faixa tira a imagem,
+  // e depender da ordem que o banco devolveu faria a capa trocar sozinha.
+  fotosDe(id) {
+    return Storage.propertyMediaCache
+      .filter(m => m.property_id === id)
+      .sort((a, b) => (b.capa ? 1 : 0) - (a.capa ? 1 : 0));
+  },
+
+  // Dois estados, sem meio-termo: a foto quando há capa, a inicial quando não
+  // há. Uma imagem de exemplo faria o cartão mentir sobre um dado que o dono
+  // nunca cadastrou.
+  capa(prop) {
+    const capa = this.fotosDe(prop.id).find(f => f.capa);
+    if (capa) {
+      return `<div class="imovel-capa">
+        <img src="${Utils.esc(Midias.url(capa.id))}" alt="Foto de ${Utils.esc(prop.name || 'imóvel')}" loading="lazy">
+      </div>`;
+    }
+    return `<div class="imovel-capa" aria-hidden="true">
+      <span>${Utils.esc(String(prop.name || '?').trim().charAt(0))}</span>
+    </div>`;
+  },
+
+  // ── Painel "Ver" ───────────────────────────────────────────────────────
+  //
+  // Existe porque o cartão mostra 5 coisas de 13, e até aqui o único jeito de
+  // ler o resto era abrir "Editar" — ou seja, entrar no modo de mexer para
+  // fazer uma coisa que é de olhar. Mostra também o que DEPENDE do imóvel, que
+  // é a pergunta de quem está prestes a excluir um.
+  detalhe(id) {
+    const p = Storage.getProperties().find(x => x.id === id);
+    if (!p) return '';
+
+    const fotos = this.fotosDe(p.id);
+    const contratos = Storage.getContractsForProperty(p.id);
+    const vistorias = Storage.getInspectionsForProperty(p.id);
+    const ids = new Set(contratos.map(c => c.id));
+    const recebido = Storage.getFinancialRecords()
+      .filter(r => ids.has(r.contract_id) && r.status === 'Pago')
+      .reduce((s, r) => s + (parseFloat(r.rent_value) || 0), 0);
+
+    const medidas = [
+      p.bedrooms && `${p.bedrooms} quarto${p.bedrooms == 1 ? '' : 's'}`,
+      p.bathrooms && `${p.bathrooms} banheiro${p.bathrooms == 1 ? '' : 's'}`,
+      p.parking && `${p.parking} vaga${p.parking == 1 ? '' : 's'}`,
+      p.area && `${p.area} m²`
+    ].filter(Boolean).join(' · ');
+
+    return `
+      ${fotos.length ? `<div class="midia-faixa detalhe-fotos">
+        ${fotos.map(f => `<figure class="midia-item">
+          <img src="${Utils.esc(Midias.url(f.id))}" alt="Foto de ${Utils.esc(p.name)}" loading="lazy">
+        </figure>`).join('')}
+      </div>` : ''}
+
+      <h4 class="detalhe-secao">Cadastro</h4>
+      <dl class="detalhe-lista">
+        ${Utils.linhaDetalhe('Tipo', p.type)}
+        ${Utils.linhaDetalhe('Situação', this.statusReal(p).status)}
+        ${Utils.linhaDetalhe('Endereço', p.address)}
+        ${Utils.linhaDetalhe('CEP', p.cep)}
+        ${Utils.linhaDetalhe('Medidas', medidas)}
+        ${Utils.linhaDetalhe('Aluguel', Utils.formatCurrency(p.rent_value || 0))}
+        ${Utils.linhaDetalhe('IPTU mensal', Utils.formatCurrency(p.iptu_value || 0))}
+        ${Utils.linhaDetalhe('Condomínio', Utils.formatCurrency(p.condo_value || 0))}
+        ${Utils.linhaDetalhe('Observações', p.notes)}
+      </dl>
+
+      <h4 class="detalhe-secao">Contratos ${contratos.length ? `(${contratos.length})` : ''}</h4>
+      ${contratos.length ? `<ul class="detalhe-vinculos">
+        ${contratos.map(c => {
+          const st = Utils.getContractStatus(c);
+          return `<li>
+            <span>${Utils.esc(c.fields && c.fields.nome_locatario || c.name || 'Sem nome')}</span>
+            <span class="badge ${st.label === 'Ativo' ? 'badge-teal' : 'badge-amber'}">${Utils.esc(st.label)}</span>
+            <span class="td-sub">${Utils.esc(Utils.formatDate(c.fields && c.fields.data_termino) || '—')}</span>
+          </li>`;
+        }).join('')}
+      </ul>` : `<p class="text-muted detalhe-vazio">Nenhum contrato vinculado a este imóvel.</p>`}
+
+      <h4 class="detalhe-secao">Vistorias ${vistorias.length ? `(${vistorias.length})` : ''}</h4>
+      ${vistorias.length ? `<ul class="detalhe-vinculos">
+        ${vistorias.map(v => `<li>
+          <span>${Utils.esc(v.tipo || 'Vistoria')}</span>
+          <span class="badge badge-blue">${Utils.esc(v.status || '')}</span>
+          <span class="td-sub">${Utils.esc(Utils.formatDate(v.inspected_on) || '—')}</span>
+        </li>`).join('')}
+      </ul>` : `<p class="text-muted detalhe-vazio">Nenhuma vistoria registrada.</p>`}
+
+      <h4 class="detalhe-secao">Recebido</h4>
+      <p class="detalhe-total">${Utils.esc(Utils.formatCurrency(recebido))}
+        <span class="td-sub">soma das parcelas pagas dos contratos acima</span></p>
+    `;
+  },
+
+  verDetalhe(id) {
+    const p = Storage.getProperties().find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prop-detalhe-titulo').textContent = p.name || 'Imóvel';
+    document.getElementById('prop-detalhe-corpo').innerHTML = this.detalhe(id);
+    document.getElementById('prop-detalhe-editar').setAttribute('onclick',
+      `PropertiesView.fecharDetalhe(); PropertiesView.openModal('${Utils.esc(id)}')`);
+    document.getElementById('prop-detalhe').style.display = 'flex';
+  },
+
+  fecharDetalhe() {
+    document.getElementById('prop-detalhe').style.display = 'none';
+  },
+
   render(container) {
     const properties = Storage.getProperties();
     const infoPorImovel = {};
@@ -75,13 +187,7 @@ const PropertiesView = {
 
             return `
             <div class="card imovel-card" data-busca>
-              <!-- A maquete traz foto do imóvel aqui. Não existe coluna nem
-                   bucket para isso, então em vez de um espaço vazio (ou de uma
-                   imagem falsa) a faixa mostra a inicial sobre a cor do tema:
-                   identifica o cartão de relance e não finge um dado. -->
-              <div class="imovel-capa" aria-hidden="true">
-                <span>${Utils.esc(String(p.name || '?').trim().charAt(0))}</span>
-              </div>
+              ${this.capa(p)}
               <div class="imovel-corpo">
                 <div class="imovel-topo">
                   <div style="min-width:0;">
@@ -95,6 +201,26 @@ const PropertiesView = {
                   ${specs.map(x => `<span>${Utils.esc(x)}</span>`).join('')}
                 </div>` : ''}
 
+                ${(() => {
+                  const fotos = this.fotosDe(p.id);
+                  return `<div class="midia-faixa midia-faixa-mini">
+                    ${fotos.map(f => `
+                      <figure class="midia-item">
+                        <img src="${Utils.esc(Midias.url(f.id))}" alt="Foto de ${Utils.esc(p.name)}" loading="lazy">
+                        ${f.capa
+                          ? `<span class="midia-capa-marca">Capa</span>`
+                          : `<button type="button" class="midia-capa-btn" title="Usar como capa"
+                              aria-label="Usar esta foto como capa do imóvel"
+                              onclick="PropertiesView.definirCapa('${Utils.esc(f.id)}')">&#9733;</button>`}
+                        <button type="button" class="midia-remover" title="Remover foto"
+                          onclick="PropertiesView.removerFoto('${Utils.esc(f.id)}')">&times;</button>
+                      </figure>`).join('')}
+                    ${fotos.length < Midias.LIMITES.foto.max ? `
+                      <button type="button" class="midia-add"
+                        onclick="PropertiesView.escolherFoto('${Utils.esc(p.id)}')">+ Foto</button>` : ''}
+                  </div>`;
+                })()}
+
                 ${inquilino ? `<div class="imovel-vinculo">Alugado para <b>${Utils.esc(inquilino)}</b></div>`
                   : info.totalContratos ? `<div class="imovel-vinculo">${info.totalContratos} contrato${info.totalContratos === 1 ? '' : 's'} no histórico</div>`
                   : `<div class="imovel-vinculo text-muted">Sem contrato vinculado</div>`}
@@ -105,6 +231,7 @@ const PropertiesView = {
                     <div class="imovel-valor">${Utils.esc(Utils.formatCurrency(p.rent_value || 0))}</div>
                   </div>
                   <div style="display:flex; gap:6px;">
+                    <button class="btn btn-primary btn-sm" onclick="PropertiesView.verDetalhe('${Utils.esc(p.id)}')">Ver</button>
                     <button class="btn btn-secondary btn-sm" onclick="PropertiesView.openModal('${Utils.esc(p.id)}')">Editar</button>
                     <button class="btn btn-danger btn-sm" onclick="PropertiesView.deleteProp('${Utils.esc(p.id)}')">Excluir</button>
                   </div>
@@ -115,6 +242,24 @@ const PropertiesView = {
           }).join('')}
         </div>
       `}
+
+      <!-- Um seletor de arquivo só na tela, reaproveitado por todos os cartões:
+           um por imóvel seriam N nós escondidos fazendo a mesma coisa. -->
+      <input type="file" id="prop-foto-arquivo" style="display:none" accept="image/jpeg,image/png,image/webp">
+
+      <!-- Painel de leitura. O corpo é preenchido no clique, não aqui: montar o
+           detalhe dos N imóveis a cada render seria trabalho para o que o
+           usuário abre um de cada vez. -->
+      <div id="prop-detalhe" class="modal-backdrop">
+        <div class="modal-card modal-card-lg">
+          <h3 id="prop-detalhe-titulo">Imóvel</h3>
+          <div id="prop-detalhe-corpo"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="PropertiesView.fecharDetalhe()">Fechar</button>
+            <button type="button" class="btn btn-primary" id="prop-detalhe-editar">Editar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Modal de Cadastro/Edição de Imóvel -->
       <div id="prop-modal" class="modal-backdrop">
@@ -273,8 +418,57 @@ const PropertiesView = {
   deleteProp(id) {
     if (confirm('Deseja realmente excluir este imóvel?')) {
       Storage.deleteProperty(id);
+      // O banco leva as fotos junto (cascata). O cache local precisa saber, ou
+      // as miniaturas do imóvel excluído sobrevivem até a próxima carga.
+      Storage.propertyMediaCache = Storage.propertyMediaCache.filter(m => m.property_id !== id);
       Utils.toast('Imóvel excluído!');
       this.render(document.getElementById('main-content'));
     }
+  },
+
+  // ── Envio, remoção e troca de capa ─────────────────────────────────────
+
+  escolherFoto(imovelId) {
+    const input = document.getElementById('prop-foto-arquivo');
+    input.onchange = () => {
+      const arquivo = input.files && input.files[0];
+      input.value = '';   // sem isto, escolher o MESMO arquivo de novo não dispara
+      if (arquivo) this.subirFoto(imovelId, arquivo);
+    };
+    input.click();
+  },
+
+  async subirFoto(imovelId, arquivo) {
+    // `enviarDoImovel` valida, reduz para 1600px e avisa o usuário quando falha;
+    // devolve null nesse caso. A miniatura só aparece com a linha confirmada.
+    const criada = await Midias.enviarDoImovel(imovelId, arquivo, this.fotosDe(imovelId).length);
+    if (!criada) return;
+    Storage.propertyMediaCache.push(criada);
+    Utils.toast('Foto anexada.');
+    this.render(document.getElementById('main-content'));
+  },
+
+  async removerFoto(midiaId) {
+    if (!confirm('Remover esta foto?')) return;
+    try {
+      await Api.removerMidia(midiaId);
+      // Relê em vez de recalcular: quando a apagada era a capa, quem promove a
+      // seguinte é o servidor. Refazer essa conta aqui daria duas fontes para a
+      // mesma verdade, e elas divergiriam no primeiro caso de borda.
+      Storage.propertyMediaCache = await Api.listarMidiasImovel();
+    } catch (e) {
+      return Utils.toast('Não foi possível remover a foto: ' + (e.message || ''), 'error');
+    }
+    this.render(document.getElementById('main-content'));
+  },
+
+  async definirCapa(midiaId) {
+    try {
+      await Api.definirCapaImovel(midiaId);
+      Storage.propertyMediaCache = await Api.listarMidiasImovel();
+    } catch (e) {
+      return Utils.toast('Não foi possível trocar a capa: ' + (e.message || ''), 'error');
+    }
+    this.render(document.getElementById('main-content'));
   }
 };

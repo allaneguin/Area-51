@@ -62,12 +62,13 @@ Aplicação web de **geração e gestão de contratos de locação**: o locador 
 │  /api/:recurso  contracts · properties · clients ·                │
 │                 financial_records · inspections                   │
 │  /api/links     link do inquilino (PÚBLICO — ele não tem conta)   │
+│  /api/midias    foto/vídeo da vistoria · foto do imóvel           │
 │  /api/admin     supervisão de contas (somente leitura)            │
 └───────────────────────────────┬───────────────────────────────────┘
                                 │ node:sqlite
 ┌───────────────────────────────▼───────────────────────────────────┐
-│  data.db — 9 tabelas. Escopo por usuário é do SERVIDOR, não do    │
-│  banco: não há RLS. Ver §7.                                       │
+│  data.db — 11 tabelas + uploads/ (os bytes das mídias em disco).  │
+│  Escopo por usuário é do SERVIDOR, não do banco: sem RLS. Ver §7. │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -133,7 +134,7 @@ Parâmetro ausente ou inválido redireciona (editor) ou mostra erro (inquilino);
 
 ## 6. Modelo de dados
 
-`data.db` (SQLite), schema criado no boot. Nove tabelas.
+`data.db` (SQLite), schema criado no boot. Onze tabelas.
 
 | Tabela | Natureza | Chave |
 |---|---|---|
@@ -143,6 +144,10 @@ Parâmetro ausente ou inválido redireciona (editor) ou mostra erro (inquilino);
 | `profiles` | O perfil inteiro como blob | `id` = `users.id` |
 | `tenant_links` | `encrypted_payload` (AES-GCM, ≤ 512 KB), `key_proof`, `finalized`, `finalized_at`/`finalized_ip`, `expires_at` (30 dias) | `id text` (uuid do CSPRNG do cliente) |
 | `properties`, `clients`, `financial_records`, `inspections` | ERP com **colunas tipadas** | `id text` gerado no cliente |
+| `midias` | Foto/vídeo por ambiente da vistoria. Cascata com `inspections` | `id text` (uuid do servidor) |
+| `midias_imovel` | Foto do imóvel, com `capa`. Cascata com `properties` | `id text` (uuid do servidor) |
+
+**Por que duas tabelas de mídia, e não uma.** Os ciclos de vida são outros: a foto da vistoria morre com a vistoria, a do imóvel vive enquanto o imóvel existir — duas cascatas diferentes. Unificar exigiria `inspection_id` anulável, e afrouxar NOT NULL no SQLite significa reconstruir a tabela num banco que já tem contrato assinado dentro. As duas **dividem a pasta `uploads/`**, e é daí que vem a regra que a varredura de órfão em `rotas/midias.js` consulta as DUAS: arquivo de tabela que ela não enxerga é apagado como órfão.
 
 **JSON vs coluna.** `contracts.fields`, `profiles.profile_data` e `inspections.rooms` são conteúdo de formulário, variam por contrato/imóvel e nada neles é consultado por SQL — é o caso em que R4.5 permite JSON. No SQLite eles são `text`.
 
@@ -226,7 +231,7 @@ Setas só nessa direção. Em particular:
 5. **View só mexe no próprio DOM**, dentro de `#main-content`, no ciclo de render dela.
 6. **Regra de negócio não mora em view nem em `Storage`.** Cálculo (status, cobrança, reajuste, parse de dinheiro) mora no núcleo puro e é testável com `node`.
 7. **No backend, rota não fala com o banco por conta própria.** Nome de tabela vem do mapa `RECURSOS` em `db.js` e de lugar nenhum mais.
-8. **Recurso cujo dado o cliente não pode escolher fica FORA do `RECURSOS`.** `profiles` (a chave primária é o usuário) e `midias` (a coluna `arquivo` é o nome de um arquivo real no disco) têm rotas próprias. O CRUD genérico grava o que o corpo mandar nas colunas declaradas — cliente que escolhe nome de arquivo lê o arquivo de qualquer um.
+8. **Recurso cujo dado o cliente não pode escolher fica FORA do `RECURSOS`.** `profiles` (a chave primária é o usuário) e `midias`/`midias_imovel` (a coluna `arquivo` é o nome de um arquivo real no disco) têm rotas próprias. O CRUD genérico grava o que o corpo mandar nas colunas declaradas — cliente que escolhe nome de arquivo lê o arquivo de qualquer um.
 9. **Proteção de porta é middleware, não `if` em handler.** `sessao.js` (quem é), `limite.js` (quantas vezes) — montados na definição da rota, onde se lê de uma vez quem passa. Regra repetida em cada handler é a que alguém esquece de repetir, e a esquecida é a que vaza.
 10. **Arquivo servido ao usuário passa por rota autenticada, nunca por pasta estática.** `uploads/` não é servido pelo `express.static`: quem tem o nome do arquivo não pode ter a foto.
 

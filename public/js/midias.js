@@ -35,8 +35,9 @@ const Midias = {
   // de qualquer aparelho; o original de celular tem 3000-4000px e 3-5 MB.
   MAX_PX: 1600,
 
-  // Devolve a mensagem do problema, ou null quando pode subir.
-  validar(tipo, arquivo, quantidadeAtual) {
+  // Devolve a mensagem do problema, ou null quando pode subir. `onde` só muda a
+  // frase da cota: na vistoria a conta é por ambiente, no imóvel é por imóvel.
+  validar(tipo, arquivo, quantidadeAtual, onde = 'ambiente') {
     const lim = this.LIMITES[tipo];
     if (!lim) return 'Tipo de mídia desconhecido.';
     if (!arquivo) return 'Nenhum arquivo selecionado.';
@@ -47,7 +48,7 @@ const Midias = {
     }
     if (arquivo.size > lim.teto) return `Arquivo acima do limite de ${lim.rotulo}.`;
     if (quantidadeAtual >= lim.max) {
-      return `Limite de ${lim.max} ${tipo === 'foto' ? 'fotos' : 'vídeos'} por ambiente atingido.`;
+      return `Limite de ${lim.max} ${tipo === 'foto' ? 'fotos' : 'vídeos'} por ${onde} atingido.`;
     }
     return null;
   },
@@ -85,10 +86,10 @@ const Midias = {
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.75));
   },
 
-  // Sobe e devolve a linha criada. Quem chama só mostra a miniatura DEPOIS
-  // disto: a tela nunca exibe mídia que o servidor não confirmou.
-  async enviar(vistoriaId, ambiente, tipo, arquivo, quantidadeAtual) {
-    const problema = this.validar(tipo, arquivo, quantidadeAtual);
+  // Valida, reduz e sobe. Só `subir` sabe o destino — vistoria e imóvel dividem
+  // tudo o que vem antes dele.
+  async _preparar(tipo, arquivo, quantidadeAtual, onde, subir) {
+    const problema = this.validar(tipo, arquivo, quantidadeAtual, onde);
     if (problema) { Utils.toast(problema, 'error'); return null; }
 
     let bytes = arquivo;
@@ -103,11 +104,24 @@ const Midias = {
     }
 
     try {
-      return await Api.enviarMidia(vistoriaId, ambiente, tipo, bytes);
+      return await subir(bytes);
     } catch (e) {
       Utils.toast('Não foi possível enviar: ' + (e.message || ''), 'error');
       return null;
     }
+  },
+
+  // Sobe e devolve a linha criada. Quem chama só mostra a miniatura DEPOIS
+  // disto: a tela nunca exibe mídia que o servidor não confirmou.
+  enviar(vistoriaId, ambiente, tipo, arquivo, quantidadeAtual) {
+    return this._preparar(tipo, arquivo, quantidadeAtual, 'ambiente',
+      bytes => Api.enviarMidia(vistoriaId, ambiente, tipo, bytes));
+  },
+
+  // O imóvel só aceita foto, então `tipo` não é parâmetro aqui.
+  enviarDoImovel(imovelId, arquivo, quantidadeAtual) {
+    return this._preparar('foto', arquivo, quantidadeAtual, 'imóvel',
+      bytes => Api.enviarMidiaImovel(imovelId, bytes));
   },
 
   // Abre a câmera num <video> já existente na página. Devolve false quando não

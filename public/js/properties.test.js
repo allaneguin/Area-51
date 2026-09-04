@@ -74,4 +74,105 @@ assert.deepStrictEqual(
   'clearAll precisa zerar todos os caches'
 );
 
-console.log('ok — properties: vínculo imóvel/contrato + status derivado + clearAll');
+// ── Foto do imóvel: capa e estado vazio ─────────────────────────────────
+// A faixa do cartão tem dois estados e nenhum meio-termo: foto quando existe
+// capa, inicial quando não existe. Inventar uma imagem de exemplo faria o
+// cartão mentir sobre um dado que o usuário não cadastrou.
+global.Midias = load('midias.js', 'Midias');
+
+// O cache vive no Storage, junto dos outros: é `clearAll()` que descarta os
+// dados do usuário anterior, e um cache fora dele seria o único a sobreviver
+// à troca de conta.
+Storage.propertyMediaCache = [
+  { id: 'm2', property_id: 'p1', capa: false },
+  { id: 'm1', property_id: 'p1', capa: true },
+];
+
+assert.deepStrictEqual(
+  PropertiesView.fotosDe('p1').map(f => f.id), ['m1', 'm2'],
+  'a capa vem primeiro, venha o array na ordem que vier do servidor'
+);
+assert.deepStrictEqual(PropertiesView.fotosDe('p3'), [], 'imóvel sem foto devolve lista vazia');
+
+const comFoto = PropertiesView.capa({ id: 'p1', name: 'Residencial Flores' });
+assert.ok(comFoto.includes('/api/midias/m1/arquivo'), 'a faixa mostra a foto marcada como capa');
+assert.ok(comFoto.includes('<img'), 'e mostra como imagem de verdade');
+
+const semFoto = PropertiesView.capa({ id: 'p3', name: 'Residencial Flores' });
+assert.ok(!semFoto.includes('<img'), 'sem foto não inventa imagem');
+assert.ok(semFoto.includes('>R<'), 'sem foto continua a inicial — o estado vazio honesto que já existia');
+
+// XSS pela porta dos fundos: o id vem do servidor, mas a inicial vem do nome
+// que o usuário digitou.
+const bravo = PropertiesView.capa({ id: 'p9', name: '<img src=x onerror=alert(1)>' });
+assert.ok(!bravo.includes('<img'), 'nome com HTML não vira tag na faixa');
+
+// A foto é o dado mais visualmente óbvio de um vazamento entre contas: se o
+// cache sobreviver ao logout, B abre Imóveis e vê a casa de A.
+Storage.clearAll();
+assert.deepStrictEqual(Storage.propertyMediaCache, [],
+  'clearAll precisa descartar as fotos dos imóveis também');
+
+// ── O cartão inteiro, montado ───────────────────────────────────────────
+// `capa()` e `fotosDe()` passando não provam que o cartão monta: a faixa de
+// miniaturas é construída dentro do `map`, e erro ali só aparece renderizando.
+Storage.propertiesCache = [
+  { id: 'p1', name: 'Residencial Flores, casa 4', address: 'Rua dos Garis', rent_value: 15000, status: 'Disponível' }
+];
+Storage.propertyMediaCache = [
+  { id: 'm1', property_id: 'p1', capa: true },
+  { id: 'm2', property_id: 'p1', capa: false },
+];
+const alvo = { innerHTML: '' };
+PropertiesView.render(alvo);
+
+assert.ok(alvo.innerHTML.includes('/api/midias/m1/arquivo'), 'a capa entrou na faixa do cartão');
+assert.ok(alvo.innerHTML.includes('/api/midias/m2/arquivo'), 'a segunda foto virou miniatura');
+assert.ok(alvo.innerHTML.includes("escolherFoto('p1')"), 'o cartão oferece anexar foto');
+assert.ok(alvo.innerHTML.includes("definirCapa('m2')"), 'a foto que não é capa oferece virar capa');
+assert.ok(!alvo.innerHTML.includes("definirCapa('m1')"), 'a que já é capa não oferece virar capa de novo');
+assert.ok(alvo.innerHTML.includes('id="prop-foto-arquivo"'), 'o seletor de arquivo existe na tela');
+
+// ── Painel "Ver": o que a lista esconde, e o que depende do imóvel ──────
+Storage.propertiesCache = [{
+  id: 'p1', name: 'Residencial Flores, casa 4', address: 'Rua dos Garis, Cáceres - MT',
+  cep: '78200-000', type: 'Residencial', bedrooms: 1, bathrooms: 1, parking: 0, area: 50,
+  rent_value: 15000, iptu_value: 120, condo_value: 0, status: 'Disponível',
+  notes: 'Portão novo instalado em março'
+}];
+Storage.contractsCache = [
+  { id: 'c1', name: 'Contrato Maria', fields: { property_id: 'p1', nome_locatario: 'Maria Souza', data_inicio: emDias(-30), data_termino: emDias(300) } }
+];
+Storage.financialRecordsCache = [
+  { id: 'f1', contract_id: 'c1', rent_value: 15000, status: 'Pago' },
+  { id: 'f2', contract_id: 'c1', rent_value: 15000, status: 'Pendente' },
+];
+Storage.inspectionsCache = [{ id: 'v1', property_id: 'p1', tipo: 'Entrada', status: 'Fechada', inspected_on: '2026-03-10' }];
+Storage.propertyMediaCache = [{ id: 'm1', property_id: 'p1', capa: true }];
+
+const painel = PropertiesView.detalhe('p1');
+
+// O motivo do painel existir: estes quatro não cabem no cartão e hoje só
+// aparecem para quem clica em "Editar" — que é arriscar mexer sem querer.
+assert.ok(painel.includes('78200-000'), 'o CEP aparece');
+assert.ok(painel.includes('Portão novo instalado em março'), 'as observações aparecem');
+assert.ok(painel.includes('120,00'), 'o IPTU aparece formatado');
+assert.ok(painel.includes('Residencial'), 'o tipo aparece');
+
+// E o que depende do imóvel — a pergunta "posso excluir isso?".
+assert.ok(painel.includes('Maria Souza'), 'o inquilino do contrato aparece');
+assert.ok(painel.includes('Entrada'), 'a vistoria aparece');
+assert.ok(painel.includes('/api/midias/m1/arquivo'), 'a foto aparece');
+assert.ok(painel.includes('15.000,00'), 'o recebido soma só o que foi pago');
+
+// Imóvel sem nada vinculado não pode mostrar seção vazia sem explicação.
+Storage.propertiesCache.push({ id: 'p2', name: 'Sala 12', address: 'Centro' });
+const vazio = PropertiesView.detalhe('p2');
+assert.match(vazio, /nenhum contrato|sem contrato/i, 'diz que não há contrato, em vez de deixar o espaço em branco');
+
+// A observação é texto digitado pelo usuário: é por ali que HTML entra.
+Storage.propertiesCache.push({ id: 'p9', name: 'Casa', address: 'Rua', notes: '<img src=x onerror=alert(1)>' });
+const perigo = PropertiesView.detalhe('p9');
+assert.ok(!perigo.includes('<img src=x'), 'observação com HTML não vira tag');
+
+console.log('ok — properties: vínculo imóvel/contrato + status derivado + clearAll + capa do imóvel');

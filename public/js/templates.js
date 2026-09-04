@@ -25,6 +25,60 @@ const Templates = {
     window.location.hash = '#editor?id=' + c.id;
   },
 
+  // ── Painel "Ver" ───────────────────────────────────────────────────────
+  //
+  // O cartão dá duas linhas de resumo e o locador escolhe no escuro: só
+  // descobre o que o modelo diz depois de criar um contrato com ele. Aqui ele
+  // lê as cláusulas e vê quais campos vai ter de preencher, antes de decidir.
+  detalhe(id) {
+    const t = Contracts[id];
+    if (!t) return '';
+
+    const n = this.usos(id);
+
+    // Campos agrupados por seção, na ordem em que o formulário os pede.
+    const secoes = [];
+    for (const f of (t.fields || [])) {
+      const atual = secoes[secoes.length - 1];
+      if (atual && atual.nome === f.section) atual.campos.push(f.label);
+      else secoes.push({ nome: f.section, campos: [f.label] });
+    }
+
+    return `
+      <p class="detalhe-resumo">${Utils.esc(t.description || '')}</p>
+      <p>
+        <span class="badge badge-${Utils.esc(t.color || 'blue')}">${Utils.esc(t.category || '')}</span>
+        <span class="text-muted" style="font-size:12px; margin-left:8px;">
+          ${n ? `${n} contrato${n === 1 ? '' : 's'} criado${n === 1 ? '' : 's'} com este modelo` : 'ainda não usado'}
+        </span>
+      </p>
+
+      <h4 class="detalhe-secao">O que ele vai pedir (${(t.fields || []).length} campos)</h4>
+      <dl class="detalhe-lista">
+        ${secoes.map(s => Utils.linhaDetalhe(s.nome, s.campos.join(' · '))).join('')}
+      </dl>
+
+      <h4 class="detalhe-secao">As cláusulas</h4>
+      <!-- HTML do próprio app (data/contracts.js), o MESMO que o editor já
+           renderiza — não é texto vindo de fora. Os campos aparecem como os
+           tracinhos que o editor preenche. -->
+      <div class="detalhe-clausulas">${t.template || ''}</div>
+    `;
+  },
+
+  verDetalhe(id) {
+    const t = Contracts[id];
+    if (!t) return;
+    document.getElementById('modelo-detalhe-titulo').textContent = t.title || 'Modelo';
+    document.getElementById('modelo-detalhe-corpo').innerHTML = this.detalhe(id);
+    document.getElementById('modelo-detalhe-usar').setAttribute('href', '#editor?template=' + encodeURIComponent(id));
+    document.getElementById('modelo-detalhe').style.display = 'flex';
+  },
+
+  fecharDetalhe() {
+    document.getElementById('modelo-detalhe').style.display = 'none';
+  },
+
   render(container) {
     const templates = Object.values(Contracts);
 
@@ -54,6 +108,8 @@ const Templates = {
               <span class="text-muted" style="font-size:12px;">${n ? `${n} contrato${n === 1 ? '' : 's'}` : 'ainda não usado'}</span>
             </div>
             <a class="btn btn-primary btn-block" href="#editor?template=${Utils.esc(t.id)}">Usar este modelo</a>
+            <button type="button" class="btn btn-secondary btn-block" style="margin-top:8px;"
+              onclick="Templates.verDetalhe('${Utils.esc(t.id)}')">Ver as cláusulas</button>
             ${Utils.ehLocal() ? `<button type="button" class="btn btn-secondary btn-block" style="margin-top:8px;"
               onclick="Templates.contratoDeTeste('${Utils.esc(t.id)}')">Contrato de teste (preenchido)</button>` : ''}
           </div>
@@ -71,6 +127,19 @@ const Templates = {
           <div class="modelo-titulo">Precisa de algo diferente?</div>
           <p class="card-body">A minuta simples abre praticamente em branco: dá para escrever as cláusulas do zero e ainda usar a assinatura e o link do inquilino.</p>
           <a class="btn btn-secondary" style="align-self:flex-start;" href="#editor?template=locacao_simples">Começar pela minuta</a>
+        </div>
+      </div>
+
+      <!-- Painel de leitura. O corpo é montado no clique: as cláusulas dos três
+           modelos a cada render seriam páginas de HTML para ler nenhuma. -->
+      <div id="modelo-detalhe" class="modal-backdrop">
+        <div class="modal-card modal-card-lg">
+          <h3 id="modelo-detalhe-titulo">Modelo</h3>
+          <div id="modelo-detalhe-corpo"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="Templates.fecharDetalhe()">Fechar</button>
+            <a class="btn btn-primary" id="modelo-detalhe-usar" href="#templates">Usar este modelo</a>
+          </div>
         </div>
       </div>
     `;
