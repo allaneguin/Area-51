@@ -1,0 +1,1180 @@
+// ═══════════════════════════════════════════════════════
+// Utilitários — Máscaras, formatação, validação, DOM helpers
+// ═══════════════════════════════════════════════════════
+
+const Utils = {
+  // ── Máscaras de Input ──
+  maskCPF(v) {
+    return v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2')
+      .replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2').slice(0,14);
+  },
+  maskCNPJ(v) {
+    return v.replace(/\D/g,'').replace(/^(\d{2})(\d)/,'$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/,'.$1/$2')
+      .replace(/(\d{4})(\d)/,'$1-$2').slice(0,18);
+  },
+  maskCPFCNPJ(v) {
+    const digits = v.replace(/\D/g,'');
+    return digits.length <= 11 ? Utils.maskCPF(v) : Utils.maskCNPJ(v);
+  },
+  maskCurrency(v) {
+    let d = String(v || '').replace(/\D/g,'');
+    if (!d) return 'R$ 0,00';
+    d = (parseInt(d) / 100).toFixed(2);
+    return 'R$ ' + d.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  },
+  // Formata um valor em REAIS. Todo call site passa reais: número do JS
+  // (soma, reajuste) ou coluna `numeric` do Postgres.
+  //
+  // O PostgREST serializa `numeric` como STRING ("2450.00") para não perder
+  // precisão. A versão anterior mandava toda string para `maskCurrency`, que é
+  // a máscara de DIGITAÇÃO e lê os dígitos como CENTAVOS: um aluguel de 2450
+  // virava "R$ 24,50" no cartão do imóvel, no <option> do editor e, pior, no
+  // campo que é copiado para dentro do contrato. Cem vezes menor, em dinheiro.
+  formatCurrency(val) {
+    const n = Utils.toReais(val);
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+
+  // Converte para número de reais o que chega das três origens possíveis:
+  // número do JS, decimal do Postgres ("2450.00") e string já formatada em
+  // pt-BR ("R$ 2.450,00"). A vírgula é o que decide: quando ela existe, o ponto
+  // é separador de milhar; quando não, o ponto é o separador decimal do SQL.
+  toReais(val) {
+    if (typeof val === 'number') return isFinite(val) ? val : 0;
+    let t = String(val == null ? '' : val).replace(/[R$\s ]/g, '');
+    if (!t) return 0;
+    t = t.indexOf(',') >= 0 ? t.replace(/\./g, '').replace(',', '.') : t;
+    const n = parseFloat(t);
+    return isFinite(n) ? n : 0;
+  },
+
+  // ── Formatação ──
+  formatDate(date) {
+    if (!date) return '';
+    // "2026-05-28" (sem hora) é interpretado como UTC pelo Date e, em qualquer fuso
+    // negativo — ou seja, no Brasil inteiro — voltava um dia ao formatar (27/05/2026).
+    // Ancorar no fuso local resolve. Timestamps completos seguem o caminho normal.
+    const isDateOnly = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const d = new Date(isDateOnly ? date + 'T00:00:00' : date);
+    return d.toLocaleDateString('pt-BR');
+  },
+  formatRelativeDate(date) {
+    const now = new Date();
+    const d = new Date(date);
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return Math.floor(diff/60) + ' min atrás';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h atrás';
+    if (diff < 604800) return Math.floor(diff/86400) + 'd atrás';
+    return Utils.formatDate(date);
+  },
+
+  // ── Validação ──
+  // Locador é PJ? Vale a escolha explícita do perfil; sem ela, infere pelo
+  // documento (mais de 11 dígitos = CNPJ).
+  isPJLocador(fields) {
+    fields = fields || {};
+    if (fields.tipo_locador) return fields.tipo_locador === 'pj';
+    return (fields.doc_locador || '').replace(/\D/g, '').length > 11;
+  },
+  isValidCPF(cpf) {
+    cpf = cpf.replace(/\D/g,'');
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+    let rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    if (rest !== parseInt(cpf[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+    rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    return rest === parseInt(cpf[10]);
+  },
+
+  isValidCNPJ(cnpj) {
+    cnpj = (cnpj || '').replace(/\D/g, '');
+    if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+    const digito = (base) => {
+      // pesos do CNPJ: 5..2,9..2 para o 1º dígito; 6,5..2,9..2 para o 2º
+      let peso = base.length - 7;
+      let sum = 0;
+      for (let i = 0; i < base.length; i++) {
+        sum += parseInt(base[i]) * peso--;
+        if (peso < 2) peso = 9;
+      }
+      const rest = sum % 11;
+      return rest < 2 ? 0 : 11 - rest;
+    };
+    if (digito(cnpj.slice(0, 12)) !== parseInt(cnpj[12])) return false;
+    return digito(cnpj.slice(0, 13)) === parseInt(cnpj[13]);
+  },
+
+  // ── Aplicar Máscaras em Inputs ──
+  applyMask(input, maskType) {
+    input.addEventListener('input', () => {
+      let fnName = 'mask' + maskType.charAt(0).toUpperCase() + maskType.slice(1);
+      if (maskType.toLowerCase() === 'cpfcnpj') fnName = 'maskCPFCNPJ';
+
+      const fn = Utils[fnName];
+      if (fn) {
+        const oldVal = input.value;
+        const newVal = fn(oldVal);
+        if (oldVal !== newVal) {
+          input.value = newVal;
+        }
+      }
+    });
+  },
+
+  // ── Pad de assinatura manuscrita (canvas) — usado pelo locador e pelo inquilino ──
+  // onChange(dataUrl) roda a cada traço solto; quem chama decide onde salvar
+  // (contract.fields.assinatura_locador ou .assinatura_locatario).
+  wireSignaturePad(canvas, placeholder, initialDataUrl, onChange) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let hasDrawn = false;
+
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && canvas.width !== rect.width) {
+        canvas.width = rect.width;
+        canvas.height = 150;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#143A66';
+      }
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    if (initialDataUrl) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        if (placeholder) placeholder.style.display = 'none';
+        hasDrawn = true;
+      };
+      img.src = initialDataUrl;
+    }
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => {
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      if (placeholder) placeholder.style.display = 'none';
+    };
+
+    const moveDraw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      hasDrawn = true;
+    };
+
+    const stopDraw = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (hasDrawn) onChange(canvas.toDataURL('image/png'));
+    };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+  },
+
+  clearSignaturePad(canvas, placeholder) {
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    if (placeholder) placeholder.style.display = 'flex';
+  },
+
+  // ── Tema claro/escuro ──
+  // O tema inicial é aplicado por um script inline no <head> (evita flash).
+  // Aqui só alternamos e persistimos a escolha.
+  toggleTheme() {
+    const el = document.documentElement;
+    const isDark = el.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      el.removeAttribute('data-theme');
+    } else {
+      el.setAttribute('data-theme', 'dark');
+    }
+    try {
+      localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    } catch (e) { /* localStorage bloqueado: tema vale só nesta sessão */ }
+  },
+
+  // ── Escape HTML (previne XSS em interpolação para innerHTML) ──
+  esc(v) {
+    if (v == null) return '';
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+  // Uma linha "rótulo: valor" dos painéis "Ver" de imóvel, cliente e modelo.
+  // Vive aqui porque as três telas mostram a mesma coisa da mesma forma, e três
+  // cópias divergiriam na primeira vez que alguém mexesse numa delas. Campo em
+  // branco vira travessão: espaço vazio deixa dúvida se é "não preenchido" ou
+  // se a tela quebrou.
+  linhaDetalhe(rotulo, valor) {
+    const vazio = valor === null || valor === undefined || valor === '';
+    return `<div class="detalhe-linha">
+      <dt>${this.esc(rotulo)}</dt>
+      <dd>${vazio ? '<span class="text-muted">—</span>' : this.esc(valor)}</dd>
+    </div>`;
+  },
+
+  // ── Imagem vinda de dado não confiável ──────────────────────────────────
+  // Regra canônica: só as três formas que o próprio fluxo gera (canvas
+  // .toDataURL e câmera). SVG fica de fora de propósito — carrega script.
+  // CloudDB usa este mesmo regex ao sanitizar o payload na entrada.
+  IMG_DATA_URL_OK: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]*={0,2}$/,
+
+  // Monta a tag <img> recusando o que não for imagem legítima. É a segunda
+  // camada: CloudDB barra na entrada, isto protege o que já estava gravado
+  // antes daquela checagem existir — o editor renderiza a partir do Storage,
+  // não do decrypt. Sem CSP de rede (o app depende de ~85 handlers inline),
+  // uma camada só é uma a menos do que o problema exige.
+  imgSeguro(dataUrl, alt, style) {
+    if (typeof dataUrl !== 'string') return '';
+    if (!Utils.IMG_DATA_URL_OK.test(dataUrl)) return '';
+    // Clicar amplia. O handler recebe o ELEMENTO (`this`), nunca a URL: a
+    // selfie tem ~30 KB de base64, e enfiar isso dentro de um atributo onclick
+    // seria enorme e ainda faria dado do inquilino virar código.
+    return `<img src="${dataUrl}" alt="${Utils.esc(alt || '')}"` +
+      ` style="${Utils.esc(style || '')}" class="img-ampliavel"` +
+      ` title="Clique para ampliar" onclick="Utils.ampliarImagem(this)">`;
+  },
+
+  // ── Ampliar uma imagem em tela cheia ────────────────────────────────────
+  //
+  // A selfie de validação sai com 100px de altura no certificado — tamanho de
+  // documento impresso, não de conferência. Quem precisa comparar o rosto com o
+  // documento na mão precisa ver grande, e a folha não pode crescer por isso.
+  //
+  // Recebe o <img> clicado, não a URL: assim serve para a selfie e a rubrica
+  // (data: URL de 30 KB) e para a foto de vistoria (rota autenticada) sem que o
+  // chamador precise saber a diferença.
+  ampliarImagem(el) {
+    if (!el || !el.src) return;
+
+    let caixa = document.getElementById('zoom-imagem');
+    if (!caixa) {
+      caixa = document.createElement('div');
+      caixa.id = 'zoom-imagem';
+      caixa.className = 'modal-backdrop zoom-backdrop';
+      // Clicar em qualquer lugar fecha — inclusive na própria imagem. Não há o
+      // que fazer aqui além de olhar e sair.
+      caixa.onclick = () => Utils.fecharZoom();
+      document.body.appendChild(caixa);
+    }
+
+    caixa.innerHTML = `<img src="${el.src}" alt="${Utils.esc(el.alt || '')}" class="zoom-img">`;
+    caixa.style.display = 'flex';
+
+    // Esc fecha, e o ouvinte se remove sozinho: sobrar ouvinte em documento que
+    // re-renderiza a cada clique é vazamento silencioso.
+    Utils._zoomEsc = (e) => { if (e.key === 'Escape') Utils.fecharZoom(); };
+    document.addEventListener('keydown', Utils._zoomEsc);
+  },
+
+  fecharZoom() {
+    const caixa = document.getElementById('zoom-imagem');
+    if (caixa) { caixa.style.display = 'none'; caixa.innerHTML = ''; }
+    if (Utils._zoomEsc) {
+      document.removeEventListener('keydown', Utils._zoomEsc);
+      Utils._zoomEsc = null;
+    }
+  },
+
+  // ── Lista branca do que o inquilino escreve ─────────────────────────────
+  // Campos que ele preenche legitimamente mas que NÃO estão declarados como
+  // seção 'Locatário' no modelo: assinatura, selfie e a trilha do aceite.
+  // assinatura_locador ficou de fora de propósito — é do outro lado.
+  CAMPOS_EXTRA_DO_INQUILINO: [
+    'assinatura_locatario', 'selfie_locatario',
+    'aceite_ts', 'aceite_hash', 'ip_acesso',
+    'geo_lat', 'geo_lng', 'geo_acc', 'user_agent'
+  ],
+
+  // O payload do link é montado no navegador do inquilino: é dado hostil (R5.4).
+  // A regra "só a seção Locatário" existia apenas no filtro de renderização da
+  // tela dele — quem abrisse o console reescrevia conta bancária, valor e prazo
+  // do locador, e a sincronização gravava isso no painel dele sem um clique.
+  // Aqui a regra vale na INGESTÃO, que é onde ela decide alguma coisa.
+  mesclarCamposDoInquilino(locais, doInquilino, templateId, evidencia) {
+    const tpl = (typeof Contracts !== 'undefined' && Contracts[templateId]) || null;
+    const permitidos = new Set([
+      ...(tpl ? tpl.fields
+        .filter(f => (f.section || '').toLowerCase() === 'locatário')
+        .map(f => f.name) : []),
+      ...Utils.CAMPOS_EXTRA_DO_INQUILINO
+    ]);
+
+    const saida = Object.assign({}, locais || {});
+    Object.keys(doInquilino || {}).forEach(k => {
+      if (permitidos.has(k)) saida[k] = doInquilino[k];
+    });
+
+    // Carimbo do servidor (migration 003). Entra DEPOIS da lista branca e
+    // sempre vence: são os únicos campos da trilha que quem assina não redige.
+    // Os nomes ficam fora de CAMPOS_EXTRA_DO_INQUILINO de propósito — assim um
+    // "aceite_ts_servidor" forjado no payload é descartado acima.
+    if (evidencia && evidencia.em) {
+      saida.aceite_ts_servidor = evidencia.em;
+      saida.ip_servidor = evidencia.ip || '';
+    }
+    return saida;
+  },
+
+  // ── Toast (feedback não-bloqueante, substitui alert) ──
+  toast(msg, type = 'success') {
+    let box = document.getElementById('toast-box');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toast-box';
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(() => el.classList.add('toast-out'), 4500);
+    setTimeout(() => el.remove(), 4900);
+  },
+
+  // ── Número por extenso (1..99) ──
+  // ponytail: 1..99 cobre o universo real de um prazo de locação.
+  // Se um dia precisar de 100+, reaproveitar o convertGroup de writeBRLInWords.
+  numeroPorExtenso(n) {
+    n = parseInt(n, 10);
+    if (!n || n < 1 || n > 99) return '';
+
+    const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+    const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+    const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+
+    const t = Math.floor(n / 10);
+    const u = n % 10;
+
+    if (t === 0) return units[u];
+    if (t === 1) return teens[u];
+    return u > 0 ? tens[t] + ' e ' + units[u] : tens[t];
+  },
+
+  // ── Prazo -> frase do contrato: (18,'meses') => "18 (dezoito) meses" ──
+  prazoPorExtenso(qtd, unidade) {
+    const n = parseInt(qtd, 10);
+    const extenso = Utils.numeroPorExtenso(n);
+    if (!extenso) return '';
+
+    const emAnos = unidade === 'anos';
+    const substantivo = emAnos ? (n === 1 ? 'ano' : 'anos') : (n === 1 ? 'mês' : 'meses');
+    return `${String(n).padStart(2, '0')} (${extenso}) ${substantivo}`;
+  },
+
+  // ── Quantos meses dura o contrato ──
+  // O select por extenso manda ("30 (trinta) meses..." -> 30). Em "personalizado"
+  // o parse dá NaN de propósito e quem vale é a quantidade digitada + a unidade.
+  mesesDoContrato(fields) {
+    fields = fields || {};
+    let meses = parseInt(fields.prazo_extenso, 10);
+    if (!isNaN(meses) && meses > 0) return meses;
+
+    const qtd = parseInt(fields.prazo_meses, 10);
+    if (isNaN(qtd) || qtd <= 0) return 0;
+    return fields.prazo_unidade === 'anos' ? qtd * 12 : qtd;
+  },
+
+  // ── Data de término, derivada de data_inicio + prazo ──
+  // Fonte única: o editor grava o resultado em fields.data_termino ao digitar
+  // (evento de mudança do campo), e getContractStatus recorre a esta mesma
+  // conta quando esse campo nunca chegou a ser escrito — o que acontece para
+  // todo contrato salvo sem esse evento disparar (ex.: campos preenchidos por
+  // vínculo de imóvel), mesmo com prazo válido.
+  calcularDataTermino(fields) {
+    const inicio = fields && fields.data_inicio;
+    const meses = Utils.mesesDoContrato(fields);
+    if (!inicio || !(meses > 0)) return null;
+
+    const d = new Date(inicio + 'T12:00:00Z');
+    d.setMonth(d.getMonth() + meses);
+    d.setDate(d.getDate() - 1); // Ex: começa 01/06/2020, termina 31/05/2021
+
+    const ano = d.getUTCFullYear();
+    const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(d.getUTCDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  },
+
+  // Vencimento do aluguel num mês (AAAA-MM).
+  //
+  // Duas correções sobre o "dia 10" que estava cravado na geração de cobranças:
+  // o dia sai do CONTRATO (o inquilino assinou aquele dia, não o 10), e a
+  // cobrança nunca vence antes do início da locação — um contrato que começa
+  // dia 27 ganhava, no mesmo mês, uma cobrança vencida em 10, atrasada no
+  // instante em que nascia. Dia 31 em mês curto cai no último dia do mês.
+  vencimentoDoMes(fields, anoMes) {
+    fields = fields || {};
+    const dia = Math.min(Math.max(parseInt(fields.dia_vencimento, 10) || 10, 1), 31);
+    const [ano, mes] = anoMes.split('-').map(Number);
+    const ultimoDia = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+    const data = `${anoMes}-${String(Math.min(dia, ultimoDia)).padStart(2, '0')}`;
+    // Comparação de texto basta: ISO ordena como data.
+    return fields.data_inicio && data < fields.data_inicio ? fields.data_inicio : data;
+  },
+
+  // ── Base dos links compartilháveis (inquilino/importação) ──
+  // Em produção usa o atalho /c (rota em `server/index.js`): o link fica curto
+  // e sem "app.html" no meio, o que lê melhor no WhatsApp. Rodando local
+  // (file:// ou localhost) mantém o caminho real.
+  shareBaseUrl(loc) {
+    loc = loc || window.location;
+    return Utils.ehLocal(loc) ? loc.href.split('#')[0] : loc.origin + '/c';
+  },
+
+  // Rodando na máquina de quem desenvolve? Decide o formato do link do
+  // inquilino e a exibição do botão de contrato de teste — ferramenta de teste
+  // no painel de um locador de verdade é dado falso esperando ser confundido.
+  ehLocal(loc) {
+    loc = loc || window.location;
+    return loc.protocol === 'file:' || /^(localhost|127\.|\[?::1)/.test(loc.hostname);
+  },
+
+  // ── Modal de Compartilhamento do Link (Substitui prompt nativo no celular) ──
+  // opts.titulo/opts.descricao: o inquilino usa o mesmo modal para devolver o
+  // link ao locador, onde o sentido da frase é o inverso.
+  showShareModal(url, opts) {
+    const titulo = (opts && opts.titulo) || 'Link do Inquilino Gerado!';
+    const descricao = (opts && opts.descricao) || 'Envie este link para o inquilino preencher os dados e assinar:';
+    let copied = false;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(() => {
+        copied = true;
+        Utils.toast('Link seguro copiado para a área de transferência!', 'success');
+      }).catch(() => {});
+    }
+
+    const oldModal = document.getElementById('app-share-modal');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'app-share-modal';
+    modal.className = 'share-modal-overlay';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;';
+
+    modal.innerHTML = `
+      <div style="background:var(--card-bg, #FFFFFF); border:1px solid var(--border-light, #CBD5E1); border-radius:16px; max-width:440px; width:100%; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2); text-align:center; animation: fadeInScale 0.2s ease-out;">
+        <div style="width:48px; height:48px; border-radius:12px; background:var(--primary-light, #EFF6FF); color:var(--primary, #1E40AF); display:grid; place-items:center; margin:0 auto 16px;">
+          <svg style="width:24px; height:24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+        </div>
+        <h3 style="font-size:1.15rem; font-weight:700; color:var(--text-main, #0F172A); margin:0 0 6px;">${Utils.esc(titulo)}</h3>
+        <p style="font-size:0.875rem; color:var(--text-muted, #64748B); margin:0 0 16px; line-height:1.4;">
+          ${copied ? 'O link foi copiado! Você também pode compartilhá-lo ou copiá-lo abaixo:' : Utils.esc(descricao)}
+        </p>
+
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+          <input type="text" readonly id="share-modal-input" value="${Utils.esc(url)}"
+            style="flex:1; font-size:0.85rem; padding:10px 12px; border:1px solid var(--input-border); border-radius:8px; background:var(--input-bg); color:var(--text-main); outline:none;"
+            onclick="this.select()">
+          <button type="button" class="btn btn-primary" style="padding:10px 16px; font-size:0.85rem; white-space:nowrap;"
+            onclick="Utils.copyInput('share-modal-input')">
+            Copiar
+          </button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${navigator.share ? `
+            <button type="button" class="btn btn-whatsapp" style="width:100%; justify-content:center; padding:12px; font-size:0.9rem;"
+              data-share-url="${Utils.esc(url)}"
+              onclick="navigator.share({ title: 'Contrato de Locação', text: 'Olá! Por favor, preencha seus dados para o contrato de locação:', url: this.getAttribute('data-share-url') }).catch(() => {})">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+              Compartilhar no WhatsApp / Apps
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-secondary" style="width:100%; justify-content:center; padding:10px; font-size:0.85rem;"
+            onclick="document.getElementById('app-share-modal').remove()">
+            Fechar
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('share-modal-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  },
+
+  copyInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.focus();
+    input.select();
+    try {
+      document.execCommand('copy');
+      Utils.toast('Link copiado para a área de transferência!', 'success');
+    } catch (e) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          Utils.toast('Link copiado para a área de transferência!', 'success');
+        });
+      }
+    }
+  },
+
+  // ── Dados do locatário exibidos na lista e no editor (uma fonte só) ──
+  // O aluguel NÃO entra na grade: é o número que se procura primeiro, então vive
+  // no cabeçalho de quem chama (lista, resumo do editor, painel de admin).
+  dadosClienteHTML(fields, createdAt) {
+    fields = fields || {};
+    const dataCriacao = createdAt ? Utils.formatDate(createdAt) : '';
+    const inicio = fields.data_inicio ? Utils.formatDate(fields.data_inicio) : '';
+    const termino = fields.data_termino ? Utils.formatDate(fields.data_termino) : '';
+    // Início sozinho é o primeiro dia da vigência: mostrar os dois repetia a data.
+    const vigencia = inicio && termino ? `${inicio} a ${termino}` : inicio;
+
+    const itens = [
+      dataCriacao && ['Iniciado em', dataCriacao],
+      fields.doc_locatario && ['CPF/CNPJ', Utils.maskCPFCNPJ(fields.doc_locatario)],
+      fields.rg_locatario && ['RG', fields.rg_locatario],
+      fields.prof_locatario && ['Profissão', fields.prof_locatario],
+      fields.est_civil_locatario && ['Estado civil', fields.est_civil_locatario],
+      vigencia && ['Vigência', vigencia],
+      fields.dia_vencimento && ['Vencimento', `todo dia ${fields.dia_vencimento}`],
+      fields.indice_reajuste && ['Reajuste', fields.indice_reajuste],
+      // O endereço é o valor mais longo da grade: ocupa duas colunas para não
+      // virar "Rua Doutor Nelson de Sena, …" e esconder o que identifica o imóvel.
+      fields.end_imovel && ['Imóvel', fields.end_imovel, true]
+    ].filter(Boolean);
+
+    // Aceite: única informação com peso jurídico aqui, então sai da grade e ganha
+    // linha própria. Prefere o carimbo do servidor (migration 003); o aceite_ts é
+    // escrito pelo próprio signatário e só vale como referência de tela — quando é
+    // ele que aparece, o selo diz isso e muda de cor.
+    const verificado = !!fields.aceite_ts_servidor;
+    const carimbo = new Date(fields.aceite_ts_servidor || fields.aceite_ts || '');
+    const aceite = isNaN(carimbo) ? '' : `
+      <div class="aceite-selo${verificado ? '' : ' aceite-selo-alerta'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="${verificado
+              ? 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
+              : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}"></path>
+        </svg>
+        <span class="aceite-texto">
+          <strong>Aceite do inquilino</strong>
+          <span class="aceite-quando">${Utils.esc(carimbo.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}</span>
+          ${verificado ? '' : '<span class="aceite-aviso">horário do aparelho do inquilino — não verificado</span>'}
+        </span>
+        ${fields.aceite_hash ? `<span class="aceite-doc" title="Impressão digital do documento aceito">doc ${Utils.esc(fields.aceite_hash.slice(0, 12))}…</span>` : ''}
+      </div>`;
+
+    if (!itens.length && !aceite) return '';
+
+    // Escape obrigatório: estes dados vêm do INQUILINO (anônimo) e vão para innerHTML.
+    // O title repete o valor inteiro — o que a coluna corta aparece no hover.
+    return `<div class="cliente-detalhes">` + itens.map(([rotulo, valor, largo]) => `
+      <div class="cliente-detalhe${largo ? ' cliente-detalhe-largo' : ''}">
+        <span class="cliente-detalhe-rotulo">${rotulo}</span>
+        <span class="cliente-detalhe-valor" title="${Utils.esc(String(valor))}">${Utils.esc(String(valor))}</span>
+      </div>
+    `).join('') + `</div>` + aceite;
+  },
+
+  // ── IDs ──
+  generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  },
+
+  // ── Obter Status do Contrato ──
+  getContractStatus(contract) {
+    if (!contract || !contract.fields) {
+      return { label: 'Pendente', class: 'badge-status-pending' };
+    }
+    
+    const inicio = contract.fields.data_inicio;
+    // Respaldo: contrato com prazo valido mas sem data_termino persistida
+    // (nunca disparou o evento de mudanca do campo no editor) deriva na hora.
+    const termino = contract.fields.data_termino || Utils.calcularDataTermino(contract.fields);
+
+    if (!inicio || !termino) {
+      return { label: 'Pendente', class: 'badge-status-pending' };
+    }
+    
+    // Obter data atual no fuso local sem horas
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    // Converter datas ISO (YYYY-MM-DD) para objetos Date
+    // Tratando no fuso local adicionando T00:00:00
+    const dataInicio = new Date(inicio + 'T00:00:00');
+    const dataTermino = new Date(termino + 'T23:59:59');
+    
+    if (hoje < dataInicio) {
+      return { label: 'A Iniciar', class: 'badge-status-future' };
+    } else if (hoje > dataTermino) {
+      return { label: 'Vencido', class: 'badge-status-expired' };
+    } else {
+      return { label: 'Ativo', class: 'badge-status-active' };
+    }
+  },
+
+  // ── Dinheiro BRL mascarado → número ──
+  // "R$ 2.450,00" -> 2450.00. Parser ÚNICO do sistema (era copiado em 4 lugares).
+  // Só para STRING mascarada (centavos embutidos nos 2 últimos dígitos);
+  // número já em reais NÃO passa aqui — /100 estragaria o valor.
+  parseMoneyBRL(v) {
+    if (!v) return 0;
+    const d = String(v).replace(/\D/g, '');
+    return d ? parseInt(d, 10) / 100 : 0;
+  },
+
+  // ── Escrever valor BRL por extenso ──
+  writeBRLInWords(amountStr) {
+    if (!amountStr) return '';
+    // Aceita número também (ex.: rent_value 1500 vindo do cadastro de imóvel).
+    // ATENÇÃO: número é tratado como REAIS; string mascarada tem os centavos embutidos.
+    if (typeof amountStr === 'number') amountStr = Utils.formatCurrency(amountStr);
+    const digits = String(amountStr).replace(/\D/g, '');
+    if (!digits || parseInt(digits) === 0) return '';
+    
+    const value = parseInt(digits) / 100;
+    const integerPart = Math.floor(value);
+    const centsPart = Math.round((value - integerPart) * 100);
+
+    const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+    const tens = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+    const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+    const hundreds = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+
+    function convertGroup(n) {
+      if (n === 0) return '';
+      if (n === 100) return 'cem';
+      
+      let out = [];
+      const h = Math.floor(n / 100);
+      const t = Math.floor((n % 100) / 10);
+      const u = n % 10;
+      
+      if (h > 0) out.push(hundreds[h]);
+      
+      if (t === 1) {
+        out.push(teens[u]);
+      } else {
+        if (t > 0) out.push(tens[t]);
+        if (u > 0) out.push(units[u]);
+      }
+      
+      return out.join(' e ');
+    }
+
+    let result = [];
+    let tempInt = integerPart;
+    const groups = [];
+    while (tempInt > 0) {
+      groups.push(tempInt % 1000);
+      tempInt = Math.floor(tempInt / 1000);
+    }
+    
+    const groupNamesSingular = ['real', 'mil', 'milhão', 'bilhão'];
+    const groupNamesPlural = ['reais', 'mil', 'milhões', 'bilhões'];
+    
+    if (integerPart > 0) {
+      for (let i = 0; i < groups.length; i++) {
+        const val = groups[i];
+        if (val === 0) continue;
+        
+        let text = convertGroup(val);
+        if (i === 1 && val === 1) {
+          text = 'mil';
+        } else {
+          const suffix = val === 1 ? groupNamesSingular[i] : groupNamesPlural[i];
+          text = text + ' ' + suffix;
+        }
+        groups[i] = text;
+      }
+      
+      const activeGroups = [];
+      for (let i = groups.length - 1; i >= 0; i--) {
+        if (groups[i]) {
+          activeGroups.push({ val: Math.floor(integerPart / Math.pow(1000, i)) % 1000, text: groups[i], idx: i });
+        }
+      }
+      
+      let intText = '';
+      for (let k = 0; k < activeGroups.length; k++) {
+        if (k > 0) {
+          const current = activeGroups[k];
+          if (k === activeGroups.length - 1 && (current.val < 100 || current.val % 100 === 0)) {
+            intText += ' e ';
+          } else {
+            intText += ' ';
+          }
+        }
+        intText += activeGroups[k].text;
+      }
+      
+      if (!groups[0]) {
+        const lowestIdx = activeGroups[activeGroups.length - 1].idx;
+        if (lowestIdx === 1) {
+          intText += ' reais';
+        } else if (lowestIdx > 1) {
+          intText += ' de reais';
+        }
+      }
+      result.push(intText);
+    }
+    
+    if (centsPart > 0) {
+      const centsText = convertGroup(centsPart) + (centsPart === 1 ? ' centavo' : ' centavos');
+      if (result.length > 0) {
+        result.push(' e ' + centsText);
+      } else {
+        result.push(centsText);
+      }
+    }
+    
+    return result.join('');
+  },
+
+  // ── Obter IP Público (com múltiplos provedores de fallback e timeout) ──
+  async getIP() {
+    const fetchWithTimeout = (url, parseFn, ms = 3000) => {
+      return Promise.race([
+        fetch(url).then(r => r.json()).then(parseFn),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+      ]);
+    };
+
+    try {
+      return await fetchWithTimeout('https://api.ipify.org?format=json', d => d.ip, 3500);
+    } catch (e1) {
+      try {
+        return await fetchWithTimeout('https://ipapi.co/json/', d => d.ip, 3500);
+      } catch (e2) {
+        return 'Não detectado (conexão/bloqueador)';
+      }
+    }
+  },
+
+  // ── Obter Coordenadas GPS (com permissão e timeout estendido) ──
+  getGPS() {
+    return new Promise(resolve => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          resolve({
+            lat: pos.coords.latitude.toFixed(6),
+            lng: pos.coords.longitude.toFixed(6),
+            acc: Math.round(pos.coords.accuracy)
+          });
+        },
+        (err) => {
+          console.warn("GPS não obtido:", err.message);
+          resolve(null);
+        },
+        { timeout: 8000, maximumAge: 300000, enableHighAccuracy: true }
+      );
+    });
+  },
+
+  // ── Consulta de Endereço por CEP (ViaCEP) ──
+  async fetchCEP(cep) {
+    if (!cep) return null;
+    const clean = String(cep).replace(/\D/g, '');
+    if (clean.length !== 8) return null;
+
+    const fetchWithTimeout = (url, ms = 4000) => {
+      return Promise.race([
+        fetch(url).then(r => {
+          if (!r.ok) throw new Error('Falha na consulta');
+          return r.json();
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ViaCEP')), ms))
+      ]);
+    };
+
+    try {
+      const data = await fetchWithTimeout(`https://viacep.com.br/ws/${clean}/json/`);
+      if (data && !data.erro) {
+        return {
+          logradouro: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+          enderecoCompleto: [data.logradouro, data.bairro ? `Bairro ${data.bairro}` : '', data.localidade && data.uf ? `${data.localidade} - ${data.uf}` : ''].filter(Boolean).join(', ')
+        };
+      }
+      return null;
+    } catch (e) {
+      console.warn("Erro ao buscar CEP no ViaCEP:", e);
+      return null;
+    }
+  },
+
+  // ── CEP → input de endereço ──
+  // Fluxo único (era copiado em editor, imóveis e inquilino): valida os 8
+  // dígitos, consulta o ViaCEP e só preenche se o alvo estiver vazio — o que
+  // o usuário já digitou tem prioridade. Devolve o endereço aplicado ou null.
+  async applyCEPToInput(cep, targetEl, msg) {
+    const clean = String(cep || '').replace(/\D/g, '');
+    if (clean.length !== 8 || !targetEl || targetEl.value.trim()) return null;
+    const data = await Utils.fetchCEP(clean);
+    if (!data || !data.enderecoCompleto) return null;
+    targetEl.value = data.enderecoCompleto;
+    Utils.toast(msg || 'Endereço preenchido pelo CEP — complete com o número.', 'info');
+    return data.enderecoCompleto;
+  },
+
+  // ── Preview do documento de contrato ──
+  // Preenche os .highlight, regras de PJ, texto de garantia e assinaturas a
+  // partir dos fields. COMPARTILHADO entre o editor do locador e a tela do
+  // inquilino — mudança no texto do contrato acontece só aqui.
+  // marcarVazio: 'borda' (editor, tracejado) ou 'classe' (inquilino, .filled).
+  updateContractPreview(prev, fields, template, marcarVazio) {
+    if (!prev) return;
+
+    prev.querySelectorAll('.highlight').forEach(el => {
+      const field = el.getAttribute('data-field');
+      let val = fields[field];
+
+      // "personalizado" é estado do formulário, não texto de contrato:
+      // o documento recebe a frase gerada a partir dos meses digitados.
+      if (field === 'prazo_extenso' && val === 'personalizado') {
+        val = Utils.prazoPorExtenso(fields['prazo_meses'], fields['prazo_unidade']);
+      }
+
+      // Formatar datas do padrão ISO (YYYY-MM-DD) para Brasileiro (DD/MM/YYYY)
+      if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const parts = val.split('-');
+        val = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      // Aplicar máscara de formatação na preview caso o dado esteja sem máscara
+      if (val) {
+        const fieldDef = template.fields.find(f => f.name === field);
+        if (fieldDef && fieldDef.mask) {
+          const fnName = 'mask' + fieldDef.mask.charAt(0).toUpperCase() + fieldDef.mask.slice(1);
+          if (Utils[fnName]) {
+            val = Utils[fnName](val);
+          }
+        }
+      }
+
+      el.textContent = val ? val : '___';
+      if (marcarVazio === 'classe') {
+        el.classList.toggle('filled', !!val); // preenchido = azul; vazio = ambar
+      } else {
+        el.style.borderBottom = val ? 'none' : '2px dashed var(--primary)';
+      }
+    });
+
+    // Locador PJ (CNPJ): oculta nacionalidade, estado civil e RG no texto,
+    // e o rótulo do documento vira "CNPJ" (ou "CPF" p/ pessoa física) em vez de "CPF/CNPJ".
+    const pjLocador = Utils.isPJLocador(fields);
+    prev.querySelectorAll('.pf-locador').forEach(el => el.style.display = pjLocador ? 'none' : '');
+    prev.querySelectorAll('.doc-locador-label').forEach(el => el.textContent = pjLocador ? 'CNPJ' : 'CPF');
+
+    // Garantia Locatícia no texto e assinaturas
+    const tipoGarantia = fields.tipo_garantia || 'sem_garantia';
+    prev.querySelectorAll('.sec-fiador-row').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+    prev.querySelectorAll('.sec-fiador-sig').forEach(el => el.style.display = tipoGarantia === 'fiador' ? '' : 'none');
+
+    const txtGarantia = prev.querySelector('.sec-garantia-texto');
+    if (txtGarantia) {
+      if (tipoGarantia === 'caucao') {
+        const v = Utils.esc(fields.valor_caucao || 'R$ ___');
+        const ve = Utils.esc(fields.valor_caucao_extenso || '___');
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, o LOCATÁRIO presta garantia mediante <strong>Caução em Dinheiro</strong> no valor de <strong>${v} (${ve})</strong>, depositada em favor do LOCADOR.`;
+      } else if (tipoGarantia === 'fiador') {
+        const nf = Utils.esc(fields.nome_fiador || '___');
+        const df = Utils.esc(fields.doc_fiador || '___');
+        txtGarantia.innerHTML = `Para garantia das obrigações assumidas neste contrato, assina como <strong>FIADOR(A)</strong> e principal pagador(a) solidário(a) o(a) Sr(a). <strong>${nf}</strong>, CPF <strong>${df}</strong>.`;
+      } else {
+        txtGarantia.innerHTML = `O presente contrato é celebrado <strong>sem modalidade de garantia fidejussória ou real</strong>.`;
+      }
+    }
+
+    // Imagens de assinatura (locatário e locador), quando existirem nos fields
+    prev.querySelectorAll('.signature-img-container[data-signature="locatario"]').forEach(el => {
+      if (fields.assinatura_locatario) {
+        el.innerHTML = Utils.imgSeguro(fields.assinatura_locatario,
+          'Assinatura Locatário', 'max-height: 55px; display: block; margin: 4px auto 0;');
+      } else {
+        el.innerHTML = '';
+      }
+    });
+
+    prev.querySelectorAll('.signature-img-container[data-signature="locador"]').forEach(el => {
+      if (fields.assinatura_locador) {
+        el.innerHTML = Utils.imgSeguro(fields.assinatura_locador,
+          'Assinatura Locador', 'max-height: 55px; display: block; margin: 4px auto 0;');
+      } else {
+        el.innerHTML = '';
+      }
+    });
+  },
+
+  // O que ainda falta para poder mandar o contrato ao inquilino.
+  //
+  // O aceite dele só tem valor se os termos essenciais já estiverem no
+  // documento que ele lê — por isso a porta existe. Mas ela só pode cobrar o
+  // que o MODELO tem: a minuta simples não possui campo de dia de vencimento, e
+  // a lista fixa exigia esse campo mesmo assim — nenhum contrato daquele modelo
+  // conseguia gerar link, pedindo um campo que não existe no formulário.
+  faltamParaOLink(fields, tpl) {
+    fields = fields || {};
+    const tem = (nome) => !!(tpl && (tpl.fields || []).some(c => c.name === nome));
+    const exigir = (nome, rotulo) => tem(nome) && !fields[nome] && rotulo;
+
+    return [
+      exigir('valor_aluguel', 'Valor do aluguel'),
+      exigir('end_imovel', 'Endereço do imóvel'),
+      exigir('data_inicio', 'Data de início'),
+      !(Utils.mesesDoContrato(fields) > 0) && 'Prazo do contrato',
+      exigir('dia_vencimento', 'Dia de vencimento')
+    ].filter(Boolean);
+  },
+
+  // ── Contrato de teste ───────────────────────────────────────────────────
+  //
+  // Preenche um modelo inteiro com dados plausíveis, para não digitar 40 campos
+  // a cada vez que se quer testar o fluxo do inquilino.
+  //
+  // Os valores saem da DEFINIÇÃO do modelo (tipo, máscara, nome do campo), não
+  // de uma lista fixa: uma fixture com os 86 campos dos três modelos ficaria
+  // desatualizada no primeiro campo novo, e o teste passaria mentindo. Aqui,
+  // campo novo no modelo nasce preenchido sozinho.
+  //
+  // Fica em Utils (e não numa tela) porque quem chama é a tela E o teste.
+  dadosDeTeste(templateId) {
+    const tpl = (typeof Contracts !== 'undefined' && Contracts[templateId]) || null;
+    if (!tpl) return null;
+
+    const hoje = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+
+    const f = {};
+    tpl.fields.forEach(campo => {
+      f[campo.name] = Utils._valorDeTeste(campo, iso(hoje));
+    });
+
+    // Campos que o editor deriva de outros quando o locador digita. Sem isto o
+    // contrato de teste nasce com prazo e valor por extenso em branco — e é
+    // justamente o que o inquilino lê antes de assinar.
+    if ('data_termino' in f) f.data_termino = Utils.calcularDataTermino(f) || f.data_termino;
+    if ('valor_extenso' in f && f.valor_aluguel) f.valor_extenso = Utils.writeBRLInWords(f.valor_aluguel);
+    if ('valor_bonus_extenso' in f && f.valor_bonus) f.valor_bonus_extenso = Utils.writeBRLInWords(f.valor_bonus);
+    if ('data_assinatura' in f) f.data_assinatura = Utils.dataPorExtenso(hoje);
+
+    return f;
+  },
+
+  // Um valor para um campo, na ordem em que a informação é confiável:
+  // máscara > tipo > nome > rótulo.
+  _valorDeTeste(campo, hojeISO) {
+    const nome = campo.name;
+
+    if (campo.mask === 'cpfcnpj') return nome.indexOf('locador') >= 0 ? '529.982.247-25' : '111.444.777-35';
+    if (campo.mask === 'currency') return nome.indexOf('bonus') >= 0 ? 'R$ 150,00' : 'R$ 1.500,00';
+
+    if (campo.type === 'select') {
+      // Primeira opção com valor de verdade: a primeira costuma ser "Selecione...".
+      const op = (campo.options || []).find(o => o.value !== '' && o.value != null);
+      return op ? op.value : '';
+    }
+
+    if (campo.type === 'date') return hojeISO;
+
+    if (campo.type === 'number') {
+      if (nome.indexOf('dia_vencimento') >= 0) return '10';
+      if (nome.indexOf('prazo') >= 0) return '12';
+      return '1';
+    }
+
+    // Texto: alguns campos alimentam regra de negócio ou saem no PDF em lugar
+    // visível, e "teste" ali atrapalha mais que ajuda.
+    const porNome = {
+      nome_locador: 'Locador de Teste',
+      nome_locatario: 'Locatária de Teste',
+      nome_fiador: 'Fiador de Teste',
+      rg_locador: '12.345.678 SSP/MT',
+      rg_locatario: '98.765.432 SSP/MT',
+      rg_fiador: '11.222.333 SSP/MT',
+      prof_locatario: 'Analista',
+      prof_locador: 'Administrador',
+      cep_imovel: '78200-000',
+      end_imovel: 'Rua de Teste, 100, Centro, Cáceres - MT',
+      desc_imovel: 'Imóvel urbano de uso residencial, em bom estado de conservação.',
+      foro_cidade: 'Cáceres',
+      mat_agua: '000000',
+      uc_energia: '0000000',
+      banco_locador: 'Banco de Teste',
+      agencia_locador: '0001',
+      conta_locador: '12345-6',
+      pix_locador: 'teste@exemplo.com',
+      titular_conta: 'Locador de Teste'
+    };
+    if (porNome[nome]) return porNome[nome];
+
+    // Sobrou: o rótulo do próprio campo, marcado como teste. Fica óbvio na tela
+    // que aquilo não é dado real — que é o ponto de um contrato de teste.
+    return (campo.label || nome).replace(/\s*\(.*\)\s*$/, '') + ' (teste)';
+  },
+
+  // "27 de agosto de 2026" — formato que o contrato usa no fecho.
+  dataPorExtenso(d) {
+    const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    return `${String(d.getDate()).padStart(2, '0')} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+  },
+
+  // O IP carimbado pelo servidor, como ele deve aparecer numa folha de prova.
+  // Endereço de loopback ou de rede privada NÃO identifica origem externa: o
+  // inquilino assinou na mesma máquina (ou na mesma rede) do servidor. Imprimir
+  // "::1" cru sugere um endereço de internet e é pior que dizer o que é —
+  // certificado que insinua mais do que sabe não vale o papel.
+  ipDeEvidencia(ip) {
+    if (!ip) return 'Não registrado pelo servidor';
+    const limpo = String(ip).replace(/^::ffff:/i, '').trim();
+    if (limpo === '::1' || /^127\./.test(limpo)) {
+      return limpo + ' — mesma máquina do servidor, não identifica origem externa';
+    }
+    if (/^(10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|f[cd])/i.test(limpo)) {
+      return limpo + ' — rede local do servidor, não identifica origem externa';
+    }
+    return limpo;
+  },
+
+  // ── Renderizar Folha de Certificado de Assinatura Eletrônica ──
+  renderCertificadoHTML(fields) {
+    fields = fields || {};
+    if (!fields.aceite_ts && !fields.assinatura_locatario && !fields.selfie_locatario) return '';
+
+    // Data e IP saem do carimbo do SERVIDOR (migration 003). Os equivalentes em
+    // fields (aceite_ts, ip_acesso) são escritos no navegador de quem assina —
+    // servem para a tela, não como prova, porque o próprio signatário os edita.
+    // Contrato assinado antes da 003 não tem carimbo: aí o certificado diz isso
+    // em vez de apresentar o valor autodeclarado como se fosse evidência.
+    // Fuso fixo: toLocaleString sem timeZone usa o do aparelho que abre o PDF,
+    // então o mesmo aceite imprimia horas diferentes para locador e inquilino —
+    // e o rótulo dizia "(UTC)", que não era verdade em nenhum dos dois.
+    const dataAceite = fields.aceite_ts_servidor
+      ? new Date(fields.aceite_ts_servidor).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      : 'Não registrado pelo servidor';
+    const ip = Utils.ipDeEvidencia(fields.ip_servidor);
+    const gpsStr = fields.geo_lat && fields.geo_lng ? `${fields.geo_lat}, ${fields.geo_lng} (Precisão ±${fields.geo_acc || 0}m)` : 'Não fornecido pelo dispositivo';
+    const hashDoc = fields.aceite_hash ? fields.aceite_hash.toUpperCase() : 'N/A';
+    const userAgent = fields.user_agent || navigator.userAgent;
+
+    return `
+      <div class="cert-page" style="page-break-before: always; margin-top: 3rem; padding-top: 2rem; border-top: 3px double #1E3A8A; font-size: 9.5pt; color: #1E293B;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <h2 style="font-size: 13pt; margin-bottom: 0.2rem; color: #0F172A; text-transform: uppercase; letter-spacing: 0.05em;">Certificado de Assinatura Eletrônica & Trilha de Auditoria</h2>
+          <p style="font-size: 8.5pt; color: #64748B; margin: 0;">Documento assinado eletronicamente nos termos do Art. 10, § 2º da MP nº 2.200-2/2001 e da Lei nº 14.063/2020.</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #CBD5E1;">
+          <tr style="background: #F8FAFC;">
+            <th colspan="2" style="border: 1px solid #CBD5E1; padding: 6px 10px; text-align: left; font-size: 9pt; color: #0F172A;">1. DADOS DO ASSINANTE (LOCATÁRIO)</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; width: 30%;"><strong>Nome Completo:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(fields.nome_locatario || '___')}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Documento (CPF):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(Utils.maskCPFCNPJ(fields.doc_locatario || ''))}</td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #CBD5E1;">
+          <tr style="background: #F8FAFC;">
+            <th colspan="2" style="border: 1px solid #CBD5E1; padding: 6px 10px; text-align: left; font-size: 9pt; color: #0F172A;">2. EVIDÊNCIAS TÉCNICAS E TRILHA DE AUDITORIA</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; width: 30%;"><strong>Data e Hora do Aceite:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(dataAceite)}${fields.aceite_ts_servidor ? ' (horário de Brasília)' : ''}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Endereço IP:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(ip)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Geolocalização (GPS):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;">${Utils.esc(gpsStr)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Hash de Integridade (SHA-256):</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-family: monospace; font-size: 8.5pt; word-break: break-all;">${Utils.esc(hashDoc)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px;"><strong>Navegador / Dispositivo:</strong></td>
+            <td style="border: 1px solid #CBD5E1; padding: 6px 10px; font-size: 8pt; color: #475569;">${Utils.esc(userAgent)}</td>
+          </tr>
+        </table>
+
+        <div style="display: flex; gap: 1.5rem; justify-content: space-around; align-items: flex-start; margin-top: 1.5rem; border: 1px solid #CBD5E1; padding: 1rem; border-radius: 8px; background: #FAFAFA;">
+          ${fields.assinatura_locatario ? `
+            <div style="text-align: center; flex: 1;">
+              <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Rubrica Manuscrita Registrada:</p>
+              ${Utils.imgSeguro(fields.assinatura_locatario, 'Rubrica Inquilino', 'max-height: 65px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 4px;')}
+            </div>
+          ` : ''}
+
+          ${fields.selfie_locatario ? `
+            <div style="text-align: center; flex: 1;">
+              <p style="font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; color: #334155;">Selfie de Validação com Documento:</p>
+              ${Utils.imgSeguro(fields.selfie_locatario, 'Selfie Inquilino', 'max-height: 100px; max-width: 100%; border: 1px solid #E2E8F0; padding: 4px; background: #FFF; border-radius: 6px; object-fit: contain;')}
+            </div>
+          ` : ''}
+        </div>
+
+        <p style="text-align: center; font-size: 8pt; color: #94A3B8; margin-top: 1.5rem;">
+          Este certificado é parte integrante e indissociável do contrato de locação correspondente.
+        </p>
+      </div>
+    `;
+  }
+};
+
+// ── Exportação em PDF (impressão nativa do navegador) ──
+// nomeSugerido: o Chrome usa o title da página como nome do arquivo .pdf
+function generatePDF(nomeSugerido) {
+  const inputName = document.getElementById('contract-name');
+  const nome = nomeSugerido || (inputName && inputName.value) || 'Contrato';
+
+  const originalTitle = document.title;
+  document.title = nome;
+  window.print();
+  document.title = originalTitle;
+}

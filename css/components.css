@@ -1,0 +1,1488 @@
+/* ═══ Components (Premium Style) ═══ */
+
+/* ═══ Botões ═══
+   O redesenho troca o botão "premium" (gradiente + brilho interno + glow)
+   por chapado em pílula. O gradiente vinha de dois hex cravados que não
+   escureciam no tema escuro (R6.1); chapado, o botão é um token só. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  border: 1px solid transparent;
+  text-decoration: none;
+  color: var(--text-main);
+  background: transparent;
+}
+
+.btn svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--color-neutral-100);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  color: var(--color-neutral-100);
+}
+
+.btn-primary:active {
+  background: var(--color-accent-900);
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border-color: var(--border-light);
+}
+
+.btn-secondary:hover {
+  background: var(--overlay-hover);
+  border-color: var(--border-focus);
+  color: var(--text-main);
+}
+
+/* Botão de texto: ação secundária dentro de cartão, sem peso de caixa. */
+.btn-ghost {
+  color: var(--primary);
+  padding-inline: 8px;
+}
+
+.btn-ghost:hover {
+  background: var(--primary-light);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  filter: brightness(0.92);
+  color: #fff;
+}
+
+/* Botão pequeno — usado nas linhas de tabela e cabeçalhos de cartão. */
+.btn-sm {
+  padding: 6px 13px;
+  font-size: 13px;
+}
+
+.btn-sm svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ═══ Cartões ═══
+   Raio grande (32px) é a assinatura do redesenho. A borda fica de hairline:
+   no tema claro ela quase some sob a sombra, no escuro é ela que separa o
+   cartão do fundo (sombra não aparece sobre fundo escuro). */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 24px 26px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), border-color var(--transition);
+  position: relative;
+}
+
+/* Sobrelinha do cartão (categoria acima do título). */
+.card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.card-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+/* Painel escuro — a faixa "Precisa de você" do painel e afins. Vive sobre a
+   rampa neutra, não sobre --card-bg, para continuar escuro nos dois temas. */
+.card-dark {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-title);
+  border: 0;
+  border-radius: var(--radius-xl);
+  padding: 28px 30px;
+}
+
+.card-dark .card,
+.card-dark .panel-item {
+  background: var(--sidebar-card-bg);
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  color: var(--sidebar-title);
+}
+
+/* ═══ Campos ═══ */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 9px 16px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-full);
+  color: var(--text-main);
+  caret-color: var(--primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.form-input:hover,
+.form-textarea:hover,
+.form-select:hover {
+  border-color: var(--border-focus);
+}
+
+/* Área de texto não é pílula: raio de pílula em caixa alta vira cápsula
+   deformada. Fica no raio médio, que é o mesmo do cartão pequeno. */
+.form-textarea {
+  border-radius: var(--radius-md);
+  min-height: 120px;
+  resize: vertical;
+  padding: 12px 16px;
+}
+
+select.form-input,
+select.form-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737d8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+  padding-right: 2.5rem;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+select.form-input:focus,
+select.form-select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+  border-color: var(--primary);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-light);
+}
+
+/* ═══ Etiquetas ═══
+   Deixaram de ser caixa-alta: no redesenho a etiqueta é um rótulo legível
+   ao lado do título, não um carimbo. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.badge-blue {
+  background-color: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+
+.badge-teal {
+  background-color: var(--color-accent-2-100);
+  color: var(--color-accent-2-800);
+}
+
+.badge-neutral {
+  background-color: var(--color-neutral-200);
+  color: var(--color-neutral-800);
+}
+
+/* Vermelho e roxo fecham o conjunto que o JS realmente usa: `badge-red` no
+   item vencido do painel e `badge-purple` no modelo comercial, cuja cor vem
+   de data/contracts.js. Faltando a regra, a etiqueta saía sem fundo nenhum. */
+.badge-red {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.badge-purple {
+  background-color: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+
+/* Marca e itens de navegação (superfície escura: barra lateral e header mobile) */
+.sidebar-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* logo solto, sem caixa: a cor vem do contexto (sidebar escura x header claro) */
+  color: var(--sidebar-title);
+}
+
+.sidebar-logo svg {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.sidebar-title {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--sidebar-title);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.nav-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+/* .nav-item tambem e usado em <button> (ex.: alternador de tema), que e uma acao e
+   nao um destino — assim ele nunca casa com a regra de "item ativo" do updateNav. */
+button.nav-item {
+  width: 100%;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-title);
+}
+
+.nav-item.active {
+  background-color: var(--sidebar-active-bg);
+  color: #FFFFFF;
+}
+
+.nav-item.active svg {
+  color: #FFFFFF;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Barra lateral (desktop) — o redesenho de 2026-08-24 troca a topbar por uma
+   coluna escura fixa à esquerda, com os destinos agrupados por assunto.
+   No celular ela não existe: lá continuam valendo a .mobile-header e a
+   .bottom-nav, que já cobriam esse caso.
+   ═══════════════════════════════════════════════════════ */
+.app-sidebar {
+  display: none;
+  /* só ≥769px (ver media query no fim do bloco) */
+  width: 254px;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 16px 22px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  /* No tema claro a diferença de luminosidade já separa a coluna do conteúdo.
+     No escuro os dois fundos ficam a poucos passos um do outro e a borda passa
+     a ser a única coisa que marca onde uma acaba e a outra começa. */
+  border-right: 1px solid var(--border-light);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 8px;
+  text-decoration: none;
+}
+
+/* A marca ganha um disco na cor de destaque — é o único ponto de cor forte
+   sobre a coluna escura, e ancora o olho no canto superior. */
+.sidebar-brand .sidebar-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-600);
+  color: #fff;
+}
+
+.sidebar-brand .sidebar-logo svg {
+  height: 17px;
+}
+
+.sidebar-brand-text {
+  min-width: 0;
+}
+
+.sidebar-brand-text .sidebar-title {
+  display: block;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+/* Nome da conta sob a marca — preenchido por App.showSessionControls. */
+.sidebar-account {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-section);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-group-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sidebar-section);
+  padding: 0 10px 6px;
+  font-weight: 600;
+}
+
+/* Cartão do rodapé da coluna: fica colado embaixo pelo margin-top:auto. */
+.sidebar-footer-card {
+  margin-top: auto;
+  border-radius: var(--radius-lg);
+  background: var(--sidebar-card-bg);
+  padding: 8px;
+}
+
+.sidebar-footer-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--sidebar-title);
+  line-height: 1.2;
+}
+
+.sidebar-footer-text {
+  font-size: 12.5px;
+  color: var(--sidebar-text);
+  margin: 6px 0 0;
+  line-height: 1.45;
+}
+
+.sidebar-footer-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* Ações do rodapé (tema, sair) sobre superfície escura. */
+.sidebar-footer-actions .nav-item {
+  flex: 1;
+  justify-content: center;
+  margin-bottom: 0;
+  padding: 7px 8px;
+  font-size: 12.5px;
+}
+
+.app-sidebar .nav-item:focus-visible,
+.sidebar-brand:focus-visible {
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: 2px;
+}
+
+.app-sidebar .logout-action:hover {
+  color: #ff9a92;
+}
+
+@media (min-width: 769px) {
+  .app-sidebar {
+    display: flex;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Barra de conteúdo — gruda no topo da coluna da direita (não da janela),
+   com a busca e as ações globais. Como a busca filtra a lista da rota atual,
+   ela só aparece nas rotas que têm lista (App.updateNav cuida disso).
+   ═══════════════════════════════════════════════════════ */
+.content-bar {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 36px;
+  border-bottom: 1px solid var(--divider);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface-bg);
+}
+
+@media (min-width: 769px) {
+  .content-bar {
+    display: flex;
+  }
+}
+
+.content-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-full);
+  padding: 8px 18px;
+  flex: 1;
+  min-width: 260px;
+  max-width: 520px;
+}
+
+.content-search:focus-within {
+  border-color: var(--primary);
+}
+
+.content-search svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  color: var(--text-light);
+}
+
+.content-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-main);
+  width: 100%;
+}
+
+
+/* Segmented tabs */
+/* Vive dentro do .page-header, que alinha as acoes pela base (align-items:
+   flex-end). Uma margem inferior aqui empurrava o seletor 18px ACIMA dessa
+   base — era por isso que o "Foco do dia / Portfolio" e o seletor de mes do
+   financeiro flutuavam mais alto que o botao das outras telas. Espaco antes do
+   conteudo, se um dia precisar em uso solto, e do container, nao do controle. */
+.seg-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--seg-bg);
+  border-radius: var(--radius-md);
+  padding: 5px;
+  width: fit-content;
+}
+
+.seg-tab {
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 22px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+
+.seg-tab:hover {
+  color: var(--text-main);
+}
+
+.seg-tab.active {
+  background: var(--card-bg);
+  color: var(--primary);
+  box-shadow: var(--shadow-md);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+}
+
+.empty-state p {
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* Mobile Header */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--card-bg);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-light);
+  align-items: center;
+  gap: 10px;
+  /* sem isto a marca fica colada no texto */
+  padding: 0 1.25rem;
+  z-index: 50;
+}
+
+.mobile-header .sidebar-logo {
+  /* fundo do header mobile e claro: logo em azul escuro para contrastar */
+  color: #143A66;
+}
+
+.mobile-header .sidebar-logo svg {
+  height: 24px;
+}
+
+.mobile-header .sidebar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.mobile-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-header-actions .logout-action:hover {
+  color: var(--danger);
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--icon-hover-bg);
+}
+
+.btn-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media(max-width: 768px) {
+  .mobile-header {
+    display: flex;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   IMPRESSÃO — margem em TODAS as páginas, sem cabeçalho do navegador
+
+   `@page { margin: 0 }` faz o Chrome parar de desenhar o cabeçalho/rodapé
+   (data, título, URL): não sobra margem para eles. Mas aí o texto encostaria
+   na borda, porque `padding` só vale no início e no fim do bloco — não se
+   repete a cada página.
+
+   Solução: o documento vai dentro de uma "tabela" cujos topo e rodapé são
+   faixas vazias. O navegador REPETE thead/tfoot em toda página impressa, e
+   essas faixas viram a margem de cima e de baixo de cada folha. A margem
+   lateral vem de padding, que essa sim vale em todas as páginas.
+   ═══════════════════════════════════════════════════════ */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* Precisa ser <table>/<thead>/<tfoot> DE VERDADE: com divs em
+   `display: table-header-group` o Chrome não repete a faixa por página. */
+.print-wrap {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-wrap>tbody>tr>td,
+.print-wrap>thead>tr>td,
+.print-wrap>tfoot>tr>td {
+  padding: 0;
+  border: none;
+}
+
+/* Na tela as faixas de margem não existem */
+.print-wrap>thead,
+.print-wrap>tfoot {
+  display: none;
+}
+
+@media print {
+  .print-wrap>thead {
+    display: table-header-group;
+  }
+
+  .print-wrap>tfoot {
+    display: table-footer-group;
+  }
+
+  /* a altura precisa vir do conteúdo: uma célula vazia colapsa */
+  .print-spacer-inner {
+    height: 18mm;
+  }
+
+  /* Assinaturas mais para o pé da página. É um empurrão fixo: o CSS de
+     impressão não sabe quanto espaço sobrou na folha, então não dá para
+     ancorar no rodapé sem dar uma página só para elas. */
+  .preview-document .signature-area {
+    margin-top: 35mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    /* Chrome antigo */
+  }
+}
+
+/* Badges de Status de Contrato */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.badge-status-active {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-status-expired {
+  background-color: var(--danger-bg);
+  color: #b91c1c;
+}
+
+.badge-status-pending {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+.badge-status-future {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+/* Toasts (feedback não-bloqueante) */
+#toast-box {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  width: min(440px, calc(100vw - 32px));
+}
+
+.toast {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  animation: toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+}
+
+.toast-out {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══ Ajustes de modo escuro para cores fixas ═══ */
+/* a seta do select vive dentro de uma url(): var() nao interpola ali, entao repete a regra */
+[data-theme="dark"] select.form-input,
+[data-theme="dark"] select.form-select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A2A9B6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* header mobile fica escuro: logo precisa clarear (no claro ele e azul escuro) */
+[data-theme="dark"] .mobile-header .sidebar-logo {
+  color: var(--sidebar-title);
+}
+
+/* Botao primario: o gradiente do tema claro fica invertido no escuro (topo mais
+   escuro que a base) e o brilho branco do :hover lavava o texto ate sumir. */
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(180deg, #3E82CE, #2A5F9E);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(180deg, #4A8FD8, #326CAE);
+}
+
+[data-theme="dark"] .btn::after {
+  background: linear-gradient(rgba(255, 255, 255, 0.05), transparent);
+}
+
+/* vermelho escuro do badge "Vencido" some no fundo escuro */
+[data-theme="dark"] .badge-status-expired {
+  color: var(--danger);
+}
+
+/* ═══ Padrões compartilhados dos módulos de cadastro (imóveis/clientes/financeiro) ═══ */
+
+.badge-amber {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+/* Ação destrutiva: vermelho vem dos tokens (--danger), não de cor fixa */
+.btn-danger {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger);
+  font-weight: 600;
+}
+.btn-danger:hover {
+  background-color: var(--danger);
+  color: #fff;
+}
+
+/* Modal padrão: o card acompanha o tema (nada de fundo branco fixo).
+   O seletor com #main-content é necessário: o backdrop nasce como filho
+   direto de #main-content, cujo "> *" limita filhos a 1080px centrados —
+   sem esta exceção o fundo escuro não cobre as laterais da tela. */
+.modal-backdrop,
+#main-content > .modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+/* — Imagem ampliada (selfie de validacao, rubrica, foto de vistoria) —
+   Reusa o .modal-backdrop; o que muda e que aqui a imagem ocupa a tela e o
+   fundo e mais escuro, porque o que importa e o que esta na foto. */
+/* O cursor mora aqui, e nao no atributo style da tag: `imgSeguro` monta o
+   `style` com o que o chamador pediu, e concatenar mais coisa ali sujava o
+   valor (`...;; cursor:`) e quebrava o teste que guarda esse sink. */
+.img-ampliavel { cursor: zoom-in; }
+
+.zoom-backdrop {
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+  padding: 24px;
+}
+
+.zoom-img {
+  max-width: 96vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* O certificado vira PDF por window.print(): caixa de zoom aberta na hora da
+   impressao sairia por cima da folha. */
+@media print {
+  .zoom-backdrop { display: none !important; }
+}
+
+.modal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 550px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+/* Painel de leitura: mais largo que um formulário porque mostra listas de
+   vínculos (contratos, vistorias) lado a lado com os campos. */
+.modal-card-lg { max-width: 680px; }
+
+/* ── Painel "Ver" ──────────────────────────────────────────────────────
+   Rótulo à esquerda, valor à direita. Grade e não tabela: o valor precisa
+   quebrar em várias linhas (endereço, observações) sem esticar a coluna. */
+.detalhe-secao {
+  margin: 1.5rem 0 0.6rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.detalhe-secao:first-child { margin-top: 0; }
+
+.detalhe-lista { margin: 0; }
+.detalhe-linha {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.detalhe-linha:last-child { border-bottom: none; }
+.detalhe-linha dt { color: var(--text-muted); font-size: 13px; }
+.detalhe-linha dd { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
+
+.detalhe-vinculos { list-style: none; margin: 0; padding: 0; }
+.detalhe-vinculos li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13.5px;
+}
+.detalhe-vinculos li:last-child { border-bottom: none; }
+.detalhe-vinculos li > span:first-child { flex: 1; min-width: 0; }
+
+.detalhe-vazio { margin: 0; font-size: 13px; }
+.detalhe-resumo { margin: 0 0 0.75rem; font-size: 13.5px; color: var(--text-muted); }
+
+/* As cláusulas são um documento inteiro dentro de uma janela. Rolam na própria
+   caixa, com moldura, para o leitor saber onde o contrato começa e termina —
+   e para os botões Fechar/Usar não fugirem para o fim de três páginas. */
+.detalhe-clausulas {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 16px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--surface-bg);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.detalhe-clausulas p { margin: 0 0 0.9rem; }
+.detalhe-clausulas .highlight {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.detalhe-total { margin: 0; font-size: 20px; font-weight: 700; }
+.detalhe-total .td-sub { display: block; font-size: 12px; font-weight: 400; }
+.detalhe-fotos { margin-bottom: 1.25rem; }
+
+.modal-card h3 {
+  margin: 0 0 1.25rem;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Tabela de dados no padrão do sistema (bordas e fundos por token = dark mode ok) */
+.data-table-wrap {
+  overflow-x: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+.data-table th {
+  padding: 0.85rem 1rem;
+  background: var(--seg-bg);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr { transition: background var(--transition); }
+.data-table tbody tr:hover { background: var(--row-hover-bg); }
+.data-table .td-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.data-table .td-acoes {
+  text-align: right;
+  white-space: nowrap;
+}
+.data-table .td-acoes .btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* ═══ Alternador de tema (sidebar) ═══ */
+.theme-icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  display: inline-block;
+}
+/* ═════════════════════════════════════════════════════
+   Vocabulário do redesenho (2026-08-24)
+   A maquete veio com tudo em `style=` inline. Virou classe aqui por dois
+   motivos: as views emitem markup curto em vez de parágrafos de estilo, e a
+   cor volta a sair de token — inline com hex não escurece (R6.1).
+   ════════════════════════════════════════════════════ */
+
+/* — Painel escuro: a faixa de destaque no topo de uma tela — */
+.hero-panel {
+  background: var(--sidebar-bg);
+  border-radius: var(--radius-xl);
+  padding: 28px 30px;
+  color: var(--sidebar-title);
+}
+
+.hero-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.hero-panel-head h3 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--sidebar-title);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+/* Quando o painel nao tem corpo (o estado "Nada pedindo atencao"), o cabecalho
+   e o ultimo filho e essa margem vira espaco morto no rodape do bloco escuro —
+   o texto sobe e desalinha do centro do cartao. */
+.hero-panel-head:last-child {
+  margin-bottom: 0;
+}
+
+.hero-panel-nota {
+  font-size: 12px;
+  color: var(--sidebar-text);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+/* Cartão dentro do painel escuro — um degrau mais claro que o fundo dele. */
+.hero-card {
+  background: var(--sidebar-card-bg);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hero-card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hero-card-titulo {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.25;
+  color: var(--sidebar-title);
+}
+
+.hero-card-detalhe {
+  font-size: 12.5px;
+  color: var(--sidebar-text);
+  line-height: 1.45;
+}
+
+.hero-card-quando {
+  font-size: 11.5px;
+  color: var(--sidebar-text);
+  white-space: nowrap;
+}
+
+/* — Cartão de métrica: sobrelinha, número grande, nota — */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(216px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+}
+
+.metric-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metric-valor {
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.metric-nota {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* Ponto de status ao lado da sobrelinha da métrica. */
+.metric-ponto {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  background: var(--color-neutral-400);
+}
+
+.metric-ponto.ok { background: var(--color-accent-2-500); }
+.metric-ponto.atencao { background: var(--warning); }
+.metric-ponto.risco { background: var(--danger); }
+
+/* — Duas colunas que viram uma quando não cabem — */
+.duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.painel-secao-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.painel-secao-head h4 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* — Linha de lista: separador em cima, nunca embaixo, para a última linha
+     não encostar uma borda solta no fim do cartão — */
+.lista-linha {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid var(--divider);
+}
+
+.lista-linha:first-child { border-top: 0; }
+
+.lista-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.lista-nome {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.lista-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.lista-valor {
+  text-align: right;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+.lista-valor strong {
+  display: block;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.lista-valor span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* — Avatar de inicial: substitui foto que o sistema não tem — */
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.avatar-lg { width: 44px; height: 44px; font-size: 16px; }
+.avatar-sm { width: 34px; height: 34px; font-size: 12.5px; }
+
+/* — Caixinha de data (dia sobre mês) — */
+.data-badge {
+  width: 46px;
+  flex-shrink: 0;
+  text-align: center;
+  background: var(--seg-bg);
+  border-radius: 14px;
+  padding: 6px 0;
+}
+
+.data-badge strong {
+  display: block;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.data-badge span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+/* — Par rótulo/valor em linha, usado nos metadados do contrato — */
+.chips-meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+.chip-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chip-meta b {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* — Filtros em pílula — */
+.filtros {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filtro-pill {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.filtro-pill:hover {
+  border-color: var(--border-focus);
+  color: var(--text-main);
+}
+
+.filtro-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--color-neutral-100);
+}
+
+/* — Gráfico de barras por mês. Altura vem de --h, calculada no JS a partir
+     do maior valor da série; o CSS nunca inventa número — */
+.barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  height: 132px;
+}
+
+.barra-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.barra {
+  width: 100%;
+  border-radius: 8px 8px 3px 3px;
+  background: var(--color-accent-2-500);
+  height: var(--h, 4px);
+  min-height: 4px;
+}
+
+.barra.aberta { background: var(--color-accent-300); }
+
+.barra-mes {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legenda {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.legenda span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legenda i {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-2-500);
+}
+
+.legenda i.aberta { background: var(--color-accent-300); }
+
+/* — Barra de proporção (ocupação da carteira) — */
+.mini-bar {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--seg-bg);
+  overflow: hidden;
+}
+
+.mini-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  width: var(--w, 0%);
+}
+
+.mini-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.mini-bar-head span { font-size: 13.5px; font-weight: 600; }
+.mini-bar-head b { font-weight: 600; font-size: 15px; }
+
+/* — Linha do tempo de atividade — */
+.timeline-item {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 16px;
+}
+
+.timeline-trilho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.timeline-ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.timeline-linha {
+  width: 2px;
+  flex: 1;
+  background: var(--divider);
+  border-radius: var(--radius-full);
+}
+
+.timeline-texto { font-size: 13.5px; line-height: 1.4; }
+.timeline-quando { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* — Cartão tracejado: ação que ainda não existe como registro — */
+.card-tracejado {
+  border: 2px dashed var(--border-focus);
+  border-radius: var(--radius-xl);
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .hero-panel { padding: 22px 18px; }
+  .duas-colunas { grid-template-columns: 1fr; }
+  .lista-valor { min-width: 0; }
+}
