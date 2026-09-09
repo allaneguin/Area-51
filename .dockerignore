@@ -1,0 +1,9 @@
+.git
+node_modules
+docs
+data.db
+data.db-wal
+data.db-shm
+*.test.js
+.claude
+.agents

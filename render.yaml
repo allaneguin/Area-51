@@ -1,0 +1,23 @@
+# Blueprint do Render. "New > Blueprint" apontando para este repositorio
+# monta o servico inteiro: container, disco persistente e variaveis.
+services:
+  - type: web
+    name: meus-imoveis
+    runtime: docker
+    # O disco persistente exige plano pago. No plano free o filesystem e
+    # efemero: todo deploy e todo restart apagariam data.db — contas,
+    # contratos e links junto.
+    plan: starter
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      # Cookie de sessao marcado como Secure.
+      - key: HTTPS
+        value: "1"
+      # Fora de /app de proposito: /app e substituido a cada deploy.
+      - key: DB_FILE
+        value: /data/data.db
+    disk:
+      name: dados
+      mountPath: /data
+      sizeGB: 1
